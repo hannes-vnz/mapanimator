@@ -1,8 +1,8 @@
-# Mapanimator
+# Kartenanimator
 
 Browser-based map animation tool for travel videos: draw routes on a map, animate them with a keyframe timeline and export the result as video for editing in DaVinci Resolve. Think of it as a free, self-built alternative to tools like GeoLayers.
 
-**[Live demo](https://hannes-vnz.github.io/mapanimator/)** · Single HTML file, no build step, no framework
+**[Live demo](https://USERNAME.github.io/kartenanimator/)** · Single HTML file, no build step, no framework
 
 <!-- ![Screenshot](screenshots/preview.png) -->
 
@@ -23,7 +23,7 @@ Open `index.html` in a modern browser, or serve the folder:
 python -m http.server 8000
 ```
 
-An optional [MapTiler](https://www.maptiler.com/) key can be entered in the app to enable satellite imagery and vector tiles. Without a key the app falls back to free sources. The key stays in your browser and is never stored in this repository.
+An optional [MapTiler](https://www.maptiler.com/) key can be entered in the app to enable satellite imagery and vector tiles. Without a key the app falls back to free sources. The key stays in your browser. It is not written into saved project files (`.json`), so projects can be shared safely.
 
 ## Built with
 
@@ -31,4 +31,4 @@ An optional [MapTiler](https://www.maptiler.com/) key can be entered in the app 
 
 ## Data & attribution
 
-Map data © OpenStreetMap contributors. Please respect the usage policies of the services listed above.
+Map data © OpenStreetMap contributors. The app shows the required attribution in the map corner. Exported videos contain only the map canvas, so please credit the map sources (© OpenStreetMap contributors, © OpenFreeMap, and MapTiler or Esri if you use their layers) in your video description. Please also respect the usage policies of the services listed above (e.g. Nominatim, Overpass).
