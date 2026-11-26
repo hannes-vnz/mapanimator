@@ -189,6 +189,18 @@ try {
     document.getElementById("profOn").checked = false; document.getElementById("mmOn").checked = false;
     return Math.round(p.min) + "–" + Math.round(p.max) + " m, ↗ " + Math.round(p.up) + " Hm";
   }));
+  await step("Erdzoom (All → Straße / raus)", () => page.evaluate(async () => {
+    await MA.load({ name: "ez", route: { stops: [{ name: "A", c: [-21.94, 64.15] }, { name: "B", c: [-21.13, 64.26], mode: "car" }] } });
+    await CAM.applyShot(CAM.shots.find(s => s.id === "s_earthin"));
+    const z0 = CAM.at(0).z, z1 = CAM.at(5).z, tip = anim.per[0]._tipIdx;
+    setPlayhead(4, true); if (anim.per[0]._tipIdx > 0.01) throw new Error("Linie wartet nicht");
+    if (!(z0 < 3 && z1 > 12)) throw new Error("Zoom " + z0.toFixed(1) + " → " + z1.toFixed(1));
+    await CAM.applyShot(CAM.shots.find(s => s.id === "s_earthout"));
+    const T = timelineTotal(), ze = CAM.at(T).z;
+    if (ze > 3) throw new Error("raus endet bei " + ze.toFixed(1));
+    document.getElementById("outroHold").value = 0; document.getElementById("projGlobe").checked = false;
+    return "rein " + z0.toFixed(1) + " → " + z1.toFixed(1) + ", raus → " + ze.toFixed(1);
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     document.getElementById("whipDir").value = "right";

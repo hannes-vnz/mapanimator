@@ -299,6 +299,7 @@ body.safe #safezone{display:block;}
 .shot.sh-overview, .shot.sh-still{background:#2f3a2c; border-color:#4b5d45;}
 .shot.sh-tripod{background:#3a2f45; border-color:#5a4870;}
 .shot.sh-orbit{background:#45342a; border-color:#6e5240;}
+.shot.sh-earth{background:#1f3a52; border-color:#3a6a8f;}
 .shot.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent);}
 .shot .edge{position:absolute; left:-1px; top:0; bottom:0; width:8px; cursor:ew-resize; background:linear-gradient(90deg, rgba(255,255,255,.35), transparent);}
 body:not(.pro) #tlShots .shlabel{display:none;}

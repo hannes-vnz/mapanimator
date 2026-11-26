@@ -1604,6 +1604,10 @@ async function prepareAnim(){
         for (let k = 0; k < firstOfLast - 1; k++) segs[k].dur = 0;   // vorherige Etappen + Pausen sofort fertig
       }
     }
+    // Start/Ende halten (z. B. für den Erdzoom): erste/letzte Pause verlängern
+    const hIn = num("introHold") || 0, hOut = num("outroHold") || 0;
+    if (hIn > 0 && segs[0] && segs[0].type === "pause") segs[0].dur += hIn;
+    if (hOut > 0 && segs.length && segs[segs.length - 1].type === "pause") segs[segs.length - 1].dur += hOut;
     let tt = 0;
     segs.forEach(s => { s.t0 = tt; tt += s.dur; s.t1 = tt; });
     const stopMeta = [];
@@ -2536,7 +2540,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","cloudLayer","fxVignette","fxStars","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","profOn","profPos","profStyle","profSize","mmOn","mmPos","mmStyle","mmSize","mmAuto","mmTheme","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","cloudLayer","fxVignette","fxStars","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","profOn","profPos","profStyle","profSize","mmOn","mmPos","mmStyle","mmSize","mmAuto","mmTheme","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","introHold","outroHold","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {

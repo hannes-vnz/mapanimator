@@ -13,7 +13,8 @@ const CAM_MODES = {
   still:    { icon: "🖼️", label: "Still" },
   overview: { icon: "🗺️", label: "Übersicht" },
   tripod:   { icon: "📷", label: "Stativ" },
-  orbit:    { icon: "🔄", label: "Orbit" }
+  orbit:    { icon: "🔄", label: "Orbit" },
+  earth:    { icon: "🌍", label: "Erdzoom" }
 };
 const CAM_BLEND = 1.2;
 
@@ -100,13 +101,32 @@ const CAM = (() => {
     const pitch = s.pitch == null ? num("pitch") : s.pitch;
     const zoom = s.zoom == null ? num("zoom") : s.zoom;
     const r = evalShotBase(s, t, tEnd, p, pitch, zoom);
-    if (s.mode !== "orbit" && s.mode !== "tripod"){
+    if (s.mode !== "orbit" && s.mode !== "tripod" && s.mode !== "earth"){
       const dt = Math.max(0, t - s.t);
       r.b += (s.drift || 0) * dt; r.z += (s.zoomDrift || 0) * dt; r.p = Math.min(85, r.p + (s.pitchDrift || 0) * dt);
     }
     return r;
   }
+  /* Erdzoom: durchgehende Fahrt All ↔ Straße (Google-Earth-Stil).
+     rein: Globus dreht sich ein (Mitte schwenkt von „swing“ Grad westlich heran), Zoom beschleunigt
+     durch die Wolken und bremst auf Straßenhöhe; Neigung kommt erst im letzten Drittel.
+     raus: dasselbe rückwärts. Ziel = Linienspitze am Abschnittsende (rein) bzw. -anfang (raus). */
+  const smoother = f => f * f * f * (f * (f * 6 - 15) + 10);
+  function evalEarth(s, t, tEnd, p, pitch, zoom){
+    const out = s.dir === "out", dur = Math.max(tEnd - s.t, 0.5);
+    let f = Math.min(Math.max((t - s.t) / dur, 0), 1); if (out) f = 1 - f;
+    const ll = p ? tipAt(p, out ? s.t : tEnd).ll : overviewCam().c;
+    const box = map.getContainer(), minPx = Math.min(box.clientWidth, box.clientHeight) || 1080;
+    const z0 = s.zoomSpace != null ? s.zoomSpace : Math.log2(0.6 * minPx * Math.PI / 512), z1 = zoom;   // Globus füllt ~60 % der kurzen Bildseite
+    const ez = smoother(f), ec = smoother(Math.min(1, f / 0.6)), ep = smoother(Math.max(0, (f - 0.62) / 0.38));
+    const sw = s.swing == null ? 35 : s.swing;
+    return { c: [ll[0] - sw * (1 - ec), Math.max(-75, Math.min(75, ll[1] - sw * 0.25 * (1 - ec)))],
+             z: z0 + (z1 - z0) * ez,
+             b: (s.bearing || 0) + (s.spin == null ? 50 : s.spin) * (1 - ez),
+             p: pitch * ep };
+  }
   function evalShotBase(s, t, tEnd, p, pitch, zoom){
+    if (s.mode === "earth") return evalEarth(s, t, tEnd, p, pitch, zoom);
     if (s.mode === "overview" || !p){ const o = overviewCam(); return { c: o.c, z: s.zoomAbs != null ? s.zoomAbs : o.z + (s.zoomAdj || 0), b: s.bearing || 0, p: pitch }; }
     if (s.mode === "still"){
       if (!s.center){ const o = overviewCam(); return { c: o.c, z: o.z, b: s.bearing || 0, p: pitch }; }
@@ -336,17 +356,19 @@ const CAM = (() => {
       (S.length > 1 && idx > 0 ? `<button type="button" class="del" data-a="del" title="${tr("Abschnitt löschen")}">✕</button>` : "") + `</div>` +
       `<div class="modes">${Object.entries(CAM_MODES).map(([k, m]) => `<button type="button" data-mode="${k}" class="${s.mode === k ? "active" : ""}"><em>${m.icon}</em>${tr(m.label)}</button>`).join("")}</div>` +
       (s.mode === "follow" ? `<div class="tempo-row"><span>${tr("Oben")}</span>${seg([["north", tr("Norden")], ["target", tr("Ziel")], ["travel", tr("Fahrtrichtung")]], s.up || "north")}</div>` : "") +
+      (s.mode === "earth" ? `<div class="tempo-row"><span>${tr("Richtung")}</span>${seg([["in", tr("All → Straße")], ["out", tr("Straße → All")]], s.dir || "in")}</div>` : "") +
       (s.mode === "still" ? `<button type="button" class="btn ghost full" data-a="cap">${tr("Aktuelle Kartenansicht übernehmen")}</button>` : "") +
       (s.mode !== "overview" && s.mode !== "still" ? rng("zoom", "Zoom", 2, 16, 0.1, s.zoom == null ? num("zoom") : s.zoom) : "") +
       rng("pitch", "Neigung", 0, 80, 1, s.pitch || 0) +
       (s.mode !== "tripod" ? rng("bearing", s.mode === "orbit" ? "Startwinkel" : "Drehung", -180, 180, 1, s.bearing || 0) : "") +
       (s.mode === "follow" ? rng("look", "Vorausschau (s)", 0, 3, 0.1, s.look || 0) : "") +
       (s.mode === "orbit" ? rng("turns", "Umdrehungen", 0.1, 2, 0.05, s.turns || 0.5) : "") +
+      (s.mode === "earth" ? rng("spin", "Drehung beim Zoom (°)", -180, 180, 5, s.spin == null ? 50 : s.spin) + rng("swing", "Globus dreht ein (°)", 0, 120, 5, s.swing == null ? 35 : s.swing) : "") +
       (["follow", "tripod", "orbit"].includes(s.mode) ? `<div class="setting"><label>${tr("Lange Etappen: rauszoomen")}</label><input type="checkbox" data-k="auto" ${s.auto !== false ? "checked" : ""}></div>` : "") +
       `<button type="button" class="btn ghost full" data-a="add">＋ ${tr("Neuer Abschnitt am Playhead")}</button>`;
     el.querySelectorAll(".modes button").forEach(b => b.addEventListener("click", () => {
       s.mode = b.dataset.mode; if (s.mode === "still" && !s.center) captureView(s); changed(); }));
-    el.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { s.up = b.dataset.v; changed(); }));
+    el.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { if (s.mode === "earth") s.dir = b.dataset.v; else s.up = b.dataset.v; changed(); }));
     el.querySelectorAll("input[type=range]").forEach(r => r.addEventListener("input", () => {
       s[r.dataset.k] = parseFloat(r.value); r.nextElementSibling.textContent = r.value;
       r.style.setProperty("--p", (r.value - r.min) / (r.max - r.min) * 100 + "%");
@@ -419,6 +441,12 @@ const CAM = (() => {
     { id: "s_bike", name: "Rad-Etappe", sub: "Radreise · schräg hinter dem Rad, Höhenprofil unten, Mini-Globus oben – für jede Tagesetappe", icon: "🚲",
       look: "pastellvlog", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, profOn: true, mmOn: true, mmStyle: "globus" },
       shots: () => [F({ t: 0, mode: "overview", pitch: 30, zoomAdj: -0.2 }), F({ t: 1.2, zoom: 12.5, pitch: 55, up: "target", look: 0.15 })], tempo: { len: 12, feel: "normal" } },
+    { id: "s_earthin", name: "Erdzoom rein", sub: "Google-Earth-Stil · 5 s: Globus dreht sich ein, Sturz durch die Wolken bis auf Straßenhöhe, dann startet die Etappe", icon: "🛰️",
+      look: "earthsat", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, introHold: 5, outroHold: 0 },
+      shots: () => [F({ t: 0, mode: "earth", dir: "in", zoom: 13, pitch: 50, spin: 60, swing: 40 }), F({ t: 5, zoom: 13, pitch: 50, up: "target", auto: false })], tempo: { len: 15, feel: "normal" } },
+    { id: "s_earthout", name: "Erdzoom raus", sub: "Google-Earth-Stil · Etappe endet, Kamera steigt in einem Zug bis ins All – zeigt, wie weit weg man ist", icon: "🚀",
+      look: "earthsat", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, introHold: 0, outroHold: 5 },
+      shots: T => [F({ t: 0, zoom: 13, pitch: 50, up: "target", auto: false }), F({ t: Math.max(T - 5, 1), mode: "earth", dir: "out", zoom: 13, pitch: 50, spin: -60, swing: 40 })], tempo: { len: 15, feel: "normal" } },
     { id: "s_globe", name: "Globus-Flug", sub: "THE RACE · 9 s: Crash-Zoom rein → Bogen zeichnet sich → Zielring → Crash-Zoom ins Ziel", icon: "🌍",
       look: "raceglobe", set: { legFocus: "last", fxClouds: false, whipIn: true, whipOut: true, whipDir: "zoom" },
       shots: () => [F({ t: 0, mode: "overview", pitch: 46, bearing: -14, zoomAdj: -0.7, drift: 2.4, zoomDrift: 0.07, pitchDrift: 0.6 })], tempo: { len: 9, feel: "gemuetlich" },
@@ -440,6 +468,7 @@ const CAM = (() => {
     if (playing) pause();
     const look = MA_TEMPLATES.list.find(x => x.id === sh.look);
     if (look) await MA_TEMPLATES.applyTemplate(look);
+    for (const k of ["introHold", "outroHold"]) if (!(sh.set && k in sh.set)) $(k).value = 0;   // Halten nur, wenn der Shot es will
     for (const [k, v] of Object.entries(sh.set || {})){ const el = $(k); if (!el) continue; if (el.type === "checkbox") el.checked = !!v; else el.value = v; }
     if (sh.set && sh.set.resolution) $("resolution").dispatchEvent(new Event("change"));
     if (sh.set && "dtLabels" in sh.set) { swapStyle(); await styleBusy; }
@@ -506,6 +535,7 @@ const CAM = (() => {
     grid.appendChild(b);
   });
 
+  Object.assign(EN, { "Erdzoom": "Earth zoom", "Richtung": "Direction", "All → Straße": "Space → street", "Straße → All": "Street → space", "Drehung beim Zoom (°)": "Spin while zooming (°)", "Globus dreht ein (°)": "Globe swings in (°)", "Start halten (s)": "Hold start (s)", "Ende halten (s)": "Hold end (s)" });
   Object.assign(EN, { "Folgen": "Follow", "Still": "Still", "Übersicht": "Overview", "Stativ": "Tripod", "Orbit": "Orbit",
     "Kamera": "Camera", "Shot": "Shot", "Abschnitt": "Shot", "Oben": "Up", "Norden": "North", "Ziel": "Destination", "Fahrtrichtung": "Direction of travel",
     "Aktuelle Kartenansicht übernehmen": "Use current map view", "Neigung": "Tilt", "Drehung": "Rotation", "Startwinkel": "Start angle",
