@@ -139,6 +139,7 @@
         <div class="card">
           <h2>Karten-Stil</h2>
           <div id="themeGrid" class="themegrid"></div>
+          <div class="setting" style="margin-top:10px"><label>Globus-Ansicht</label><input type="checkbox" id="projGlobe"></div>
           <div class="setting sr-only-setting"><label>Karten-Stil</label>
             <select id="mapStyle">
               <option value="hell" selected>Vlog Hell (Creme)</option>
@@ -146,6 +147,8 @@
               <option value="atlas">Atlas (Vlog-Weltkarte)</option>
               <option value="dunkel">Race Dunkel</option>
               <option value="satellit">Satellit</option>
+              <option value="pastell">Pastell-Topo</option>
+              <option value="nacht">Nacht-GPS</option>
               <option value="vintage">Abenteuer (Vintage)</option>
               <option value="minimal">Minimal Flach</option>
             </select>
@@ -172,6 +175,7 @@
               <option value="photo">Foto-Pin (weiß)</option>
               <option value="badge" selected>Foto-Badge + Name</option>
               <option value="dot">Farbpunkt</option>
+              <option value="tag">Etikett (Ortsname)</option>
             </select>
           </div>
           <div class="setting"><label>Linienspitze</label>
@@ -256,7 +260,7 @@
           <div class="setting"><label>Whip-Pan am Anfang</label><input type="checkbox" id="whipIn"></div>
           <div class="setting"><label>Whip-Pan am Ende</label><input type="checkbox" id="whipOut"></div>
           <div class="setting"><label>Schwenkrichtung</label>
-            <select id="whipDir"><option value="right" selected>nach rechts</option><option value="left">nach links</option><option value="up">nach oben</option><option value="down">nach unten</option></select>
+            <select id="whipDir"><option value="right" selected>nach rechts</option><option value="left">nach links</option><option value="up">nach oben</option><option value="down">nach unten</option><option value="zoom">Crash-Zoom (rein/raus)</option></select>
           </div>
           <div class="hint">Schneller Schwenk mit Bewegungsunschärfe in den ersten/letzten 0,5 s – wie Ein- und Ausstieg in Reise-Vlogs. Im MP4 echt gerechnet; die WebM-Echtzeitaufnahme hat keine Unschärfe.</div>
         </div>

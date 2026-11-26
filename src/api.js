@@ -83,7 +83,7 @@
     const rs = P.routes || (P.route ? [P.route] : []);
     routes = [];
     rs.forEach((r, i) => {
-      const rt = newRoute(r.name || "Route " + (i + 1), r.color || PALETTE[i % PALETTE.length]);
+      const rt = newRoute(r.name || "Route " + (i + 1), r.color || (rs.length === 1 ? val("lineColor") : PALETTE[i % PALETTE.length]));
       rt.tipLabel = r.tipLabel || "";
       for (const s of r.stops || []){ const c = ll(s); if (!c) continue;
         rt.waypoints.push({ id: ++wpCounter, name: s.name || "", lat: c[1], lng: c[0], color: s.color || rt.color, mode: s.mode || "", speed: s.speed || 1, photo: null }); }

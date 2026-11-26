@@ -129,16 +129,18 @@ const CAM = (() => {
      off = Versatz in Bildbreiten (−: kommt von der Gegenseite, +: schwenkt raus), vel = Tempo (Bildbreiten/s) */
   const WHIP_D = 0.5, WHIP_DIST = 2.2;
   function whipState(t){
-    const T = timelineTotal(), d = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[val("whipDir")] || [1, 0];
+    const T = timelineTotal(), zoomMode = val("whipDir") === "zoom", d = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[val("whipDir")] || [1, 0];
     let off = 0, vel = 0;
     if (checked("whipIn") && t < WHIP_D){ const f = Math.max(t, 0) / WHIP_D; off = -Math.pow(1 - f, 3); vel = 3 * Math.pow(1 - f, 2) / WHIP_D; }
     else if (checked("whipOut") && t > T - WHIP_D){ const f = Math.min((t - (T - WHIP_D)) / WHIP_D, 1); off = Math.pow(f, 3); vel = 3 * f * f / WHIP_D; }
-    return { off: off * WHIP_DIST, vel: vel * WHIP_DIST, dx: d[0], dy: d[1] };
+    return { off: off * WHIP_DIST, vel: vel * WHIP_DIST, dx: d[0], dy: d[1], zoom: zoomMode };
   }
   function frameW(){ const [w, h] = val("resolution").split("x").map(Number); return w || 1920; }
   function applyWhip(cam, t){
     const w = whipState(t);
     if (!w.off) return cam;
+    // Crash-Zoom: am Anfang von weit draußen hineinstürzen, am Ende hineintauchen
+    if (w.zoom) return Object.assign({}, cam, { z: cam.z + (w.off < 0 ? w.off * 1.1 : w.off * 1.4) });
     const b = cam.b * Math.PI / 180, mpp = 1 / (512 * Math.pow(2, cam.z)), dist = w.off * frameW() * mpp;
     // Bildschirm-Richtung → Mercator (Karte um bearing gedreht)
     const mx = w.dx * Math.cos(b) - w.dy * Math.sin(b), my = w.dx * Math.sin(b) + w.dy * Math.cos(b);
@@ -152,6 +154,7 @@ const CAM = (() => {
     const px = whipBlurPx(t, 30);
     if (px < 1.5 || mp4Busy){ if (wrap.style.filter) wrap.style.filter = ""; return; }
     const w = whipState(t), sd = px / 3;
+    if (w.zoom){ wrap.style.filter = "blur(" + (px / 14).toFixed(1) + "px)"; return; }
     fe.setAttribute("stdDeviation", (Math.abs(w.dx) * sd).toFixed(1) + " " + (Math.abs(w.dy) * sd).toFixed(1));
     wrap.style.filter = "url(#whipBlur)";
   }
@@ -165,6 +168,15 @@ const CAM = (() => {
     if (tmpC.width !== W || tmpC.height !== H){ tmpC.width = W; tmpC.height = H; }
     const tg = tmpC.getContext("2d"); tg.clearRect(0, 0, W, H); tg.drawImage(g.canvas, 0, 0);
     const N = Math.min(24, Math.max(6, Math.round(px / 8)));
+    if (w.zoom){   // radiale Zoom-Unschärfe: skalierte Kopien um die Bildmitte
+      const amt = Math.min(px / W, 0.35);
+      for (let k = 0; k < N; k++){
+        const sc = 1 + amt * k / (N - 1);
+        g.globalAlpha = 1 / (k + 2);
+        g.drawImage(tmpC, W / 2 - W * sc / 2, H / 2 - H * sc / 2, W * sc, H * sc);
+      }
+      g.globalAlpha = 1; return;
+    }
     for (let k = 0; k < N; k++){
       const o = (k / (N - 1) - 0.5) * px;
       g.globalAlpha = 1 / (k + 2);
@@ -293,6 +305,13 @@ const CAM = (() => {
       shots: T => [F({ t: 0, zoom: 4.6 }), F({ t: Math.max(T - 1.8, 2), mode: "overview" })], tempo: { len: 30, feel: "rasant" }, whip: true },
     { id: "static", name: "Feste Karte", sub: "Indiana-Jones-Stil: ganze Route, Linie wächst", icon: "🗺️",
       shots: () => [F({ t: 0, mode: "overview" })], tempo: { len: 15, feel: "gemuetlich" } },
+    { id: "vloginsert", name: "Vlog-Einschub", sub: "Kara & Nate: kurz, leicht geneigt, folgt dem Avatar", icon: "🚐",
+      shots: () => [F({ t: 0, zoom: 7.2, pitch: 22 })], tempo: { len: 5, feel: "normal" } },
+    { id: "tracker", name: "Tracker-Reveal", sub: "THE RACE: nah am Team, dann raus bis alle sichtbar", icon: "📡",
+      shots: T => [F({ t: 0, zoom: 13, pitch: 0, auto: false }), F({ t: Math.max(T * 0.55, 1.2), mode: "overview" }), F({ t: Math.max(T * 0.85, 1.6), mode: "overview", zoomAdj: -2 })],
+      tempo: { len: 8, feel: "normal" } },
+    { id: "globeflight", name: "Globus-Flug", sub: "THE RACE: Crash-Zoom rein, Globus, Bogen zum Ziel", icon: "🌍",
+      shots: () => [F({ t: 0, mode: "overview", pitch: 30, bearing: -8, zoomAdj: -1.4 })], tempo: { len: 6, feel: "gemuetlich" }, whip: "zoomIn" },
     { id: "snap70", name: "Snap-Zooms", sub: "70-Sekunden-Wiki: Ruck + Drift", icon: "⚡", keyframes: "snap70", tempo: { len: 15, feel: "normal" } },
     { id: "tripod", name: "Stativ", sub: "Kamera steht, schwenkt mit", icon: "📷",
       shots: T => [0, 1, 2].map(k => F({ t: k * T / 3, mode: "tripod", zoom: 9, pitch: 55 })), tempo: { len: 0, feel: "gemuetlich" } },
@@ -304,7 +323,8 @@ const CAM = (() => {
   async function applyPreset(pr){
     if (playing) pause();
     tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
-    $("whipIn").checked = $("whipOut").checked = !!pr.whip;
+    $("whipIn").checked = !!pr.whip; $("whipOut").checked = pr.whip === true;
+    if (pr.whip === "zoomIn") $("whipDir").value = "zoom"; else if (pr.whip) $("whipDir").value = "right";
     if (!pr.keyframes) shots = pr.shots(timelineTotal());          // vorläufig: Zoom fürs Tempo
     if (pr.tempo) await MA_TEMPLATES.applyTempo(pr.tempo.len, pr.tempo.feel);
     if (pr.terrain && !$("terrain3d").checked){ $("terrain3d").checked = true; if (num("terrainEx") < 1.5) $("terrainEx").value = 1.5; applyTerrain(); }
@@ -336,7 +356,7 @@ const CAM = (() => {
     "Neuer Abschnitt am Playhead": "New shot at playhead", "Abschnitt löschen": "Delete shot", "Ansicht übernommen.": "View captured.",
     "Hier beginnt schon ein Abschnitt.": "A shot already starts here.",
     "Übergänge": "Transitions", "Whip-Pan am Anfang": "Whip pan at start", "Whip-Pan am Ende": "Whip pan at end", "Schwenkrichtung": "Pan direction",
-    "nach rechts": "right", "nach links": "left", "nach oben": "up", "nach unten": "down" });
+    "nach rechts": "right", "Crash-Zoom (rein/raus)": "Crash zoom (in/out)", "nach links": "left", "nach oben": "up", "nach unten": "down" });
 
   return {
     at, renderRow, renderEditor, applyPreset, presets: PRESETS, blurCanvas, whipBlurPx,

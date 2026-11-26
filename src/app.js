@@ -32,7 +32,7 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
+  "Kamera-Presets":"Camera presets","Etikett (Ortsname)":"Tag (place name)","Globus-Ansicht":"Globe view","Pastell-Topo":"Pastel topo","Nacht-GPS":"Night GPS","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
   "Fotos werden an ihren Aufnahmeort gesetzt (GPS aus dem Foto) und poppen als Polaroid auf, wenn die Linie vorbeikommt. Ohne GPS: zwischen zeitlich benachbarten Fotos oder per Klick. iPhone-Fotos (HEIC) vorher als JPEG exportieren, mit Ortsangabe.":"Photos are placed where they were taken (GPS from the photo) and pop up as instant prints when the line passes. Without GPS: between photos taken before/after, or by click. Export iPhone photos (HEIC) as JPEG with location first.",
   "Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.":"Your own labels on the map: pill, callout with a line to the point, marker with name, spaced title (“I T A L Y”). With pop, fade or typewriter animation and their own time window in the timeline.","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
   "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
@@ -196,6 +196,23 @@ const THEMES = {
     detail: { states: "#ffffff", road: "#ffffff", rail: "#dddddd", wood: "#ffffff", urban: "#ffffff", park: "#ffffff" },
     defaultLine: "#ffd23f", glowDefault: true
   },
+  pastell: {      // Reise-Vlog-Look (Kara & Nate): helle Topo-Karte, Relief, dünne dunkle Linie
+    bg: "#ece9e3", water: "#bcd5e6", ice: "#f8f8f6", iceOp: 0.9,
+    hills: { shadow: "#a9a196", highlight: "#ffffff", accent: "#d9d2c7", ex: 0.55 },
+    boundary: { color: "#c4bcb1", width: 0.8, dash: null, opacity: 0.7 },
+    country: { color: "#5b5f66", halo: "#ece9e3", upper: false, spacing: 0.05 },
+    city: { color: "#6b6f76", halo: "#ece9e3" },
+    detail: { states: "#cfc7bc", road: "#ffffff", rail: "#bdb5aa", wood: "#dfe3d3", urban: "#e3ded6", park: "#dbe3cf" },
+    defaultLine: "#2b2d31", glowDefault: false
+  },
+  nacht: {        // The-Race-Look: dunkler Stadtplan mit allen Straßen, Neon-Linien
+    bg: "#131519", water: "#1c2531", ice: null, hills: null, streets: true,
+    boundary: { color: "#3a3f48", width: 1, dash: null },
+    country: { color: "#8b919c", halo: "#131519", upper: true, spacing: 0.3 },
+    city: { color: "#7d838e", halo: "#131519" },
+    detail: { states: "#2c3038", road: "#2e333b", rail: "#262a31", wood: "#171b1f", urban: "#181b20", park: "#16201a" },
+    defaultLine: "#3fa9ff", glowDefault: true
+  },
   vintage: {
     bg: "#e9dcbc", water: "#a9c3c1", ice: "#f3ecd8", iceOp: 0.8,
     hills: { shadow: "#9c8a6a", highlight: "#fff8e6", accent: "#d8c8a2", ex: 0.45 },
@@ -303,6 +320,10 @@ function buildBaseStyle(name){
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": t.detail.road, "line-opacity": t.raster ? 0.5 : 1,
              "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.4, 9, 1.6, 13, 4] } });
+  if (t.streets) style.layers.push({ id: "streets", type: "line", source: "omt", "source-layer": "transportation",
+    minzoom: 9, filter: ["!", ["in", ["get", "class"], ["literal", ["rail", "transit", "ferry", "path"]]]],
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": t.detail.road, "line-width": ["interpolate", ["exponential", 1.4], ["zoom"], 9, 0.3, 12, 1, 16, 5] } });
   if (dt("dtRail")) style.layers.push({ id: "dt-rail", type: "line", source: "omt", "source-layer": "transportation",
     filter: ["==", ["get", "class"], "rail"],
     paint: { "line-color": t.detail.rail, "line-opacity": t.raster ? 0.6 : 1,
@@ -319,6 +340,10 @@ function buildBaseStyle(name){
     filter: ["all", ["has", "admin_level"], ["<=", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]],
     paint: bPaint });
 
+  if (dt("projGlobe")){
+    style.projection = { type: "globe" };
+    style.sky = { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] };
+  }
   const noLabels = document.getElementById("dtLabels") && !document.getElementById("dtLabels").checked;
   if (noLabels) style.layers = style.layers.filter(l => l.type !== "symbol");
   if (!noLabels) style.layers.push({ id: "place-city", type: "symbol", source: "omt", "source-layer": "place",
@@ -610,7 +635,28 @@ async function buildPinImage(wp, styleOverride){
   const ctx = c.getContext("2d");
   const name = "pin-" + wp.id + "-" + pinStyle + "-" + val("pinFont") + "-" + (wp.color || "").replace("#", "");
 
-  if (pinStyle === "marker"){
+  if (pinStyle === "tag"){
+    // Orts-Etikett: kleiner Chip mit Namen + Punkt am Ort (hell auf hellen, dunkel auf dunklen Karten)
+    const th = THEMES[val("mapStyle")] || {};
+    const dark = th.raster || /^#(0|1|2)/.test(th.bg || "");
+    const label = wp.name || "";
+    ctx.font = "700 30px " + fontStack;
+    const tw = Math.min(ctx.measureText(label).width, 420), W = Math.max(60, tw + 40), H = 92;
+    c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.font = "700 30px " + fontStack;
+    g.save(); g.shadowColor = "rgba(0,0,0,.3)"; g.shadowBlur = 8; g.shadowOffsetY = 2;
+    g.fillStyle = dark ? "#0d0e10" : "#ffffff";
+    roundRect(g, 0, 4, W, 48, 10); g.fill();
+    g.beginPath(); g.moveTo(W / 2 - 9, 50); g.lineTo(W / 2 + 9, 50); g.lineTo(W / 2, 62); g.closePath(); g.fill();
+    g.restore();
+    g.fillStyle = dark ? "#ffffff" : "#1b1d21"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(label, W / 2, 29, 420);
+    g.fillStyle = wp.color; g.strokeStyle = "#ffffff"; g.lineWidth = 4;
+    g.beginPath(); g.arc(W / 2, 78, 10, 0, Math.PI * 2); g.fill(); g.stroke();
+    // Anker unten: Punkt-Mitte liegt 14 px über der Unterkante → per Polsterung ausgleichen
+  }
+  else if (pinStyle === "marker"){
     // klassischer Karten-Marker (Tropfen) in Stoppfarbe mit weißem Punkt
     c.width = 100; c.height = 132; ctx.scale(100 / 72, 132 / 96);
     const cx = 36, cy = 34, r = 26;
@@ -801,7 +847,7 @@ async function updateTipPin(){
       rt._tipIcon = await makeTipPinFor(rt);
     }
   }
-  if (ts === "mode") for (const rt of routes) for (const k of Object.keys(MODES)) await makeModeIcon(rt, k);
+  if (ts === "mode" || (ts === "model3d" && dt("projGlobe"))) for (const rt of routes) for (const k of Object.keys(MODES)) await makeModeIcon(rt, k);
   try {
     map.setLayoutProperty("tip-pin", "icon-anchor", ts === "mode" ? "center" : "bottom");
     map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" || ts === "mode" || ts === "avatar" ? [0, 0] : [0, -6]);
@@ -824,7 +870,7 @@ document.getElementById("tipPhoto").addEventListener("change", e => {
 });
 document.getElementById("tipLabel").addEventListener("change", () => { R().tipLabel = val("tipLabel"); updateTipPin(); });
 
-function labelFor(wp){ return val("pinStyle") === "badge" && wp.photo ? "" : wp.name; }
+function labelFor(wp){ const ps = val("pinStyle"); return (ps === "badge" && wp.photo) || ps === "tag" ? "" : wp.name; }
 
 /* ---------- Routen-UI ---------- */
 function renderRoutes(){
@@ -1266,7 +1312,7 @@ function readCustomColors(){
   document.getElementById(id).addEventListener("change", () => { readCustomColors(); rebuildStyle(); }));
 document.getElementById("ccReset").addEventListener("click", () => { customColors = null; rebuildStyle(); });
 document.getElementById("mtKey").addEventListener("change", rebuildStyle);
-["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns", "dtLabels"].forEach(id =>
+["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns", "dtLabels", "projGlobe"].forEach(id =>
   document.getElementById(id).addEventListener("change", rebuildStyle));
 /* Stil wechseln: Terrain vorher aus (sonst rendert MapLibre Terrain ohne DEM-Quelle),
    Laufzeit-Ebenen neu anlegen, neu zeichnen. styleBusy = Promise bis alles fertig ist. */
@@ -1694,7 +1740,7 @@ function renderAt(t, live){
     const lg = legAt(p, tipIdx);
     if (p === activeP) activeLeg = lg;
     if (tipStyle !== "none" && t < total - 0.01 && !done){
-      if (tipStyle === "model3d"){
+      if (tipStyle === "model3d" && !dt("projGlobe")){
         const span = Math.max(lg.to - lg.from, 1e-6);
         // Luftfahrzeuge mit 3D-Terrain: ruhige Flughöhe über dem höchsten Punkt der Umgebung
         let groundM = null;
@@ -1710,7 +1756,7 @@ function renderAt(t, live){
                       prog: (tipIdx - lg.from) / span, px: 64 * sampleNum(tracks.tipScale, t, num("tipScale")) });
       } else
         tipFeats.push({ type: "Feature",
-          properties: { color: p.rt.color, icon: tipStyle === "mode" ? "tipmode-" + lg.mode + "-" + p.rt.id : (p.rt._tipIcon || "") },
+          properties: { color: p.rt.color, icon: tipStyle === "mode" || tipStyle === "model3d" ? "tipmode-" + lg.mode + "-" + p.rt.id : (p.rt._tipIcon || "") },
           geometry: { type: "Point", coordinates: tip } });
     }
   }
@@ -1721,7 +1767,7 @@ function renderAt(t, live){
   map.setPaintProperty("tip-dot", "circle-opacity", dotOn ? 1 : 0);
   map.setPaintProperty("tip-dot", "circle-stroke-opacity", dotOn ? 1 : 0);
   if (map.getLayer("tip-pin"))
-    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop" || tipStyle === "mode" || tipStyle === "avatar") && anyTip ? 1 : 0);
+    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop" || tipStyle === "mode" || tipStyle === "avatar" || tipStyle === "model3d") && anyTip ? 1 : 0);
   M3D.update(models, t);
 
   // Stopps (pro Route, beim Überfahren)
@@ -2462,7 +2508,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {
