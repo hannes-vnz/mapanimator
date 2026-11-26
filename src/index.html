@@ -298,6 +298,16 @@
           <div class="hint" id="markEmpty">Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.</div>
           <label class="btn ghost full filebtn adv">GeoJSON importieren<input id="markGeojson" type="file" accept=".json,.geojson" hidden></label>
         </div>
+        <div class="card">
+          <h2>Labels</h2>
+          <div class="btnrow">
+            <button class="btn ghost" id="labelPick">📍 Label setzen</button>
+            <button class="btn ghost" id="labelMarks">🏷️ Namen der Markierungen</button>
+            <button class="btn ghost" id="labelDist">📏 Distanzen</button>
+          </div>
+          <div id="labelList"></div>
+          <div class="hint" id="labelEmpty">Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.</div>
+        </div>
         <div hidden>        <div>
           <h2>Länder hervorheben</h2>
           <div class="setting"><label>Länder (ISO3)</label><input type="text" id="hlIso" placeholder="DEU, AUT" autocapitalize="characters" autocomplete="off"></div>
@@ -403,6 +413,7 @@
 <script src="templates.js"></script>
 <script src="camera.js"></script>
 <script src="marks.js"></script>
+<script src="labels.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

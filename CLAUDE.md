@@ -14,6 +14,7 @@ Sprache im Tool und in der Kommunikation: Deutsch.
   - `src/models3d.js`: 3D-Modelle an der Spitze (`M3D`, eigene WebGL-Custom-Layer `tip-3d`, prozedurale Low-Poly-Meshes je Verkehrsmittel, Schatten, Flugzeug steigt/landet).
   - `src/camera.js`: Kamera-Abschnitte (`CAM`, Modi follow/still/overview/tripod/orbit, Norden/Fahrtrichtung oben, Vorausschau, Auto-Rauszoomen, Überblendung) + Kamera-Presets. Kamera ist reine Funktion der Zeit (`CAM.at(t)`); Keyframes auf pos/zoom/bearing/pitch haben Vorrang.
   - `src/marks.js`: Markierungen (`MARKS`, je Markierung eigene Quellen/Ebenen `mk<id>-*`: Füllung, Kontur mit `line-gradient` zum Nachzeichnen, Glühen, Schatten, Puls, Fokus-Maske, `fill-extrusion`), Suche/Land-Klick/„Länder der Route“ (Natural Earth 50m), Balken in der Timeline. Alte `hlIso`/Features werden beim Laden umgewandelt.
+  - `src/labels.js`: Labels (`LABELS`, aufs Overlay `#ovl` gezeichnet → automatisch im MP4; Stile pill/callout/marker/spaced/plain, Animationen pop/fade/type, Balken in der Timeline; Namen aus Markierungen, Distanz-Labels je Etappe).
   - `src/templates.js`: Looks (`TEMPLATES`, nur Aussehen) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
   - `src/ui.js`: Oberfläche (Einfach/Profi-Modus über `body.pro`, `.adv` = nur Profi), (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
   - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
@@ -77,7 +78,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - Fläche einfärben, Kontur zeichnet sich animiert (Strich „draw-on“), Innenglühen/Schatten, optional 3D-Extrusion.
    - Effekte: einblenden, pulsieren/blinken, Kontur nachzeichnen, Fokus (Rest der Karte abdunkeln).
    - Als Objekte mit Balken in der Timeline (Item-Timeline wie GeoLayers, keine Keyframes nötig).
-6. **Labels im Spezifischen:**
+6. **Labels im Spezifischen:** – erledigt (`labels.js`, Tab Ebenen). Offen: Icon-/Bild-Marker, Labels per Drag auf der Karte verschieben.
    - Eigene Labels an Punkt, Fläche oder Etappe: Stile Pille, Callout mit Linie zum Punkt (Leader-Line), Kreis-Marker + Name, gesperrter Großtext, Icon-/Bild-Marker.
    - Automatische Labels für markierte Länder/Städte, Distanz-Label an Etappen („412 km“).
    - Schrift, Größe, Farbe, Hintergrund, Kontur; Animationen Pop, Fade, Schreibmaschine; Zeitfenster in der Timeline.

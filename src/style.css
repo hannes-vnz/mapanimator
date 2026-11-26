@@ -308,7 +308,15 @@ body:not(.pro) #tlBody{height:auto;}
 .fxrow button.on{border-color:var(--accent); color:var(--text); background:var(--accent-soft);}
 .fxrow button.on em{filter:none; opacity:1;}
 .medit{margin-top:9px; padding-top:8px; border-top:1px solid var(--line);}
-#markPick.on{border-color:var(--accent); background:var(--accent-soft);}
+#labelList{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+.ltext{flex:1; min-width:0; height:28px; border:1px solid var(--line); border-radius:7px; background:var(--field); color:var(--text); padding:0 8px; font-weight:650;}
+.lstyles{grid-template-columns:repeat(5,1fr);}
+.lstyles button{font-size:10px; padding:6px 2px; color:#b6b8c0;}
+.lbar{background:color-mix(in srgb, var(--c) 22%, #1b1d24); border-style:dashed;}
+#tlLabels{flex:none; max-height:96px; overflow-y:auto;}
+body:not(.pro) #tlLabels .shlabel{display:none;}
+body:not(.pro) #tlLabels{margin:2px 12px 0;}
+#labelPick.on, #markPick.on{border-color:var(--accent); background:var(--accent-soft);}
 #tlMarks{flex:none; max-height:96px; overflow-y:auto;}
 .mrow{display:flex; height:22px; border-bottom:1px solid #222329;}
 .mrow .shlabel{width:104px; min-width:104px; display:flex; align-items:center; gap:5px; padding-left:12px; font-size:10.5px; color:var(--muted); border-right:1px solid var(--line); background:var(--panel); overflow:hidden; white-space:nowrap;}

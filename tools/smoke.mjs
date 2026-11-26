@@ -109,6 +109,17 @@ try {
     if (!map.getLayer("mk1-fill") || document.querySelectorAll(".mbar").length !== L.length) throw new Error("Ebenen/Balken fehlen");
     return L.map(m => m.name).join(", ");
   }));
+  await step("Labels (alle Stile) + Speichern/Laden", () => page.evaluate(async () => {
+    LABELS.fromMarks(); await LABELS.distances();
+    for (const st of ["pill", "callout", "marker", "spaced", "plain"]) LABELS.add("Test " + st, [12, 47], { style: st, t0: 0, anim: st === "plain" ? "type" : "pop" });
+    setPlayhead(timelineTotal() * 0.8, true);
+    const c = document.getElementById("ovl"), d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    let n = 0; for (let i = 3; i < d.length; i += 400) if (d[i] > 0) n++;
+    if (!n) throw new Error("Overlay leer");
+    const saved = LABELS.get(); LABELS.set(saved);
+    if (LABELS.list().length !== saved.length) throw new Error("Laden verliert Labels");
+    return saved.length + " Labels";
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     const a = CAM.at(0.05).c, b = CAM.at(0.6).c;

@@ -32,7 +32,8 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
+  "Kamera-Presets":"Camera presets",
+  "Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.":"Your own labels on the map: pill, callout with a line to the point, marker with name, spaced title (“I T A L Y”). With pop, fade or typewriter animation and their own time window in the timeline.","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
   "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
   "Ein Look setzt nur das Aussehen: Kartenstil, Linie, Spitze, Pins. Kamera und Tempo stellst du im Tab Kamera ein.":"A look only sets the appearance: map style, line, tip, pins. Set camera and pace in the Camera tab.",
   "Jeder Abschnitt gilt bis zum nächsten; Übergänge werden weich überblendet. Blöcke in der Timeline anklicken oder an der Kante ziehen.":"Each shot lasts until the next; transitions blend smoothly. Click blocks in the timeline or drag their edge.","Größe Spitze / 3D-Modell":"Tip / 3D model size","Look":"Look","Gefühl":"Feel","Profi":"Pro",
@@ -2218,7 +2219,7 @@ document.getElementById("mp4Btn").addEventListener("click", async () => {
       g.drawImage(map.getCanvas(), 0, 0, W, H);
     }
     if (typeof CAM !== "undefined") CAM.blurCanvas(g, W, H, t, fps);
-    if (checked("ovOn")) g.drawImage(document.getElementById("ovl"), 0, 0, W, H);
+    g.drawImage(document.getElementById("ovl"), 0, 0, W, H);   // Zähler + Labels
     if (wantPos){
       const o = {};
       a.stopsData.features.forEach((f, k) => { const p = map.project(f.geometry.coordinates);
@@ -2341,7 +2342,8 @@ document.getElementById("projSave").addEventListener("click", () => {
     customColors,
     tracks,
     cam: typeof CAM !== "undefined" ? CAM.get() : null,
-    marks: typeof MARKS !== "undefined" ? MARKS.get() : []
+    marks: typeof MARKS !== "undefined" ? MARKS.get() : [],
+    labels: typeof LABELS !== "undefined" ? LABELS.get() : []
   };
   const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
   const a = document.createElement("a");
@@ -2367,6 +2369,7 @@ document.getElementById("projLoad").addEventListener("change", e => {
       ensureTrackKeys();
       if (typeof CAM !== "undefined") CAM.set(proj.cam);
       if (typeof MARKS !== "undefined") MARKS.set(proj.marks || []);
+      if (typeof LABELS !== "undefined") LABELS.set(proj.labels || []);
       customColors = proj.customColors || null;
       pois = proj.pois || [];
       features = [];
