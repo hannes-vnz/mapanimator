@@ -18,6 +18,7 @@ Sprache im Tool und in der Kommunikation: Deutsch.
   - `src/signs.js`: Schilder & Fotokarten (`SIGNS`; Polaroid an Schnur, Typen pin/tent/hotel/flag/star/view, Anzeige pass/passHide/always/window, EXIF-GPS-Parser, „Hier anhalten“ → `pausesFor()` teilt Etappen in `prepareAnim`).
   - Stopp-Pins ohne Foto werden automatisch als Marker gezeichnet (`buildPinImage`, Stil `marker`).
   - `src/regions.js`: Regionslabels (`REGIONS`, Natural Earth 50m regions + marine, NAME_DE, Ebenen `rg-0…4` nach MIN_LABEL-Rang; wichtigste zuletzt = Vorrang).
+  - `src/scenes.js`: Szenen (`SCENES`; Leiste über der Karte; Zustand je Szene = `serializeProject()`, Laden über `loadProject()` → Event `ma:loaded`; Projekt-JSON v6 `{scenes:[{name,data}], active}`, alte Dateien = 1 Szene). MP4 „Alle Szenen in einem Video“.
   - `src/templates.js`: Looks (`TEMPLATES`, nur Aussehen) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
   - `src/ui.js`: Oberfläche (Einfach/Profi-Modus über `body.pro`, `.adv` = nur Profi), (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
   - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
@@ -34,7 +35,7 @@ Sprache im Tool und in der Kommunikation: Deutsch.
   - Kamera-Presets: `#camPreset`
   - Export: `#mp4Btn` (framegenau), `#recordBtn` (Echtzeit-WebM)
   - Overlay: `drawOverlay()` zeichnet in `#ovl` und wird beim Export aufs Video gelegt.
-- Projekt-Speichern: `SETTING_IDS`. Neue Einstellungen dort eintragen.
+- Projekt-Speichern: `SETTING_IDS`. Neue Einstellungen dort eintragen. Module, die nach dem Laden etwas synchronisieren müssen, hören auf `ma:loaded`.
 - Stilwechsel immer über `swapStyle()` (Terrain vorher aus, `diff:false`, `styleBusy`-Promise).
 
 ## Neu in dieser Runde (Claude, Chat)
@@ -91,7 +92,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - Größenregler.
 8. **Avatar an der Spitze:** – erledigt (Spitzen-Stil `avatar`, `makeAvatarIcon()`; Foto wählen schaltet automatisch auf Avatar; ohne Foto → Marker). rundes Foto mit weißem Ring und Pin. Foto-Spitze gibt es schon, Look angleichen.
 9. **Gesperrte Regionslabels** – erledigt (`regions.js`, Look-Tab; in den Looks Relief/Abenteuer/Vlog-Atlas/Erklär-Atlas an): („A L P E N“, „I R A N“) aus Natural Earth geography_regions (Gebirge, Wüsten, Meere).
-10. **Szenen:** mehrere Szenen pro Projekt, die nacheinander exportiert werden; Projekt als JSON-Datei.
+10. **Szenen:** – erledigt (`scenes.js`): mehrere Szenen pro Projekt, die nacheinander exportiert werden; Projekt als JSON-Datei.
 11. **Formate:** (erledigt: Buttons 9:16/4:5/1:1/16:9 und Safe-Zone in der Topbar)
    - 9:16, 4:5, 1:1, 16:9 als Buttons.
    - Safe-Zone-Overlay für Shorts/TikTok-UI (nur Vorschau).

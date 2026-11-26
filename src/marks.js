@@ -358,7 +358,7 @@ const MARKS = (() => {
       features = []; refreshFeatures(); renderFeatList();
     }
   }
-  $("projLoad").addEventListener("change", () => setTimeout(migrate, 900));
+  document.addEventListener("ma:loaded", migrate);
 
   Object.assign(EN, { "Markierungen": "Highlights", "Zeichnen": "Draw", "Glühen": "Glow", "Schatten": "Shadow", "Puls": "Pulse", "Fokus": "Focus",
     "Deckkraft": "Opacity", "Kontur": "Outline", "Start / Ende (s)": "Start / end (s)", "Ende": "end", "Start = Playhead": "Start = playhead",

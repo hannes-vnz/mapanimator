@@ -380,6 +380,7 @@
             <select id="expFps"><option value="30" selected>30 fps</option><option value="25">25 fps</option><option value="60">60 fps</option></select>
           </div>
           <div class="setting"><label>Bewegungsunschärfe</label><input type="checkbox" id="expBlur"></div>
+          <div class="setting" id="expAllScenesRow" hidden><label>Alle Szenen in einem Video</label><input type="checkbox" id="expAllScenes" checked></div>
           <div class="setting adv"><label>Stopp-Positionen (JSON)</label><input type="checkbox" id="expPos"></div>
           <button class="btn full big" id="mp4Btn">■ MP4 framegenau rendern</button>
           <div class="hint">Rendert Bild für Bild und wartet jedes Mal, bis alle Kacheln geladen sind: scharf, ohne Ruckler, auch in 4K. Dauert länger als Echtzeit.</div>
@@ -435,6 +436,7 @@
 <script src="labels.js"></script>
 <script src="signs.js"></script>
 <script src="regions.js"></script>
+<script src="scenes.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

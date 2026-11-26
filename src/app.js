@@ -799,9 +799,11 @@ async function updateTipPin(){
     }
   }
   if (ts === "mode") for (const rt of routes) for (const k of Object.keys(MODES)) await makeModeIcon(rt, k);
-  map.setLayoutProperty("tip-pin", "icon-anchor", ts === "mode" ? "center" : "bottom");
-  map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" || ts === "mode" || ts === "avatar" ? [0, 0] : [0, -6]);
-  map.setLayoutProperty("tip-pin", "icon-size", num("tipScale"));
+  try {
+    map.setLayoutProperty("tip-pin", "icon-anchor", ts === "mode" ? "center" : "bottom");
+    map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" || ts === "mode" || ts === "avatar" ? [0, 0] : [0, -6]);
+    map.setLayoutProperty("tip-pin", "icon-size", num("tipScale"));
+  } catch { /* Stil wird gerade getauscht – nächstes drawStatic setzt es */ }
 }
 document.getElementById("tipPhoto").addEventListener("change", e => {
   const file = e.target.files[0];
@@ -1483,11 +1485,12 @@ async function prepareAnim(){
   const per = [];
   const allStopsFeats = [];
   // 1. alle Routen bauen (für Übersichts-Zoom)
-  const built = [];
-  for (let ri = 0; ri < routes.length; ri++){
-    const r = await buildRouteFor(routes[ri]);
-    if (r && r.coords.length >= 2){ built.push({ ri, r }); routes[ri]._coords = r.coords; }
+  const built = [], rts = routes.slice();          // Schnappschuss: Szenenwechsel während await nicht stören lassen
+  for (let ri = 0; ri < rts.length; ri++){
+    const r = await buildRouteFor(rts[ri]);
+    if (r && r.coords.length >= 2){ built.push({ ri, r }); rts[ri]._coords = r.coords; }
   }
+  if (rts[0] !== routes[0]) return null;
   if (built.length){
     const oc = map.cameraForBounds(boundsOf(built.flatMap(b => b.r.coords)), { padding: 90 });
     anim0Zoom = oc ? oc.zoom : null;
@@ -1496,7 +1499,7 @@ async function prepareAnim(){
   const [EW, EH] = val("resolution").split("x").map(Number);
   const frameMin = Math.min(EW, EH) || 1080;
   for (const { ri, r } of built){
-    const rt = routes[ri];
+    const rt = rts[ri];
     const coords = r.coords;
     const cum = [0];
     for (let i = 1; i < coords.length; i++) cum.push(cum[i - 1] + haversine(coords[i - 1], coords[i]));
@@ -1794,6 +1797,7 @@ async function drawStatic(){
   invalidateAnim();
   applyStyleSettings();
   const a = await prepareAnim();
+  if (!map.getSource("tip") || !map.getSource("route") || !map.getSource("stops")) return;   // Stil wurde inzwischen getauscht
   if (/^Route „/.test(document.getElementById("status").textContent)) setStatus("");
   M3D.update([]);
   map.getSource("tip").setData(emptyFC());
@@ -2246,15 +2250,14 @@ let mp4Busy = false;
 document.getElementById("mp4Btn").addEventListener("click", async () => {
   if (playing || mp4Busy) return;
   if (!window.VideoEncoder || !window.Mp4Muxer){ setStatus("Dieser Browser kann kein MP4 kodieren (WebCodecs fehlt) – bitte aktuelles Chrome/Edge nutzen."); return; }
-  const a = await ensureAnim();
-  if (!a){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); return; }
+  const allScenes = typeof SCENES !== "undefined" && checked("expAllScenes") && SCENES.count() > 1;
+  const startScene = allScenes ? SCENES.active() : 0;
+  const sceneList = allScenes ? [...Array(SCENES.count()).keys()] : [null];
+  if (!(await ensureAnim()) && !allScenes){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); return; }
   mp4Busy = true;
   const [W, H] = val("resolution").split("x").map(Number);
-  const fps = parseInt(val("expFps")) || 30, total = timelineTotal(), n = Math.round(total * fps);
+  const fps = parseInt(val("expFps")) || 30;
   const pr = map.getPixelRatio();
-  applyStyleSettings();
-  sizeStage(W, H); map.setPixelRatio(1); map.resize();
-  await new Promise(r => setTimeout(r, 300));
   let codec = "avc1.640034";
   if (!(await VideoEncoder.isConfigSupported({ codec, width: W, height: H })).supported) codec = "avc1.4d0034";
   const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: "avc", width: W, height: H, frameRate: fps }, fastStart: "in-memory" });
@@ -2263,44 +2266,57 @@ document.getElementById("mp4Btn").addEventListener("click", async () => {
   enc.configure({ codec, width: W, height: H, bitrate: W * H > 4e6 ? 60e6 : 24e6, framerate: fps, latencyMode: "quality" });
   const out = document.createElement("canvas"); out.width = W; out.height = H; const g = out.getContext("2d");
   const pos = [], wantPos = checked("expPos"), t0 = performance.now();
-  popT = {}; camPos = null;
-  for (let i = 0; i < n && !err; i++){
-    const t = i / fps;
-    setPlayheadOnly(t);
-    if (checked("expBlur")){
-      // 6 Unterbilder über einen halben Frame (180°-Shutter) mitteln
-      const S = 6;
-      for (let k = 0; k < S; k++){
-        const tt = Math.max(0, t + (k / S - 0.25) / fps);
-        renderAt(tt, true); await waitIdle();
-        g.globalAlpha = 1 / (k + 1); g.drawImage(map.getCanvas(), 0, 0, W, H);
+  let fi = 0, skipped = 0;
+  for (const sc of sceneList){
+    if (err) break;
+    if (sc !== null){ await SCENES.switchTo(sc); }
+    const a = await ensureAnim();
+    if (!a){ skipped++; continue; }
+    applyStyleSettings();
+    sizeStage(W, H); map.setPixelRatio(1); map.resize();
+    await new Promise(r => setTimeout(r, 300));
+    const total = timelineTotal(), n = Math.round(total * fps);
+    popT = {}; camPos = null;
+    for (let i = 0; i < n && !err; i++, fi++){
+      const t = i / fps;
+      setPlayheadOnly(t);
+      if (checked("expBlur")){
+        // 6 Unterbilder über einen halben Frame (180°-Shutter) mitteln
+        const S = 6;
+        for (let k = 0; k < S; k++){
+          const tt = Math.max(0, t + (k / S - 0.25) / fps);
+          renderAt(tt, true); await waitIdle();
+          g.globalAlpha = 1 / (k + 1); g.drawImage(map.getCanvas(), 0, 0, W, H);
+        }
+        g.globalAlpha = 1; renderAt(t, false);
+      } else {
+        renderAt(t, true); await waitIdle();
+        g.drawImage(map.getCanvas(), 0, 0, W, H);
       }
-      g.globalAlpha = 1; renderAt(t, false);
-    } else {
-      renderAt(t, true); await waitIdle();
-      g.drawImage(map.getCanvas(), 0, 0, W, H);
+      if (typeof CAM !== "undefined") CAM.blurCanvas(g, W, H, t, fps);
+      g.drawImage(document.getElementById("ovl"), 0, 0, W, H);   // Zähler + Labels + Schilder
+      if (wantPos){
+        const o = {};
+        a.stopsData.features.forEach((f, k) => { const p = map.project(f.geometry.coordinates);
+          o[(f.properties.label || f.properties.name || "stopp") + "#" + k] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; });
+        pos.push(o);
+      }
+      const vf = new VideoFrame(out, { timestamp: Math.round(fi * 1e6 / fps), duration: Math.round(1e6 / fps) });
+      enc.encode(vf, { keyFrame: fi % (fps * 2) === 0 || i === 0 }); vf.close();
+      while (enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 5));
+      if (i % 10 === 0) setStatus("■ " + (sc !== null ? tr("Szene") + " " + (sc + 1) + "/" + sceneList.length + " · " : "") + "Frame " + (i + 1) + " / " + n + " …", true);
     }
-    if (typeof CAM !== "undefined") CAM.blurCanvas(g, W, H, t, fps);
-    g.drawImage(document.getElementById("ovl"), 0, 0, W, H);   // Zähler + Labels
-    if (wantPos){
-      const o = {};
-      a.stopsData.features.forEach((f, k) => { const p = map.project(f.geometry.coordinates);
-        o[(f.properties.label || f.properties.name || "stopp") + "#" + k] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; });
-      pos.push(o);
-    }
-    const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
-    enc.encode(vf, { keyFrame: i % (fps * 2) === 0 }); vf.close();
-    while (enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 5));
-    if (i % 10 === 0) setStatus("■ Rendere Frame " + (i + 1) + " / " + n + " …", true);
   }
   await enc.flush(); muxer.finalize();
   const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
-  dl(blob, "map-animation.mp4");
-  if (wantPos) setTimeout(() => dl(new Blob([JSON.stringify({ fps, w: W, h: H, pos })], { type: "application/json" }), "map-animation_punkte.json"), 800);
+  if (fi) dl(blob, "map-animation.mp4");
+  if (wantPos && fi) setTimeout(() => dl(new Blob([JSON.stringify({ fps, w: W, h: H, pos })], { type: "application/json" }), "map-animation_punkte.json"), 800);
+  if (allScenes) await SCENES.switchTo(startScene);
   map.setPixelRatio(pr); sizeStage(null);
   mp4Busy = false;
   setStatus(err ? "Fehler beim Kodieren: " + err.message
-    : "MP4 gespeichert: " + n + " Frames, " + ((performance.now() - t0) / 1000).toFixed(0) + " s Renderzeit, " + (blob.size / 1e6).toFixed(1) + " MB.");
+    : !fi ? tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")
+    : "MP4 gespeichert: " + fi + " Frames" + (allScenes ? ", " + (sceneList.length - skipped) + " " + tr("Szenen") : "") + ", " + ((performance.now() - t0) / 1000).toFixed(0) + " s Renderzeit, " + (blob.size / 1e6).toFixed(1) + " MB.");
 });
 document.getElementById("recordBtn").addEventListener("click", async () => {
   if (playing) return;
@@ -2387,8 +2403,8 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
   "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
-document.getElementById("projSave").addEventListener("click", () => {
-  const proj = {
+function serializeProject(){
+  return {
     version: 5,
     settings: Object.fromEntries(SETTING_IDS.map(id => {
       const el = document.getElementById(id);
@@ -2408,14 +2424,78 @@ document.getElementById("projSave").addEventListener("click", () => {
     labels: typeof LABELS !== "undefined" ? LABELS.get() : [],
     signs: typeof SIGNS !== "undefined" ? SIGNS.get() : []
   };
-  const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
+}
+function downloadJSON(obj, name){
+  const blob = new Blob([JSON.stringify(obj)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "kartenprojekt.json";
+  a.download = name;
   a.click();
+}
+document.getElementById("projSave").addEventListener("click", () => {
+  downloadJSON(typeof SCENES !== "undefined" ? SCENES.serializeAll() : serializeProject(), "kartenprojekt.json");
   setStatus(tr("Projekt gespeichert."));
 });
 
+/* Projekt-/Szenenzustand laden (Einstellungen, Routen, Kamera, Ebenen) – feuert danach „ma:loaded“ */
+async function loadProject(proj){
+  if (typeof MA_TEMPLATES !== "undefined") await MA_TEMPLATES.idle();   // laufendes Neuzeichnen abwarten
+  for (const [id, v] of Object.entries(proj.settings || {})){
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (el.type === "checkbox") el.checked = v; else el.value = v;
+  }
+  tracks = proj.tracks || {};
+  ensureTrackKeys();
+  if (typeof CAM !== "undefined") CAM.set(proj.cam);
+  if (typeof MARKS !== "undefined") MARKS.set(proj.marks || []);
+  if (typeof LABELS !== "undefined") LABELS.set(proj.labels || []);
+  if (typeof SIGNS !== "undefined") await SIGNS.set(proj.signs || []);
+  customColors = proj.customColors || null;
+  pois = proj.pois || [];
+  features = [];
+  featCounter = 0;
+  for (const ft of (proj.features || []))
+    features.push({ id: ++featCounter, name: ft.name, geometry: ft.geometry, color: ft.color, appearT: ft.appearT ?? null, op: 1 });
+  const loadImg = src => new Promise(res => {
+    if (!src) return res(null);
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => res(null);
+    img.src = src;
+  });
+  routes = [];
+  routeCounter = 0;
+  wpCounter = 0;
+  const srcRoutes = proj.routes ||
+    [{ name: "Route 1", color: PALETTE[0], tipLabel: "", gpx: proj.gpxTrack || null,
+       tipPhoto: proj.tipPhoto || null, waypoints: proj.waypoints || [] }];
+  for (const pr of srcRoutes){
+    const rt = newRoute(pr.name || "Route", pr.color || PALETTE[0]);
+    rt.tipLabel = pr.tipLabel || "";
+    rt.gpx = pr.gpx || null;
+    rt.tipPhoto = await loadImg(pr.tipPhoto);
+    for (const w of (pr.waypoints || [])){
+      const photo = await loadImg(w.photo);
+      rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, mode: w.mode || "", speed: w.speed || 1, photo });
+    }
+    routes.push(rt);
+  }
+  if (!routes.length) routes.push(newRoute("Route 1", PALETTE[0]));
+  activeRoute = 0;
+  prevStyle = val("mapStyle");
+  // Stil neu aufbauen und alles zeichnen
+  if (playing) pause();
+  playheadT = 0; popT = {};
+  await swapStyle(async () => {
+    syncRouteInputs();
+    renderRoutes();
+    renderWpList();
+    renderFeatList();
+  });
+  applyLang();
+  document.dispatchEvent(new Event("ma:loaded"));
+}
 document.getElementById("projLoad").addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -2423,61 +2503,14 @@ document.getElementById("projLoad").addEventListener("change", e => {
   reader.onload = async () => {
     try {
       const proj = JSON.parse(reader.result);
-      for (const [id, v] of Object.entries(proj.settings || {})){
-        const el = document.getElementById(id);
-        if (!el) continue;
-        if (el.type === "checkbox") el.checked = v; else el.value = v;
-      }
-      tracks = proj.tracks || {};
-      ensureTrackKeys();
-      if (typeof CAM !== "undefined") CAM.set(proj.cam);
-      if (typeof MARKS !== "undefined") MARKS.set(proj.marks || []);
-      if (typeof LABELS !== "undefined") LABELS.set(proj.labels || []);
-      if (typeof SIGNS !== "undefined") SIGNS.set(proj.signs || []);
-      customColors = proj.customColors || null;
-      pois = proj.pois || [];
-      features = [];
-      featCounter = 0;
-      for (const ft of (proj.features || []))
-        features.push({ id: ++featCounter, name: ft.name, geometry: ft.geometry, color: ft.color, appearT: ft.appearT ?? null, op: 1 });
-      const loadImg = src => new Promise(res => {
-        if (!src) return res(null);
-        const img = new Image();
-        img.onload = () => res(img);
-        img.onerror = () => res(null);
-        img.src = src;
-      });
-      routes = [];
-      routeCounter = 0;
-      wpCounter = 0;
-      const srcRoutes = proj.routes ||
-        [{ name: "Route 1", color: PALETTE[0], tipLabel: "", gpx: proj.gpxTrack || null,
-           tipPhoto: proj.tipPhoto || null, waypoints: proj.waypoints || [] }];
-      for (const pr of srcRoutes){
-        const rt = newRoute(pr.name || "Route", pr.color || PALETTE[0]);
-        rt.tipLabel = pr.tipLabel || "";
-        rt.gpx = pr.gpx || null;
-        rt.tipPhoto = await loadImg(pr.tipPhoto);
-        for (const w of (pr.waypoints || [])){
-          const photo = await loadImg(w.photo);
-          rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, mode: w.mode || "", speed: w.speed || 1, photo });
-        }
-        routes.push(rt);
-      }
-      activeRoute = 0;
-      prevStyle = val("mapStyle");
-      // Stil neu aufbauen und alles zeichnen
-      swapStyle(async () => {
-        syncRouteInputs();
-        renderRoutes();
-        renderWpList();
-        renderFeatList();
-      }).then(() => { applyLang(); setStatus(tr("Projekt geladen.")); });
+      if (typeof SCENES !== "undefined") await SCENES.loadAll(proj); else await loadProject(proj);
+      setStatus(tr("Projekt geladen."));
     } catch (err){
       setStatus("Projekt konnte nicht geladen werden: " + err.message);
     }
   };
   reader.readAsText(file);
+  e.target.value = "";
 });
 
 (() => {

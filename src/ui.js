@@ -85,7 +85,7 @@
     $("projLoad").dispatchEvent(new Event("change"));
   });
   // nach Projekt-Laden Format/Regler/Theme aktualisieren
-  $("projLoad").addEventListener("change", () => setTimeout(() => { syncFormat(); syncRanges(); syncThemes(); sizeStage(null); }, 300));
+  document.addEventListener("ma:loaded", () => { syncFormat(); syncRanges(); syncThemes(); if (!stageLock) sizeStage(null); });
 
   /* ---------- Timeline ein-/ausklappen ---------- */
   $("tlToggle").addEventListener("click", () => {
@@ -144,7 +144,7 @@
   const applyPro = () => { body.classList.toggle("pro", pro.checked); try { localStorage.setItem("ma.pro", pro.checked ? "1" : "0"); } catch {} renderTimeline(); };
   pro.addEventListener("change", applyPro); applyPro();
   document.addEventListener("ma:settings", () => { syncFormat(); syncRanges(); syncThemes(); });
-  $("projLoad").addEventListener("change", () => setTimeout(() => CAM.set(null), 600));
+
 
   /* ---------- Tastenkürzel ---------- */
   const order = tabs.map(b => b.dataset.tab);

@@ -153,6 +153,20 @@ try {
     if (!vis.includes("ALPEN")) throw new Error("ALPEN fehlt: " + vis.join(","));
     return vis.length + " sichtbar";
   }));
+  await step("Szenen (wechseln, speichern/laden)", () => page.evaluate(async () => {
+    const n0 = R().waypoints.length;
+    await SCENES.addScene(false);
+    if (R().waypoints.length !== 0) throw new Error("neue Szene nicht leer");
+    addWaypoint("Rom", 41.9, 12.5); addWaypoint("Neapel", 40.85, 14.27); await drawStatic();
+    await SCENES.switchTo(0);
+    if (R().waypoints.length !== n0) throw new Error("Szene 1 verloren");
+    const saved = SCENES.serializeAll();
+    await SCENES.loadAll(JSON.parse(JSON.stringify(saved)));
+    await SCENES.switchTo(1);
+    if (R().waypoints.map(w => w.name).join() !== "Rom,Neapel") throw new Error("Szene 2 nach Laden falsch");
+    await SCENES.switchTo(0);
+    return SCENES.count() + " Szenen";
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     const a = CAM.at(0.05).c, b = CAM.at(0.6).c;

@@ -209,6 +209,21 @@ body.safe #safezone{display:block;}
 #status.rec::before{content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--danger); margin-right:8px; animation:blink 1s infinite;}
 @keyframes blink{50%{opacity:.25;}}
 
+/* ---------- Szenen-Leiste ---------- */
+#sceneBar{flex:none; display:flex; align-items:center; gap:6px; padding:7px 10px; background:var(--panel); border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none;}
+#sceneBar::-webkit-scrollbar{display:none;}
+.scene{flex:none; display:flex; align-items:center; gap:7px; height:30px; padding:0 6px 0 4px; border:1px solid var(--line); border-radius:9px; background:var(--field); color:var(--muted); font-size:12px; font-weight:650; cursor:pointer; max-width:220px;}
+.scene:hover{color:var(--text); border-color:var(--line-2);}
+.scene.active{color:var(--text); border-color:var(--accent); background:var(--accent-soft);}
+.scn{display:grid; place-items:center; width:20px; height:20px; border-radius:6px; background:var(--card-2); font-size:10.5px; font-variant-numeric:tabular-nums;}
+.scene.active .scn{background:var(--accent); color:var(--accent-ink);}
+.scname{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:4px;}
+.scact{border:0; background:none; color:var(--muted); font-size:12px; padding:2px 5px; border-radius:5px;}
+.scact:hover{color:var(--text); background:var(--card-2);}
+.screname{width:120px; height:24px; border:1px solid var(--accent); border-radius:6px; background:var(--field); color:var(--text); padding:0 6px; font-weight:650;}
+.scplus{flex:none; height:30px; padding:0 11px; border:1px dashed var(--line-2); border-radius:9px; background:none; color:var(--muted); font-size:12px; font-weight:650;}
+.scplus:hover{color:var(--text); border-color:var(--accent);}
+
 /* ---------- Timeline ---------- */
 #timeline{height:var(--tl-h); flex:none; background:var(--panel); border-top:1px solid var(--line); display:flex; flex-direction:column; user-select:none; -webkit-user-select:none;}
 #timeline.collapsed{height:auto;}

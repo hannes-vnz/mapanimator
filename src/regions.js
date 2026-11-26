@@ -101,7 +101,7 @@ const REGIONS = (() => {
   ["rgMtn", "rgLand", "rgSea", "rgSize"].forEach(id => $(id).addEventListener(id === "rgSize" ? "input" : "change", apply));
   $("mapStyle").addEventListener("change", () => setTimeout(apply, 50));
   document.querySelectorAll("#langSel .lbtn").forEach(b => b.addEventListener("click", () => setTimeout(apply, 0)));
-  $("projLoad").addEventListener("change", () => setTimeout(apply, 1200));
+  document.addEventListener("ma:loaded", apply);
 
   Object.assign(EN, { "Regionslabels": "Region labels", "Gebirge": "Mountains", "Wüsten & Landschaften": "Deserts & landscapes", "Meere & Buchten": "Seas & bays",
     "Regionsdaten konnten nicht geladen werden.": "Region data could not be loaded.",

@@ -151,10 +151,10 @@ const LENGTHS = [0, 8, 15, 30, 60];
     feelBox.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.feel === F));
   }
   syncTempo();
-  $("projLoad").addEventListener("change", () => setTimeout(() => {
+  document.addEventListener("ma:loaded", () => {
     syncTempo();
     const id = val("tplId"); grid.querySelectorAll(".tpl").forEach(b => b.classList.toggle("active", b.dataset.id === id));
-  }, 400));
+  });
 
-  window.MA_TEMPLATES = { applyTemplate, applyTempo, list: TEMPLATES };
+  window.MA_TEMPLATES = { applyTemplate, applyTempo, list: TEMPLATES, idle: () => chain };
 })();
