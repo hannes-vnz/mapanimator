@@ -59,11 +59,11 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
 - Auf dem Mac geprüft (26.11.): alle Themes mit echten Kacheln, MP4 (auch mit Unschärfe), WebM, Speichern/Laden. Behoben: Pin-Bild-Race („image already exists“), 3D-Terrain blieb nach Relief an.
 
 ## Roadmap (Priorität von oben)
-1. **Entwicklungs-Setup:**
+1. **Entwicklungs-Setup:** – erledigt (`src/`, `tools/build.py` → `index.html`, `npm test`).
    - `src/` (app.js, style.css, index.html) plus Build-Skript, das wieder eine einzelne `mapanimator.html` erzeugt (Bibliotheken inline).
    - Grund: Die 1-MB-Datei ist zum Editieren unhandlich.
    - Playwright-Smoke-Test: lädt die Seite, wählt alle Themes, rendert 1 s MP4 und prüft auf JS-Fehler.
-2. **Verkehrsmittel pro Etappe** (Kamelfamilie) – erledigt (11 Verkehrsmittel mit pace/zoom, Chips + ½×/2× am Stopp): `MODES`, `wp.mode` („Anreise per“), `legFeatures()`, Layer route-casing/route-line/route-dash:
+2. **Verkehrsmittel pro Etappe** (Kamelfamilie) – erledigt (22 Verkehrsmittel inkl. Seilbahn/Sessellift, gruppierte Auswahl, Tempo nach Bildschirm-Strecke `legScreenDur()`, Chips + ½×/2× am Stopp): `MODES`, `wp.mode` („Anreise per“), `legFeatures()`, Layer route-casing/route-line/route-dash:
    - Auto/Rad/Zu Fuß geroutet; Fähre und Flug als Bogen.
    - Linienstil je Etappe: durchgezogen rot mit weißer Kontur, Fähre weiß gestrichelt, Bus orange gestrichelt.
 3. **Kamera wie Baldinger:** – erledigt (`camera.js`, Tab 3 „Kamera“ mit Presets + Tempo, Blöcke in der Timeline). Offen: „alle Routen folgen“.
@@ -71,21 +71,30 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - „Norden oben“ / „Fahrtrichtung oben“.
    - Kamera-Segmente als Blöcke in der Timeline.
 4. **Whip-Pan-Übergänge** am Anfang/Ende: schneller Schwenk mit starker Richtungsunschärfe, wie der Ein- und Ausstieg in Kamelfamilie.
-5. **Schilder (Signs):**
+5. **Landmarkierungen (GeoLayers-Stil, geolayers.app):**
+   - Länder, Regionen, Städte, Seen, Gebirge per Suche markieren (Natural Earth / Nominatim-Polygone).
+   - Fläche einfärben, Kontur zeichnet sich animiert (Strich „draw-on“), Innenglühen/Schatten, optional 3D-Extrusion.
+   - Effekte: einblenden, pulsieren/blinken, Kontur nachzeichnen, Fokus (Rest der Karte abdunkeln).
+   - Als Objekte mit Balken in der Timeline (Item-Timeline wie GeoLayers, keine Keyframes nötig).
+6. **Labels im Spezifischen:**
+   - Eigene Labels an Punkt, Fläche oder Etappe: Stile Pille, Callout mit Linie zum Punkt (Leader-Line), Kreis-Marker + Name, gesperrter Großtext, Icon-/Bild-Marker.
+   - Automatische Labels für markierte Länder/Städte, Distanz-Label an Etappen („412 km“).
+   - Schrift, Größe, Farbe, Hintergrund, Kontur; Animationen Pop, Fade, Schreibmaschine; Zeitfenster in der Timeline.
+7. **Schilder (Signs):**
    - Freie Labels oder Fotokarten auf der Karte.
    - Anzeige: immer, wenn passiert, oder Zeitfenster; optional mit Pause.
    - Größenregler.
-6. **Avatar an der Spitze:** rundes Foto mit weißem Ring und Pin. Foto-Spitze gibt es schon, Look angleichen.
-7. **Gesperrte Regionslabels** („A L P E N“, „I R A N“) aus Natural Earth geography_regions (Gebirge, Wüsten, Meere).
-8. **Szenen:** mehrere Szenen pro Projekt, die nacheinander exportiert werden; Projekt als JSON-Datei.
-9. **Formate:** (erledigt: Buttons 9:16/4:5/1:1/16:9 und Safe-Zone in der Topbar)
+8. **Avatar an der Spitze:** rundes Foto mit weißem Ring und Pin. Foto-Spitze gibt es schon, Look angleichen.
+9. **Gesperrte Regionslabels** („A L P E N“, „I R A N“) aus Natural Earth geography_regions (Gebirge, Wüsten, Meere).
+10. **Szenen:** mehrere Szenen pro Projekt, die nacheinander exportiert werden; Projekt als JSON-Datei.
+11. **Formate:** (erledigt: Buttons 9:16/4:5/1:1/16:9 und Safe-Zone in der Topbar)
    - 9:16, 4:5, 1:1, 16:9 als Buttons.
    - Safe-Zone-Overlay für Shorts/TikTok-UI (nur Vorschau).
-10. **Skript-API** für automatisches Rendern, wie im Tool `~/Kartenvideos/reliefkarte/reliefkarte.html`:
+12. **Skript-API** für automatisches Rendern, wie im Tool `~/Kartenvideos/reliefkarte/reliefkarte.html`:
     - `window.MA.load(plan)` / `render()`.
     - Plan-JSON mit Keyframes, Layern und Punkten.
     - Export als ein Bundle (MP4 + Positionen).
-11. 3D-Modelle an der Spitze – erledigt als prozedurale Modelle (`models3d.js`); glTF-Import wäre die Ausbaustufe.
+13. 3D-Modelle an der Spitze – erledigt als prozedurale Modelle (`models3d.js`); glTF-Import wäre die Ausbaustufe.
 
 ## Regeln
 - Single-File-Auslieferung behalten (läuft offline per Doppelklick bzw. GitHub Pages).
