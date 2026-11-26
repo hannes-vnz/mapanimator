@@ -139,6 +139,7 @@
   async function load(plan){
     await ready();
     if (typeof plan === "string") plan = JSON.parse(plan);
+    if (!defaults) defaults = JSON.stringify(serializeProject());
     await SCENES.loadAll(JSON.parse(defaults));          // sauberer Ausgangszustand
     const list = Array.isArray(plan.scenes) && plan.scenes.length ? plan.scenes.map(s => Object.assign({}, plan, { scenes: undefined }, s)) : [plan];
     for (let i = 0; i < list.length; i++){

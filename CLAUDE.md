@@ -68,6 +68,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
 ## Videoanalyse (26.11.2026)
 - `docs/analyse-reisevideos.md`: Kara & Nate „Overlanding Iceland“ + „THE RACE S3E01“ – Kartentypen, Schnitt, Format, Ideen, Formate ohne vor der Kamera zu sprechen.
 - Daraus: Themes `pastell`, `nacht` (mit `streets`), Globus (`projGlobe`, `style.projection`), Pin-Stil `tag`, Übergang Crash-Zoom (`whipDir: "zoom"`), Looks `pastellvlog`/`racegps`/`raceglobe`/`raceborder`, Presets `vloginsert`/`tracker`/`globeflight`.
+- Komplette Shots (`CAM.shots`, `applyShot`): Island-Etappe, Globus-Flug, Routen-Reveal, Split-Kachel, Team-Tracker, Positions-Recap – nach gemessenem Ablauf. Bausteine: `legFocus: last` (nur letzte Etappe), `fxClouds` (Wolken-Einflug), Shot-Parameter `drift`/`zoomDrift`/`zoomAbs`/`fitSoFar`/`zoomFromOv`.
 - Werkzeug: `tools/video-analyse.sh <video>` (Schnitte, Kontaktbögen, Whisper-Transkript, PANNs-Tonklassen + Beats via uv).
 
 ## Roadmap (Priorität von oben)

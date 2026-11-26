@@ -167,6 +167,19 @@ try {
     await SCENES.switchTo(0);
     return SCENES.count() + " Szenen";
   }));
+  await step("Komplette Shots (aus Videoanalyse)", () => page.evaluate(async () => {
+    const out = [];
+    for (const sh of CAM.shots){
+      await CAM.applyShot(sh);
+      if (!anim) throw new Error(sh.id + ": keine Animation");
+      setPlayhead(timelineTotal() * 0.5, true);
+      out.push(sh.id + " " + timelineTotal().toFixed(1) + "s");
+    }
+    document.getElementById("legFocus").value = "all"; document.getElementById("fxClouds").checked = false;
+    document.getElementById("projGlobe").checked = false; document.getElementById("resolution").value = "1080x1920";
+    await MA_TEMPLATES.applyTemplate(MA_TEMPLATES.list[0]);
+    return out.join(", ");
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     document.getElementById("whipDir").value = "right";

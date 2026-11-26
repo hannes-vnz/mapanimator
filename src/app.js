@@ -32,7 +32,7 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Etikett (Ortsname)":"Tag (place name)","Globus-Ansicht":"Globe view","Pastell-Topo":"Pastel topo","Nacht-GPS":"Night GPS","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
+  "Kamera-Presets":"Camera presets","Nur letzte Etappe animieren":"Animate last leg only","Wolken-Einflug":"Fly in through clouds","Komplette Shots":"Complete shots","Etikett (Ortsname)":"Tag (place name)","Globus-Ansicht":"Globe view","Pastell-Topo":"Pastel topo","Nacht-GPS":"Night GPS","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
   "Fotos werden an ihren Aufnahmeort gesetzt (GPS aus dem Foto) und poppen als Polaroid auf, wenn die Linie vorbeikommt. Ohne GPS: zwischen zeitlich benachbarten Fotos oder per Klick. iPhone-Fotos (HEIC) vorher als JPEG exportieren, mit Ortsangabe.":"Photos are placed where they were taken (GPS from the photo) and pop up as instant prints when the line passes. Without GPS: between photos taken before/after, or by click. Export iPhone photos (HEIC) as JPEG with location first.",
   "Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.":"Your own labels on the map: pill, callout with a line to the point, marker with name, spaced title (“I T A L Y”). With pop, fade or typewriter animation and their own time window in the timeline.","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
   "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
@@ -1580,6 +1580,16 @@ async function prepareAnim(){
         { type: "pause", at: pz.idx, dur: pz.dur / speed, sign: true },
         { type: "leg", from: pz.idx, to: s.to, dur: Math.max(s.dur * (1 - f), 0.3), km: (s.km || 0) * (1 - f), whole });
     }
+    if (val("legFocus") === "last"){
+      const legIx = segs.map((s, k) => s.type === "leg" && !s.whole ? k : -1).filter(k => k >= 0);
+      const wholes = segs.filter(s => s.type === "leg" && s.whole).map(s => s.whole).filter((w, i, a) => a.indexOf(w) === i);
+      const lastLeg = legIx.length + wholes.length > 1 ? Math.max(...segs.map((s, k) => s.type === "leg" ? k : -1)) : -1;
+      if (lastLeg > 0){
+        const lastWhole = segs[lastLeg].whole;
+        const firstOfLast = lastWhole ? segs.findIndex(s => s.whole === lastWhole) : lastLeg;
+        for (let k = 0; k < firstOfLast - 1; k++) segs[k].dur = 0;   // vorherige Etappen + Pausen sofort fertig
+      }
+    }
     let tt = 0;
     segs.forEach(s => { s.t0 = tt; tt += s.dur; s.t1 = tt; });
     const stopMeta = [];
@@ -2508,7 +2518,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {

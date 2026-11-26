@@ -66,6 +66,16 @@ Dazu: **Mini-Routengrafik** (orange Schlangenlinie auf Schwarz mit Zielflagge) a
 
 ---
 
+### Gemessener Ablauf je Shot (10–2 Bilder/s ausgewertet) → „Komplette Shots“ im Kamera-Tab
+| Shot | Ablauf im Original | Vorlage |
+|---|---|---|
+| **Island-Etappe** (6,2 s) | 0–1,0 s Zoom aus dem Weltmaßstab durch Wolken · 1,0–2,8 s heran auf Island, Avatar + Etikett · 2,8–4,6 s Linie zeichnet nur die **neue** Etappe (alte bleibt stehen) · Ankunfts-Etikett · 4,6–6,2 s halten mit Drift | „Island-Etappe“ (5,5 s): Wolken-Einflug, „Nur letzte Etappe animieren“, Pastell-Look |
+| **Globus-Flug** (21 s) | Crash-Zoom aus der Szene · gekippter Globus mit Horizont · Start-Flagge · Bogen zeichnet sich (~4–5 s) · Zielring pulsiert + Ziel-Flagge · halten, Kamera dreht · Crash-Zoom ins Ziel → Schnitt auf Drohne | „Globus-Flug“ (9 s): Crash-Zoom rein/raus, Drehung, Zielring |
+| **Routen-Reveal** (17 s) | leuchtender Startpunkt „START“ · Länder entlang der Route füllen sich nacheinander rot · weiße Linie wächst · Chip „3.700 KM“ · grauer Zielpunkt „ZIEL“ · Zoom auf die Zielregion | „Routen-Reveal“ (12 s): Länder der Route rot, Distanz-Chip, Ziel-Zoom, Zielring |
+| **Split-Kachel** (24 s) | dunkle Kartenkachel neben dem Live-Bild · gestrichelte orange Route baut sich Stopp für Stopp auf · Karte zoomt mit, ganze bisherige Route bleibt sichtbar · Chip „3.290 KM“ am Ende | „Split-Kachel“ (1:1): Kamera „bisherige Route einpassen“, km-Chip am Ziel |
+| **Team-Tracker** | Nacht-Stadtplan, nah am Team, Neon-Spur folgt | „Team-Tracker“ |
+| **Positions-Recap** (29 s) | alle Teams mit Spuren, Kamera zieht raus bis alle sichtbar, dann weiter raus | „Positions-Recap“ (mehrere Routen anlegen) |
+
 ## 4. Schnittstil
 
 **Rhythmus.** Beide schneiden im Mittel alle 2,4 s. The Race legt im Einstieg 32 Schnitte/min vor und beruhigt danach auf ~15/min. Lange Einstellungen gibt es nur in Gesprächen am Tisch oder im Auto.

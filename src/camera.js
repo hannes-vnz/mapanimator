@@ -99,7 +99,8 @@ const CAM = (() => {
     const p = activePer();
     const pitch = s.pitch == null ? num("pitch") : s.pitch;
     const zoom = s.zoom == null ? num("zoom") : s.zoom;
-    if (s.mode === "overview" || !p){ const o = overviewCam(); return { c: o.c, z: o.z + (s.zoomAdj || 0), b: s.bearing || 0, p: pitch }; }
+    const drift = (s.drift || 0) * Math.max(0, t - s.t);
+    if (s.mode === "overview" || !p){ const o = overviewCam(); return { c: o.c, z: (s.zoomAbs != null ? s.zoomAbs : o.z + (s.zoomAdj || 0)) + (s.zoomDrift || 0) * Math.max(0, t - s.t), b: (s.bearing || 0) + drift, p: pitch }; }
     if (s.mode === "still"){
       if (!s.center){ const o = overviewCam(); return { c: o.c, z: o.z, b: s.bearing || 0, p: pitch }; }
       return { c: s.center, z: zoom, b: s.bearing || 0, p: pitch };
@@ -108,6 +109,14 @@ const CAM = (() => {
     const st = smoothTip(p, t, look, s.up === "travel" ? 3 : s.up === "target" ? 1.6 : 1.2);
     let z = zoom + st.modeZoom;
     if (s.auto !== false) z = Math.min(z, autoZoom(p, t) + 0.35);
+    if (s.mode === "follow" && s.fitSoFar){
+      const idx = tipAt(p, t).idx, end = Math.max(1, Math.ceil(idx)), step = Math.max(1, Math.floor(end / 200));
+      const pts = []; for (let i = 0; i <= end; i += step) pts.push(p.coords[i]); pts.push(tipAt(p, t).ll);
+      const c = map.cameraForBounds(boundsOf(pts), { padding: 120 });
+      const z = Math.min(c ? c.zoom : zoom, s.maxZoom || 9);
+      const cc = c ? (c.center.lng !== undefined ? [c.center.lng, c.center.lat] : c.center) : st.ll;
+      return { c: cc, z, b: s.bearing || 0, p: pitch };
+    }
     if (s.mode === "follow"){
       const b = s.up === "travel" ? headingToBearing(st.heading) + (s.bearing || 0)
               : s.up === "target" ? headingToBearing(st.target) + (s.bearing || 0)
@@ -237,8 +246,26 @@ const CAM = (() => {
       lane.appendChild(b);
     });
   }
+  let lastT = null;
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ baseRA(t, live); previewBlur(t); };
+  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); previewBlur(t); };
+  // Wolken-Einflug: weiche Wolkenfetzen fliegen in den ersten 0,9 s auseinander und blenden aus
+  const CLOUDS = Array.from({ length: 16 }, (_, i) => { const a = i * 2.39996, r = 0.15 + ((i * 37) % 10) / 22; return { x: Math.cos(a) * r, y: Math.sin(a) * r * 0.7, s: 0.35 + ((i * 53) % 10) / 18 }; });
+  const baseDO = drawOverlay;
+  window.drawOverlay = drawOverlay = function (){
+    baseDO();
+    if (!checked("fxClouds") || lastT == null || lastT > 0.95) return;
+    const c = $("ovl"), g = c.getContext("2d"), W = c.width, H = c.height, k = lastT / 0.95;
+    g.save();
+    g.fillStyle = `rgba(255,255,255,${(0.4 * Math.pow(1 - k, 1.6)).toFixed(3)})`; g.fillRect(0, 0, W, H);   // Dunst
+    for (const cl of CLOUDS){
+      const sp = 1 + k * 2.6, x = W / 2 + cl.x * W * sp, y = H / 2 + cl.y * H * sp, r = cl.s * Math.max(W, H) * (0.24 + k * 1.1);
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, `rgba(255,255,255,${(0.6 * Math.pow(1 - k, 1.3)).toFixed(3)})`); gr.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+  };
   const baseRT = renderTimeline;
   window.renderTimeline = renderTimeline = function (){ baseRT(); renderRow(); };
 
@@ -340,6 +367,88 @@ const CAM = (() => {
     if (anim) renderAt(playheadT, false);
     setStatus(tr("Kamera") + ": " + pr.name);
   }
+  /* ---------- Komplette Shots (aus der Videoanalyse) ----------
+     Jeder Shot = Look + Kamera-Abschnitte + Tempo + Effekte, nachgebaut nach gemessenem Ablauf. */
+  const lastStop = () => { const p = anim && anim.per[0]; return p ? { p, c: p.coords[p.coords.length - 1] } : null; };
+  const arrivalTime = p => { const n = p.coords.length - 1; let lo = 0, hi = timelineTotal(); for (let k = 0; k < 28; k++){ const m = (lo + hi) / 2; if (tipIndexFor(p, m) >= n - 1e-6) hi = m; else lo = m; } return hi; };
+  const SHOTS = [
+    { id: "s_island", name: "Island-Etappe", sub: "Kara & Nate · 5,5 s: Welt-Einflug durch Wolken → neue Etappe zeichnet sich → halten", icon: "🚐",
+      look: "pastellvlog", set: { legFocus: "last", fxClouds: true, whipIn: false, whipOut: false },
+      shots: () => [F({ t: 0, mode: "overview", zoomAbs: 2.2, pitch: 0 }), F({ t: 0.35, zoom: 7.2, pitch: 15 })], tempo: { len: 5.5, feel: "normal" } },
+    { id: "s_globe", name: "Globus-Flug", sub: "THE RACE · 9 s: Crash-Zoom rein → Bogen zeichnet sich → Zielring → Crash-Zoom ins Ziel", icon: "🌍",
+      look: "raceglobe", set: { legFocus: "last", fxClouds: false, whipIn: true, whipOut: true, whipDir: "zoom" },
+      shots: () => [F({ t: 0, mode: "overview", pitch: 48, bearing: -10, zoomAdj: -0.5, drift: 0.8, zoomDrift: 0.03 })], tempo: { len: 9, feel: "gemuetlich" },
+      extras: ["destPulse"] },
+    { id: "s_reveal", name: "Routen-Reveal", sub: "THE RACE · 12 s: Länder füllen sich rot, Linie wächst, Distanz-Chip, Zoom aufs Ziel", icon: "🟥",
+      look: "raceborder", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, lineColor: "#ffffff", lineWidth: 3.5, glow: true },
+      shots: T => [F({ t: 0, mode: "overview", pitch: 0 }), F({ t: Math.max(T * 0.8, 1), mode: "still", zoomFromOv: 2.6 })], tempo: { len: 12, feel: "normal" },
+      extras: ["countriesRed", "totalKm", "destPulse"] },
+    { id: "s_split", name: "Split-Kachel", sub: "THE RACE · 1:1-Karte für neben das Live-Bild: gestrichelte Route baut sich Stopp für Stopp auf", icon: "🧩",
+      look: "racegps", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, resolution: "1080x1080", lineStyle: "dashed", lineColor: "#ff7a2f", glow: false, dtLabels: false },
+      shots: () => [F({ t: 0, pitch: 0, fitSoFar: true, maxZoom: 8 })], tempo: { len: 0, feel: "gemuetlich" }, extras: ["totalKmEnd"] },
+    { id: "s_tracker", name: "Team-Tracker", sub: "THE RACE · 6 s: nah am Team auf dem Nacht-Stadtplan, Neon-Spur folgt", icon: "📡",
+      look: "racegps", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false },
+      shots: () => [F({ t: 0, zoom: 14, pitch: 0, auto: false })], tempo: { len: 6, feel: "gemuetlich" } },
+    { id: "s_recap", name: "Positions-Recap", sub: "THE RACE · 8 s: alle Teams mit Spuren, Kamera zieht raus bis alle sichtbar", icon: "🏁",
+      look: "racegps", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false }, preset: "tracker", tempo: { len: 8, feel: "normal" } }
+  ];
+  async function applyShot(sh){
+    if (playing) pause();
+    const look = MA_TEMPLATES.list.find(x => x.id === sh.look);
+    if (look) await MA_TEMPLATES.applyTemplate(look);
+    for (const [k, v] of Object.entries(sh.set || {})){ const el = $(k); if (!el) continue; if (el.type === "checkbox") el.checked = !!v; else el.value = v; }
+    if (sh.set && sh.set.resolution) $("resolution").dispatchEvent(new Event("change"));
+    if (sh.set && "dtLabels" in sh.set) { swapStyle(); await styleBusy; }
+    if (sh.set && sh.set.lineColor && routes.length === 1){ routes[0].color = sh.set.lineColor; routes[0].waypoints.forEach(w => w.color = sh.set.lineColor); renderRoutes(); renderWpList(); }
+    tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
+    if (sh.preset){ await applyPreset(PRESETS.find(p => p.id === sh.preset)); $("whipIn").checked = !!sh.set.whipIn; $("whipOut").checked = !!sh.set.whipOut; }
+    else {
+      shots = sh.shots(timelineTotal());
+      await MA_TEMPLATES.applyTempo(sh.tempo.len, sh.tempo.feel);
+      await ensureAnim();
+      const T = timelineTotal();
+      shots = sh.shots(T);
+      // Still-Abschnitt aufs Ziel: Zoom relativ zur Übersicht
+      const ls = lastStop();
+      shots.forEach(s => { if (s.zoomFromOv != null && anim && ls){ s.center = ls.c; s.zoom = anim.ovCam.zoom + s.zoomFromOv; } });
+    }
+    // Effekte (ersetzen frühere Shot-Effekte)
+    MARKS.removeWhere(m => m.shotExtra); LABELS.removeWhere(l => l.shotExtra);
+    await ensureAnim();
+    const ls = lastStop();
+    for (const ex of sh.extras || []){
+      if (!ls) break;
+      if (ex === "destPulse"){
+        MARKS.add("Ziel", { type: "Point", coordinates: ls.c }, { shotExtra: true, color: "#ffffff", t0: Math.max(0, arrivalTime(ls.p) - 0.2),
+          fx: { draw: false, glow: true, shadow: false, pulse: true, focus: false, extrude: false } });
+      } else if (ex === "countriesRed"){
+        const before = new Set(MARKS.list());
+        await MARKS.routeCountries();
+        MARKS.list().filter(m => !before.has(m)).forEach(m => Object.assign(m, { shotExtra: true, color: "#c2161f", fillOp: 0.6, stroke: "#ff3b45", width: 2,
+          fx: { draw: true, glow: true, shadow: false, pulse: false, focus: false, extrude: false } }));
+      } else if (ex === "totalKm" || ex === "totalKmEnd"){
+        const km = anim.per.reduce((a, p) => a + p.totalKm, 0);
+        const p = ls.p, mid = p.coords[Math.round(p.coords.length * (ex === "totalKmEnd" ? 0.8 : 0.55))];
+        const txt = (km >= 100 ? (Math.round(km / 10) * 10).toLocaleString("de-DE") : Math.round(km)) + " KM";
+        const t0 = ex === "totalKmEnd" ? arrivalTime(p) : timelineTotal() * 0.5;
+        LABELS.add(txt, mid, { shotExtra: true, style: "pill", color: "#d81f2a", textColor: "#ffffff", size: 0.9, anim: "pop", t0: Math.round(t0 * 10) / 10 });
+      }
+    }
+    sel = 0; renderTimeline(); renderEditor();
+    await drawStatic();
+    if (anim) renderAt(playheadT, false);
+    document.querySelectorAll(".shotpre").forEach(b => b.classList.toggle("active", b.dataset.id === sh.id));
+    setStatus(tr("Shot") + ": " + sh.name);
+  }
+  const sgrid = $("shotGrid");
+  SHOTS.forEach(sh => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "campre shotpre"; b.dataset.id = sh.id;
+    b.innerHTML = `<em>${sh.icon}</em><span><b></b><small></small></span>`;
+    b.querySelector("b").textContent = sh.name; b.querySelector("small").textContent = sh.sub;
+    b.addEventListener("click", () => applyShot(sh));
+    sgrid.appendChild(b);
+  });
+
   const grid = $("camGrid");
   PRESETS.forEach(pr => {
     const b = document.createElement("button"); b.type = "button"; b.className = "campre"; b.dataset.id = pr.id;
@@ -350,7 +459,7 @@ const CAM = (() => {
   });
 
   Object.assign(EN, { "Folgen": "Follow", "Still": "Still", "Übersicht": "Overview", "Stativ": "Tripod", "Orbit": "Orbit",
-    "Kamera": "Camera", "Abschnitt": "Shot", "Oben": "Up", "Norden": "North", "Ziel": "Destination", "Fahrtrichtung": "Direction of travel",
+    "Kamera": "Camera", "Shot": "Shot", "Abschnitt": "Shot", "Oben": "Up", "Norden": "North", "Ziel": "Destination", "Fahrtrichtung": "Direction of travel",
     "Aktuelle Kartenansicht übernehmen": "Use current map view", "Neigung": "Tilt", "Drehung": "Rotation", "Startwinkel": "Start angle",
     "Vorausschau (s)": "Look-ahead (s)", "Umdrehungen": "Turns", "Lange Etappen: rauszoomen": "Long legs: zoom out",
     "Neuer Abschnitt am Playhead": "New shot at playhead", "Abschnitt löschen": "Delete shot", "Ansicht übernommen.": "View captured.",
@@ -359,7 +468,7 @@ const CAM = (() => {
     "nach rechts": "right", "Crash-Zoom (rein/raus)": "Crash zoom (in/out)", "nach links": "left", "nach oben": "up", "nach unten": "down" });
 
   return {
-    at, renderRow, renderEditor, applyPreset, presets: PRESETS, blurCanvas, whipBlurPx,
+    at, renderRow, renderEditor, applyPreset, presets: PRESETS, blurCanvas, whipBlurPx, applyShot, shots: SHOTS,
     get: () => JSON.parse(JSON.stringify(shots)),
     set(v){ if (Array.isArray(v) && v.length) shots = v; sel = 0; renderTimeline(); renderEditor();
             document.querySelectorAll(".campre").forEach(b => b.classList.toggle("active", b.dataset.id === $("camPresetId").value)); },

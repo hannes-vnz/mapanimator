@@ -247,6 +247,7 @@ const LABELS = (() => {
 
   return {
     add, draw, fromMarks, distances, list: () => list, any: () => list.length > 0,
+    removeWhere(fn){ list = list.filter(l => !fn(l)); sel = null; changed(); },
     get: () => list.map(({ id, ...rest }) => rest),
     set(arr){ list = []; sel = null; (arr || []).forEach(o => add(o.text, o.lngLat, Object.assign({}, o))); sel = null; changed(); }
   };

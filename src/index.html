@@ -244,6 +244,11 @@
       <!-- ===== KAMERA & TEMPO ===== -->
       <section class="pane" data-pane="camera">
         <div class="card">
+          <h2>Komplette Shots</h2>
+          <div id="shotGrid" class="camgrid"></div>
+          <div class="hint">Nachgebaut aus den analysierten Videos: Look, Kamera, Timing und Effekte in einem Klick. Danach alles einzeln anpassbar.</div>
+        </div>
+        <div class="card">
           <h2>Kamera-Presets</h2>
           <div id="camGrid" class="camgrid"></div>
           <input type="hidden" id="camPresetId" value="">
@@ -259,6 +264,8 @@
           <h2>Übergänge</h2>
           <div class="setting"><label>Whip-Pan am Anfang</label><input type="checkbox" id="whipIn"></div>
           <div class="setting"><label>Whip-Pan am Ende</label><input type="checkbox" id="whipOut"></div>
+          <div class="setting"><label>Wolken-Einflug</label><input type="checkbox" id="fxClouds"></div>
+          <div class="setting"><label>Nur letzte Etappe animieren</label><select id="legFocus"><option value="all" selected>nein, ganze Route</option><option value="last">ja (vorherige schon gezeichnet)</option></select></div>
           <div class="setting"><label>Schwenkrichtung</label>
             <select id="whipDir"><option value="right" selected>nach rechts</option><option value="left">nach links</option><option value="up">nach oben</option><option value="down">nach unten</option><option value="zoom">Crash-Zoom (rein/raus)</option></select>
           </div>

@@ -375,9 +375,10 @@ const MARKS = (() => {
     if (!f) return null;
     return add(countryName(f.properties), f.geometry, Object.assign({ iso: f.properties.ADM0_A3 }, opt));
   }
+  function removeWhere(fn){ list.filter(fn).forEach(m => removeLayersFor(m)); list = list.filter(m => !fn(m)); sel = null; changed(); }
   return {
-    add, addCountry, countries, inGeom, render, search, routeCountries, pickAt,
-    get: () => list.map(m => ({ name: m.name, geom: m.geom, color: m.color, fillOp: m.fillOp, stroke: m.stroke, width: m.width, t0: m.t0, t1: m.t1, fx: m.fx, iso: m.iso, drawDur: m.drawDur })),
+    add, addCountry, countries, inGeom, render, search, routeCountries, pickAt, removeWhere,
+    get: () => list.map(m => ({ name: m.name, geom: m.geom, color: m.color, fillOp: m.fillOp, stroke: m.stroke, width: m.width, t0: m.t0, t1: m.t1, fx: m.fx, iso: m.iso, drawDur: m.drawDur, shotExtra: m.shotExtra })),
     set(arr){ list.forEach(removeLayersFor); list = []; sel = null; (arr || []).forEach(o => add(o.name, o.geom, Object.assign({}, o))); changed(); },
     list: () => list
   };
