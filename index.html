@@ -8430,6 +8430,15 @@ const ASSETS = (() => {
   const $ = id => document.getElementById(id);
   const TYPES = {
     kmintro:    { icon: "🚴", name: "Kilometer-Intro", dur: 4 },
+    elevation:  { icon: "⛰️", name: "Höhenprofil", dur: 6 },
+    miniglobe:  { icon: "🌍", name: "Mini-Globus", dur: 4 },
+    daystats:   { icon: "📊", name: "Tagesstatistik", dur: 4.5 },
+    weather:    { icon: "☀️", name: "Wetter-Chip", dur: 3.5 },
+    speedo:     { icon: "🏁", name: "Tacho", dur: 3.5 },
+    gradesign:  { icon: "⚠️", name: "Steigungsschild", dur: 3 },
+    progress:   { icon: "📍", name: "Reise-Fortschritt", dur: 4 },
+    signpost:   { icon: "🪧", name: "Wegweiser", dur: 4 },
+    lodging:    { icon: "⛺", name: "Unterkunft-Chip", dur: 3 },
     daystamp:   { icon: "📮", name: "Tages-Marke", dur: 3.5 },
     countdown:  { icon: "⏳", name: "Countdown", dur: 4 },
     flapboard:  { icon: "🛫", name: "Abflugtafel", dur: 4 },
@@ -8480,13 +8489,19 @@ const ASSETS = (() => {
       for (const f of j.features){
         const p = f.properties, a2 = (p.ISO_A2_EH && p.ISO_A2_EH !== "-99" ? p.ISO_A2_EH : p.ISO_A2 || "").toLowerCase();
         if (!a2 || a2 === "-99") continue;
-        const rec = { a2, name: p.NAME_DE || p.NAME || p.ADMIN };
+        const rec = { a2, name: p.NAME_DE || p.NAME || p.ADMIN, ll: centerOf(f.geometry, p) };
         byA3.set(p.ADM0_A3, rec);
         for (const n of [p.NAME_DE, p.NAME, p.NAME_EN, p.ADMIN, p.NAME_LONG, p.ISO_A3, a2]) if (n) byName.set(String(n).toLowerCase(), rec);
       }
       ctry = { byName, byA3 }; drawOverlay();
     }).catch(e => { console.warn("Länder:", e); ctryJob = null; });
     return ctryJob;
+  }
+  function centerOf(geom, pr){
+    if (pr && pr.LABEL_X != null) return [pr.LABEL_X, pr.LABEL_Y];
+    const polys = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates; let best = null, area = -1;
+    for (const pl of polys){ let a = 0, sx = 0, sy = 0; const r = pl[0]; for (let i = 0; i < r.length; i++){ sx += r[i][0]; sy += r[i][1]; } a = r.length; if (a > area){ area = a; best = [sx / r.length, sy / r.length]; } }
+    return best;
   }
   function lookup(name){ countriesReady(); return ctry && name ? ctry.byName.get(String(name).trim().toLowerCase()) || null : null; }
   const flags = new Map();
@@ -8794,6 +8809,210 @@ const ASSETS = (() => {
         if (ak >= 1){ g.beginPath(); g.moveTo(ex - dir * u * 0.035, ey - u * 0.03); g.lineTo(ex, ey); g.lineTo(ex + dir * u * 0.012, ey - u * 0.045);
           g.lineWidth = u * 0.02; g.strokeStyle = "#111"; g.stroke(); g.lineWidth = u * 0.009; g.strokeStyle = col; g.stroke(); }
       }
+      g.restore();
+    },
+
+    /* ===== Radreise & Reisevlog ===== */
+    // Höhenprofil: aus der Route (Tab Route) oder aus eingetippten Höhen; Punkt wandert, Fläche füllt sich
+    elevation(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ff5a36", prof = elevData(p); if (!prof) return;
+      const portrait = H > W * 1.2, bw = Math.min(W * (portrait ? 0.9 : 0.62), u * 1.3), bh = u * 0.26, [x, y] = place(p, W, H, bw, bh, "bottom");
+      const inK = easeOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35)), fr = easeInOut(clamp((lt - 0.4) / Math.max(0.5, dur - 1.2)));
+      g.save(); g.globalAlpha = inK * (1 - outK); g.translate(0, (1 - inK) * u * 0.08);
+      rcard(g, x, y, bw, bh, u * 0.025, u);
+      const pad = u * 0.025, fs = u * 0.03, cx = x + pad, cw = bw - pad * 2, top = y + pad + fs * 2.1, cb = y + bh - pad, ch = cb - top, e = prof.e, N = e.length;
+      const lo = Math.max(0, prof.min - (prof.max - prof.min) * 0.05), hi = prof.max + Math.max(40, (prof.max - prof.min) * 0.25);
+      const X = i => cx + cw * i / (N - 1), Y = v => cb - ch * (v - lo) / (hi - lo), at = i => { const a = Math.floor(i), b = Math.min(a + 1, N - 1); return e[a] + (e[b] - e[a]) * (i - a); };
+      const fi = fr * (N - 1);
+      const path = i1 => { g.beginPath(); g.moveTo(X(0), cb); for (let i = 0; i <= Math.ceil(i1); i++){ const ii = Math.min(i, i1); g.lineTo(X(ii), Y(at(ii))); } g.lineTo(X(i1), cb); g.closePath(); };
+      g.fillStyle = "rgba(255,255,255,.12)"; path(N - 1); g.fill();
+      if (fi > 0){ const gr = g.createLinearGradient(0, top, 0, cb); gr.addColorStop(0, col); gr.addColorStop(1, hexA(col, 0.25)); g.fillStyle = gr; path(fi); g.fill();
+        g.strokeStyle = col; g.lineWidth = Math.max(2, u * 0.004); g.beginPath(); for (let i = 0; i <= Math.ceil(fi); i++){ const ii = Math.min(i, fi); i ? g.lineTo(X(ii), Y(at(ii))) : g.moveTo(X(ii), Y(at(ii))); } g.stroke(); }
+      if (prof.max - prof.min > 50){ const tx = X(prof.top), ty = Y(e[prof.top]); g.fillStyle = fi >= prof.top ? "#fff" : "rgba(255,255,255,.55)"; g.font = CF(fs * 0.9, 800);
+        g.textAlign = tx > cx + cw * 0.85 ? "right" : tx < cx + cw * 0.15 ? "left" : "center"; g.textBaseline = "bottom"; g.fillText("▲ " + fmtN(e[prof.top]) + " m" + (p.peak ? " · " + p.peak : ""), tx, ty - fs * 0.3); }
+      const px = X(fi), py = Y(at(fi)), r = Math.max(4, u * 0.009);
+      g.save(); g.shadowColor = col; g.shadowBlur = r * 2.5; g.fillStyle = "#fff"; g.beginPath(); g.arc(px, py, r * 1.35, 0, Math.PI * 2); g.fill(); g.restore();
+      g.fillStyle = col; g.beginPath(); g.arc(px, py, r * 0.8, 0, Math.PI * 2); g.fill();
+      let up = 0, ref = e[0]; for (let i = 1; i <= fi; i++){ const v = e[i]; if (v - ref > 3){ up += v - ref; ref = v; } else if (ref - v > 3) ref = v; }
+      const yT = y + pad + fs * 1.1; g.textBaseline = "middle"; g.textAlign = "left"; g.fillStyle = "#fff"; g.font = CF(fs * 1.5, 900);
+      const hT = fmtN(at(fi)) + " m"; g.fillText(hT, cx, yT); const hw = g.measureText(hT).width;
+      g.font = CF(fs, 700); g.fillStyle = "rgba(255,255,255,.7)"; g.fillText(fmtN(prof.km * fr) + " / " + fmtN(prof.km) + " km", cx + hw + fs * 0.8, yT);
+      g.textAlign = "right"; g.fillStyle = "#fff"; g.font = CF(fs * 1.1, 800); g.fillText("↗ " + fmtN(up) + " Hm", cx + cw, yT);
+      g.restore();
+    },
+
+    // Mini-Globus: dreht sich zum Ziel, Punkt pulsiert, optional Bogen von A nach B
+    miniglobe(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ff3b45", R = u * 0.2, [x, y] = place(p, W, H, R * 2, R * 2 + u * 0.1, "tr");
+      const cx = x + R, cy = y + R, to = placeLL(p.to || "Laos"), from = p.from ? placeLL(p.from) : null; if (!to) return;
+      const k = easeInOut(clamp((lt - 0.15) / 1.3)), inK = backOut(clamp(lt / 0.4)), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35));
+      const start = from || [to[0] - 70, to[1] * 0.3], l0 = (start[0] + (to[0] - start[0]) * k) * Math.PI / 180, p0 = Math.max(-60, Math.min(60, start[1] + (to[1] - start[1]) * k)) * Math.PI / 180;
+      const sp0 = Math.sin(p0), cp0 = Math.cos(p0);
+      const proj = (lon, lat) => { const l = lon * Math.PI / 180 - l0, q = lat * Math.PI / 180, cq = Math.cos(q); let px = cq * Math.sin(l), py = cp0 * Math.sin(q) - sp0 * cq * Math.cos(l);
+        const vis = sp0 * Math.sin(q) + cp0 * cq * Math.cos(l); if (vis < 0){ const nn = Math.hypot(px, py) || 1; px /= nn; py /= nn; } return [cx + px * R, cy - py * R, vis >= 0]; };
+      g.save(); g.globalAlpha = Math.min(1, inK) * (1 - outK); g.translate(cx, cy); g.scale(inK, inK); g.translate(-cx, -cy);
+      const atm = g.createRadialGradient(cx, cy, R * 0.95, cx, cy, R * 1.22); atm.addColorStop(0, "rgba(120,190,255,.55)"); atm.addColorStop(1, "rgba(120,190,255,0)");
+      g.fillStyle = atm; g.beginPath(); g.arc(cx, cy, R * 1.22, 0, Math.PI * 2); g.fill();
+      g.save(); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
+      const sea = g.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R); sea.addColorStop(0, "#2d6fb5"); sea.addColorStop(1, "#0d2f5c"); g.fillStyle = sea; g.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+      g.strokeStyle = "rgba(255,255,255,.1)"; g.lineWidth = 1;
+      for (let lo = -180; lo < 180; lo += 30){ g.beginPath(); let pen = false; for (let la = -80; la <= 80; la += 5){ const q = proj(lo, la); if (!q[2]){ pen = false; continue; } pen ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); pen = true; } g.stroke(); }
+      const land = landRings();
+      if (land){ g.fillStyle = p.landColor || "#4f9a5e"; for (const ring of land){ g.beginPath(); let any = false; ring.forEach((pt, i) => { const q = proj(pt[0], pt[1]); if (q[2]) any = true; i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); if (any) g.fill(); } }
+      if (from){ const ak = clamp((lt - 0.9) / 0.9); if (ak > 0){ g.strokeStyle = "#fff"; g.lineWidth = Math.max(2, u * 0.005); g.setLineDash([u * 0.012, u * 0.01]); g.beginPath();
+        for (let i = 0; i <= 40 * ak; i++){ const f = i / 40, lon = from[0] + (to[0] - from[0]) * f, lat = from[1] + (to[1] - from[1]) * f + Math.sin(f * Math.PI) * 6, q = proj(lon, lat); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); } g.stroke(); g.setLineDash([]); } }
+      const sh = g.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.05, cx, cy, R); sh.addColorStop(0, "rgba(255,255,255,.18)"); sh.addColorStop(0.6, "rgba(255,255,255,0)"); sh.addColorStop(1, "rgba(0,0,0,.35)"); g.fillStyle = sh; g.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+      g.restore();
+      const q = proj(to[0], to[1]);
+      if (q[2] && k > 0.6){ const ph = (lt * 1.1) % 1, r = Math.max(4, u * 0.012);
+        g.strokeStyle = col; g.globalAlpha *= 1; g.lineWidth = Math.max(2, u * 0.004); g.save(); g.globalAlpha *= 1 - ph; g.beginPath(); g.arc(q[0], q[1], r + r * 3 * ph, 0, Math.PI * 2); g.stroke(); g.restore();
+        g.fillStyle = "#fff"; g.beginPath(); g.arc(q[0], q[1], r * 1.3, 0, Math.PI * 2); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(q[0], q[1], r * 0.85, 0, Math.PI * 2); g.fill(); }
+      const lk = easeOut(clamp((lt - 1.3) / 0.35)), label = (p.label || (lookup(p.to) ? lookup(p.to).name : p.to) || "").toUpperCase();
+      if (lk > 0 && label){ g.save(); g.globalAlpha *= lk; g.font = CF(u * 0.04, 800); const tw = g.measureText(label).width + u * 0.05, ph2 = u * 0.06;
+        rcard(g, cx - tw / 2, cy + R + u * 0.025, tw, ph2, ph2 / 2, u); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(label, cx, cy + R + u * 0.025 + ph2 / 2 + 1); g.restore(); }
+      g.lineWidth = Math.max(2, u * 0.004); g.strokeStyle = "rgba(255,255,255,.7)"; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
+      g.restore();
+    },
+
+    // Tagesstatistik: 4 Werte zählen hoch (Strava-Stil)
+    daystats(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#fc5200";
+      const items = [[p.i1 || "🚲", p.v1 || "112", p.u1 || "km", p.l1 || "Distanz"], [p.i2 || "⛰️", p.v2 || "1.840", p.u2 || "Hm", p.l2 || "Höhenmeter"],
+        [p.i3 || "⏱", p.v3 || "6:12", p.u3 || "h", p.l3 || "Fahrzeit"], [p.i4 || "⚡", p.v4 || "18,1", p.u4 || "km/h", p.l4 || "Ø Tempo"]];
+      const portrait = H > W * 1.2, cw = Math.min(W * (portrait ? 0.9 : 0.6), u * 1.1), ch = u * 0.42, [x, y] = place(p, W, H, cw, ch, "center");
+      const k = easeOut(clamp(lt / 0.4)), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35));
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate(0, (1 - k) * u * 0.08 + outK * u * 0.08);
+      rcard(g, x, y, cw, ch, u * 0.03, u);
+      g.fillStyle = col; rr(g, x, y, cw, u * 0.09, u * 0.03); g.fill(); g.fillRect(x, y + u * 0.05, cw, u * 0.04);
+      g.fillStyle = "#fff"; g.font = CF(u * 0.045, 900); g.textAlign = "left"; g.textBaseline = "middle"; g.fillText((p.title || "TAG 23 · ETAPPE 12").toUpperCase(), x + u * 0.035, y + u * 0.047);
+      if (p.route){ g.textAlign = "right"; g.font = CF(u * 0.03, 700); g.fillText(p.route, x + cw - u * 0.035, y + u * 0.047); }
+      const gw = (cw - u * 0.07) / 2, gh = (ch - u * 0.14) / 2;
+      items.forEach(([ic, v, unit, lab], i) => {
+        const tx = x + u * 0.035 + (i % 2) * gw, ty = y + u * 0.11 + Math.floor(i / 2) * gh, kk = clamp((lt - 0.35 - i * 0.12) / 0.9);
+        if (kk <= 0) return;
+        g.save(); g.globalAlpha *= Math.min(1, kk * 3);
+        picto(g, ic, tx + gh * 0.28, ty + gh * 0.45, gh * 0.38, col);
+        g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "alphabetic"; g.font = CF(gh * 0.42, 900);
+        const shown = countUp(v, easeOut(kk)); g.fillText(shown, tx + gh * 0.6, ty + gh * 0.55); const sw = g.measureText(shown).width;
+        g.font = CF(gh * 0.2, 800); g.fillStyle = col; g.fillText(unit, tx + gh * 0.6 + sw + gh * 0.06, ty + gh * 0.55);
+        g.font = CF(gh * 0.17, 700); g.fillStyle = "rgba(255,255,255,.65)"; g.fillText(lab.toUpperCase(), tx + gh * 0.6, ty + gh * 0.82);
+        g.restore();
+      });
+      g.restore();
+    },
+
+    // Wetter-Chip: Icon, Temperatur, Wind mit Richtungspfeil
+    weather(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), ph = u * 0.12;
+      g.font = CF(ph * 0.55, 900); const tTxt = (p.temp || "31") + "°", tw = g.measureText(tTxt).width; g.font = CF(ph * 0.22, 700);
+      const wTxt = p.wind || "Gegenwind 25 km/h", ww = g.measureText(wTxt).width, pw = ph * 1.1 + tw + ph * 0.3 + Math.max(ww, ph * 0.8) + ph * 0.6;
+      const [x, y] = place(p, W, H, pw, ph, "tr"), k = backOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      g.save(); g.globalAlpha = Math.min(1, k) * (1 - outK); g.translate(x + pw / 2, y + ph / 2); g.scale(k, k); g.translate(-pw / 2, -ph / 2);
+      rcard(g, 0, 0, pw, ph, ph / 2, u);
+      g.font = Math.round(ph * 0.62) + "px 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+      g.save(); g.translate(ph * 0.58, ph / 2); g.rotate(Math.sin(lt * 2) * 0.05); g.fillText(p.icon || "☀️", 0, ph * 0.03); g.restore();
+      g.fillStyle = "#fff"; g.font = CF(ph * 0.55, 900); g.textAlign = "left"; g.fillText(tTxt, ph * 1.05, ph / 2 + ph * 0.02);
+      const wx = ph * 1.05 + tw + ph * 0.3;
+      if (p.windDir !== "none"){ const ang = ({ gegen: Math.PI, rücken: 0, links: -Math.PI / 2, rechts: Math.PI / 2 }[p.windDir] ?? Math.PI) + Math.sin(lt * 3) * 0.08;
+        g.save(); g.translate(wx + ph * 0.18, ph * 0.32); g.rotate(ang); g.strokeStyle = "#7fd3ff"; g.fillStyle = "#7fd3ff"; g.lineWidth = ph * 0.05; g.lineCap = "round";
+        g.beginPath(); g.moveTo(0, ph * 0.13); g.lineTo(0, -ph * 0.1); g.stroke(); g.beginPath(); g.moveTo(-ph * 0.08, -ph * 0.04); g.lineTo(0, -ph * 0.15); g.lineTo(ph * 0.08, -ph * 0.04); g.closePath(); g.fill(); g.restore(); }
+      g.fillStyle = "rgba(255,255,255,.85)"; g.font = CF(ph * 0.22, 700); g.fillText(wTxt, wx, ph * 0.7);
+      if (p.place){ g.font = CF(ph * 0.2, 800); g.fillStyle = "#fff"; g.fillText(p.place.toUpperCase(), wx + ph * 0.42, ph * 0.33); }
+      g.restore();
+    },
+
+    // Tacho: Halbkreis, Nadel schwingt auf den Wert (mit Überschwingen), Digitalanzeige
+    speedo(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ff3b45", R = u * 0.17, max = +p.max || 80, val = num0(p.value || "54");
+      const [x, y] = place(p, W, H, R * 2.3, R * 2.3, "br"), cx = x + R * 1.15, cy = y + R * 1.15;
+      const k = clamp((lt - 0.2) / 1.1), ov = k < 1 ? 1 - Math.pow(1 - k, 3) + Math.sin(k * Math.PI) * 0.12 : 1 + Math.sin((lt - 1.3) * 18) * 0.01 * clamp(2 - lt);
+      const v = val * Math.min(1.12, ov), inK = easeOut(clamp(lt / 0.3)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      const a0 = Math.PI * 0.8, a1 = Math.PI * 2.2, ang = a0 + (a1 - a0) * Math.min(1, v / max);
+      g.save(); g.globalAlpha = inK * (1 - outK);
+      g.fillStyle = "rgba(14,15,18,.75)"; g.beginPath(); g.arc(cx, cy, R * 1.12, 0, Math.PI * 2); g.fill();
+      g.lineWidth = R * 0.12; g.lineCap = "round"; g.strokeStyle = "rgba(255,255,255,.15)"; g.beginPath(); g.arc(cx, cy, R * 0.92, a0, a1); g.stroke();
+      const gr = g.createLinearGradient(cx - R, 0, cx + R, 0); gr.addColorStop(0, "#3ddc6f"); gr.addColorStop(0.6, "#ffcc33"); gr.addColorStop(1, col);
+      g.strokeStyle = gr; g.beginPath(); g.arc(cx, cy, R * 0.92, a0, ang); g.stroke();
+      g.fillStyle = "rgba(255,255,255,.75)"; g.font = CF(R * 0.15, 700); g.textAlign = "center"; g.textBaseline = "middle";
+      for (let s = 0; s <= max; s += max / 4){ const a = a0 + (a1 - a0) * s / max; g.fillText(String(Math.round(s)), cx + Math.cos(a) * R * 0.66, cy + Math.sin(a) * R * 0.66); }
+      g.save(); g.translate(cx, cy); g.rotate(ang); g.fillStyle = col; g.shadowColor = col; g.shadowBlur = R * 0.15;
+      g.beginPath(); g.moveTo(0, -R * 0.04); g.lineTo(R * 0.82, 0); g.lineTo(0, R * 0.04); g.closePath(); g.fill(); g.restore();
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(cx, cy, R * 0.07, 0, Math.PI * 2); g.fill();
+      g.font = CF(R * 0.42, 900); g.fillText(String(Math.round(Math.max(0, v))), cx, cy + R * 0.42);
+      g.font = CF(R * 0.15, 800); g.fillStyle = "rgba(255,255,255,.75)"; g.fillText((p.unit || "km/h") + (p.label ? " · " + p.label.toUpperCase() : ""), cx, cy + R * 0.72);
+      g.restore();
+    },
+
+    // Steigungsschild: dreieckiges Warnschild mit Prozent
+    gradesign(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), S = u * 0.3, [x, y] = place(p, W, H, S, S * 0.9, "tl"), cx = x + S / 2, cy = y + S * 0.55;
+      const k = backOut(clamp(lt / 0.4)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3)), wob = Math.sin(lt * 10) * 0.05 * clamp(1.2 - lt);
+      const down = String(p.dir || "up") === "down", pct = String(p.value || "12").replace("%", "") + "%";
+      g.save(); g.globalAlpha = Math.min(1, k) * (1 - outK); g.translate(cx, cy + S * 0.35); g.rotate(wob); g.scale(k, k); g.translate(0, -S * 0.35);
+      const tri = s => { g.beginPath(); g.moveTo(0, -s * 0.55); g.lineTo(s * 0.52, s * 0.35); g.lineTo(-s * 0.52, s * 0.35); g.closePath(); };
+      g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.025; g.fillStyle = "#fff"; tri(S); g.fill(); g.shadowBlur = 0;
+      g.lineJoin = "round"; g.lineWidth = S * 0.09; g.strokeStyle = "#d8262c"; tri(S * 0.9); g.stroke();
+      g.fillStyle = "#111"; g.beginPath();                                                   // Steigungskeil
+      if (down){ g.moveTo(-S * 0.3, S * 0.04); g.lineTo(S * 0.3, S * 0.24); g.lineTo(-S * 0.3, S * 0.24); } else { g.moveTo(-S * 0.3, S * 0.24); g.lineTo(S * 0.3, S * 0.04); g.lineTo(S * 0.3, S * 0.24); }
+      g.closePath(); g.fill();
+      g.font = CF(S * 0.17, 900); g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#111"; g.fillText(pct, down ? S * 0.12 : -S * 0.12, -S * 0.12);
+      g.restore();
+      if (p.text){ const tk = clamp((lt - 0.4) / 0.3); g.save(); g.globalAlpha = tk * (1 - outK); g.font = CF(u * 0.04, 800); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "top";
+        g.shadowColor = "rgba(0,0,0,.7)"; g.shadowBlur = u * 0.02; g.fillText(p.text.toUpperCase(), cx, y + S * 0.95); g.restore(); }
+    },
+
+    // Reise-Fortschritt: Balken Start → Ziel, Rad fährt mit, km + Prozent
+    progress(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ff5a36", portrait = H > W * 1.2, bw = Math.min(W * (portrait ? 0.86 : 0.7), u * 1.4), bh = u * 0.16;
+      const [x, y] = place(p, W, H, bw, bh, "bottom"), done = num0(p.done || "1840"), total = Math.max(1, num0(p.total || "12000"));
+      const k = easeOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35)), fk = easeInOut(clamp((lt - 0.35) / 1.4)), f = Math.min(1, done / total) * fk;
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate(0, (1 - k) * u * 0.06);
+      const ly = y + bh * 0.62, lh = u * 0.018;
+      g.font = CF(u * 0.048, 900); g.fillStyle = "#fff"; g.textBaseline = "alphabetic"; g.shadowColor = "rgba(0,0,0,.7)"; g.shadowBlur = u * 0.02;
+      g.textAlign = "left"; g.fillText((p.from || "Berlin").toUpperCase(), x, ly - u * 0.045); g.textAlign = "right"; g.fillText((p.to || "Singapur").toUpperCase(), x + bw, ly - u * 0.045);
+      g.shadowBlur = 0; g.fillStyle = "rgba(255,255,255,.25)"; rr(g, x, ly, bw, lh, lh / 2); g.fill();
+      g.fillStyle = col; rr(g, x, ly, Math.max(lh, bw * f), lh, lh / 2); g.fill();
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(x + bw, ly + lh / 2, lh * 0.9, 0, Math.PI * 2); g.fill();
+      g.font = Math.round(u * 0.06) + "px 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; g.textAlign = "center"; g.textBaseline = "bottom";
+      g.save(); g.translate(x + bw * f, ly - u * 0.002 + Math.sin(lt * 14) * u * 0.002); g.scale(-1, 1); g.fillText(p.icon || "🚴", 0, 0); g.restore();
+      g.font = CF(u * 0.042, 900); g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "top"; g.shadowColor = "rgba(0,0,0,.7)"; g.shadowBlur = u * 0.02;
+      g.fillText(fmtN(done * fk) + " / " + fmtN(total) + " " + (p.unit || "km"), x, ly + lh + u * 0.015);
+      g.textAlign = "right"; g.fillStyle = col; g.fillText(Math.round(f * 100) + " %", x + bw, ly + lh + u * 0.015);
+      g.restore();
+    },
+
+    // Wegweiser: grünes oder gelbes Straßenschild mit Zielen und km
+    signpost(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), yellow = p.style === "gelb", bg0 = yellow ? "#f6c400" : "#0a6b3d", fg = yellow ? "#111" : "#fff";
+      const rows = String(p.text || "↑ Vientiane | 120 km\n→ Bangkok | 650 km\n← Hanoi | 890 km").split("\n").map(r => r.split("|").map(s => s.trim())).slice(0, 4);
+      const rh = u * 0.085, sw = Math.min(W * 0.8, u * 0.75), sh = rows.length * rh + u * 0.05, [x, y] = place(p, W, H, sw, sh, "tr");
+      const k = easeOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate((1 - k) * u * 0.2, 0);
+      g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.03; g.fillStyle = bg0; rr(g, x, y, sw, sh, u * 0.02); g.fill(); g.shadowBlur = 0;
+      g.strokeStyle = fg; g.lineWidth = u * 0.006; rr(g, x + u * 0.012, y + u * 0.012, sw - u * 0.024, sh - u * 0.024, u * 0.012); g.stroke();
+      rows.forEach(([name, dist], i) => {
+        const rk = easeOut(clamp((lt - 0.25 - i * 0.15) / 0.3)); if (rk <= 0) return;
+        const ry = y + u * 0.025 + i * rh + rh / 2;
+        g.save(); g.globalAlpha *= rk; g.translate((1 - rk) * u * 0.05, 0); g.fillStyle = fg; g.textBaseline = "middle";
+        g.font = "700 " + Math.round(rh * 0.5) + "px 'DIN Alternate','DIN Condensed','Arial Narrow',Arial,sans-serif";
+        g.textAlign = "left"; g.fillText(name || "", x + u * 0.04, ry); g.textAlign = "right"; g.fillText(dist || "", x + sw - u * 0.04, ry);
+        if (i < rows.length - 1){ g.globalAlpha *= 0.4; g.fillRect(x + u * 0.03, ry + rh / 2, sw - u * 0.06, Math.max(1, u * 0.002)); }
+        g.restore();
+      });
+      g.restore();
+    },
+
+    // Unterkunft-Chip: Icon + Art + Preis
+    lodging(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), ph = u * 0.09, col = p.color || "#3ddc6f";
+      g.font = CF(ph * 0.38, 800); const t1 = (p.text || "Wildcampen").toUpperCase(), t2 = p.price || "0 €", w1 = g.measureText(t1).width; g.font = CF(ph * 0.38, 900); const w2 = g.measureText(t2).width;
+      const pw = ph * 1.05 + w1 + ph * 0.35 + w2 + ph * 0.55, [x, y] = place(p, W, H, pw, ph, "bl"), k = easeOut(clamp(lt / 0.3)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate((1 - k) * -u * 0.12, 0);
+      rcard(g, x, y, pw, ph, ph / 2, u);
+      g.font = Math.round(ph * 0.55) + "px 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(p.icon || "⛺", x + ph * 0.55, y + ph / 2 + ph * 0.03);
+      g.fillStyle = "#fff"; g.font = CF(ph * 0.38, 800); g.textAlign = "left"; g.fillText(t1, x + ph * 1.05, y + ph / 2 + 1);
+      const bx = x + ph * 1.05 + w1 + ph * 0.2; g.fillStyle = col; rr(g, bx, y + ph * 0.18, w2 + ph * 0.3, ph * 0.64, ph * 0.32); g.fill();
+      g.fillStyle = "#0e0f12"; g.font = CF(ph * 0.38, 900); g.fillText(t2, bx + ph * 0.15, y + ph / 2 + 1);
       g.restore();
     },
 
@@ -9378,6 +9597,39 @@ const ASSETS = (() => {
   }
   let stampLayerC = null;
   function stampLayer(w, h){ stampLayerC = stampLayerC || document.createElement("canvas"); if (stampLayerC.width !== w || stampLayerC.height !== h){ stampLayerC.width = w; stampLayerC.height = h; } return stampLayerC; }
+  // Höhendaten: Route (Tab Route, über OVL) oder eingetippte Höhen, geglättet
+  const elevCache = new Map();
+  function elevData(p){
+    if (p.source === "route" && typeof OVL !== "undefined"){ const pr = OVL.profile(); if (pr && pr.ok) return pr; }
+    const key = (p.heights || "") + "|" + (p.km || ""); if (elevCache.has(key)) return elevCache.get(key);
+    const hs = String(p.heights || "520, 610, 780, 1050, 1381, 1200, 900").split(/[,;\s]+/).map(Number).filter(v => !isNaN(v)); if (hs.length < 2) return null;
+    const N = 160, e = [];
+    for (let i = 0; i < N; i++){ const f = i / (N - 1) * (hs.length - 1), a = Math.floor(f), b = Math.min(a + 1, hs.length - 1), t = f - a, s2 = t * t * (3 - 2 * t);
+      e.push(hs[a] + (hs[b] - hs[a]) * s2 + Math.sin(i * 0.9) * (hs[b] - hs[a]) * 0.015); }
+    let top = 0; e.forEach((v, i) => { if (v > e[top]) top = i; });
+    const r = { e, min: Math.min(...e), max: Math.max(...e), top, km: num0(p.km || "37"), ok: true }; elevCache.set(key, r); return r;
+  }
+  const fmtN = v => Math.round(v).toLocaleString("de-DE");
+  // Ort → [lon, lat]: „lat, lon“ oder Ländername
+  function placeLL(s){
+    const m = String(s || "").match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;]\s*(-?\d+(?:\.\d+)?)\s*$/); if (m) return [+m[2], +m[1]];
+    const c = lookup(s); return c && c.ll;
+  }
+  let landR = null, landJob = null;
+  function landRings(){
+    if (landR || landJob) return landR;
+    landJob = fetch("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson").then(r => r.json()).then(d => {
+      landR = []; for (const f of d.features){ const gm = f.geometry, polys = gm.type === "Polygon" ? [gm.coordinates] : gm.coordinates; for (const pl of polys) landR.push(pl[0]); }
+    }).catch(() => { landJob = null; });
+    return null;
+  }
+  // Wert hochzählen, Format bleibt („1.840“, „18,1“, „6:12“)
+  function countUp(v, k){
+    const s0 = String(v); if (k >= 1) return s0;
+    if (/^\d+:\d{2}$/.test(s0)){ const [h, m] = s0.split(":").map(Number), t = Math.round((h * 60 + m) * k); return Math.floor(t / 60) + ":" + String(t % 60).padStart(2, "0"); }
+    const dec = (s0.split(",")[1] || "").length, n = num0(s0) * k;
+    return n.toLocaleString("de-DE", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
   let kmLayerC = null;
   function kmLayer(w, h){ kmLayerC = kmLayerC || document.createElement("canvas"); if (kmLayerC.width !== w || kmLayerC.height !== h){ kmLayerC.width = w; kmLayerC.height = h; } return kmLayerC; }
   /* ---------- Bausteine ---------- */
@@ -9518,6 +9770,7 @@ const ASSETS = (() => {
       const a2s = a.type === "flags" ? itemsFor(a).map(i => i.a2) : names.map(n => lookup(n) && lookup(n).a2);
       for (const a2 of a2s) if (a2){ flagImg(a2); jobs.push(flags.get(a2).job); }
     }
+    if (arr.some(a => a.type === "miniglobe")){ landRings(); if (landJob) jobs.push(landJob); }
     for (const a of arr) for (const k of ["img", "photo", "cutout"]) if (a[k]){ userImg(a[k]); const im = userImgs.get(a[k]); if (!im.complete) jobs.push(im.decode().catch(() => {})); }
     await Promise.all(jobs);
   }
@@ -9602,6 +9855,15 @@ const ASSETS = (() => {
     flapboard: { label: "ABFLUG · DEPARTURES", text: "VIENTIANE   09:00", pos: "bottom" },
     itempop: { amount: "+1", text: "Wasserflasche", icon: "💧", color: "#3fd8ff" },
     nametag: { text: "Kambon", color: "#ffffff", arrow: "right" },
+    elevation: { source: "manuell", heights: "520, 610, 780, 1050, 1381, 1200, 900", km: "37", peak: "Brenner", color: "#ff5a36", pos: "bottom" },
+    miniglobe: { to: "Laos", from: "Deutschland", label: "", color: "#ff3b45", pos: "tr" },
+    daystats: { title: "Tag 23 · Etappe 12", route: "Luang Prabang → Vang Vieng", color: "#fc5200", v1: "112", v2: "1.840", v3: "6:12", v4: "18,1" },
+    weather: { icon: "☀️", temp: "31", wind: "Gegenwind 25 km/h", windDir: "gegen", place: "", pos: "tr" },
+    speedo: { value: "54", max: 80, unit: "km/h", label: "Abfahrt", color: "#ff3b45", pos: "br" },
+    gradesign: { value: "12", dir: "up", text: "die nächsten 8 km", pos: "tl" },
+    progress: { from: "Berlin", to: "Singapur", done: "1840", total: "12000", unit: "km", icon: "🚴", color: "#ff5a36", pos: "bottom" },
+    signpost: { style: "grün", text: "↑ Vientiane | 120 km\n→ Bangkok | 650 km\n← Hanoi | 890 km", pos: "tr" },
+    lodging: { icon: "⛺", text: "Wildcampen", price: "0 €", color: "#3ddc6f", pos: "bl" },
     kmintro: { from: "0", to: "1840", unit: "KM", sub: "Tag 23 · Laos", country: "Laos", hm: "↗ 12.340 HM", color: "#ff5a36" },
     flag: { country: "Laos", text: "WILLKOMMEN IN", sub: "" },
     challenge: { title: "CHALLENGE", text: "Mit 100 € in 3 Tagen nach Bangkok", goal: "💶 100 €", time: "⏱ 3 TAGE", status: "open" },
@@ -9628,6 +9890,16 @@ const ASSETS = (() => {
     flapboard: [["label", "Kopfzeile", "text"], ["text", "Zeilen (Enter = neue Zeile, max. 3)", "textarea"]],
     itempop: [["amount", "Zahl", "text"], ["text", "Gegenstand", "text"], ["icon", "Icon (Emoji, bunt)", "text"], ["color", "Farbe", "color"]],
     nametag: [["text", "Name", "text"], ["arrow", "Pfeil", "select", [["right", "nach rechts unten"], ["left", "nach links unten"]]], ["color", "Farbe", "color"]],
+    elevation: [["source", "Daten", "select", [["manuell", "eigene Höhen"], ["route", "aus meiner Route (Tab Route)"]]], ["heights", "Höhen in m (Komma, von Start bis Ziel)", "text"], ["km", "Strecke (km)", "text"], ["peak", "Name des höchsten Punkts", "text"], ["color", "Farbe", "color"]],
+    miniglobe: [["to", "Ziel (Land oder „Breite, Länge“)", "text"], ["from", "Start (optional, für Bogen)", "text"], ["label", "Beschriftung (leer = Land)", "text"], ["color", "Punktfarbe", "color"]],
+    daystats: [["title", "Titel", "text"], ["route", "Strecke (rechts oben)", "text"], ["v1", "Wert 1 (km)", "text"], ["v2", "Wert 2 (Hm)", "text"], ["v3", "Wert 3 (Zeit h:mm)", "text"], ["v4", "Wert 4 (km/h)", "text"],
+      ["l1", "Bezeichnung 1", "text"], ["l2", "Bezeichnung 2", "text"], ["l3", "Bezeichnung 3", "text"], ["l4", "Bezeichnung 4", "text"], ["color", "Akzentfarbe", "color"]],
+    weather: [["icon", "Wetter (Emoji)", "text"], ["temp", "Temperatur", "text"], ["wind", "Wind-Text", "text"], ["windDir", "Wind", "select", [["gegen", "Gegenwind"], ["rücken", "Rückenwind"], ["links", "von links"], ["rechts", "von rechts"], ["none", "kein Pfeil"]]], ["place", "Ort (optional)", "text"]],
+    speedo: [["value", "Geschwindigkeit", "text"], ["max", "Skala bis", "number"], ["unit", "Einheit", "text"], ["label", "Zusatz", "text"], ["color", "Farbe", "color"]],
+    gradesign: [["value", "Steigung (%)", "text"], ["dir", "Richtung", "select", [["up", "bergauf"], ["down", "bergab"]]], ["text", "Text darunter", "text"]],
+    progress: [["from", "Start", "text"], ["to", "Ziel", "text"], ["done", "Geschafft", "text"], ["total", "Gesamt", "text"], ["unit", "Einheit", "text"], ["icon", "Icon (Emoji)", "text"], ["color", "Farbe", "color"]],
+    signpost: [["style", "Schild", "select", [["grün", "grün (Fernstraße)"], ["gelb", "gelb (Landstraße)"]]], ["text", "Zeilen: Ziel | Entfernung (je Zeile, max. 4)", "textarea"]],
+    lodging: [["icon", "Icon (Emoji)", "text"], ["text", "Unterkunft", "text"], ["price", "Preis", "text"], ["color", "Farbe Preis", "color"]],
     kmintro: [["from", "Zählt von", "text"], ["to", "bis (Kilometer)", "text"], ["unit", "Einheit", "text"], ["sub", "Unterzeile", "text"], ["country", "Flagge (Land)", "text"], ["hm", "Chip oben (leer = aus)", "text"], ["color", "Akzentfarbe", "color"]],
     flag: [["country", "Land (mehrere mit Komma)", "text"], ["text", "Zeile oben", "text"], ["title", "Name (leer = Land)", "text"], ["sub", "Unterzeile", "text"]],
     challenge: [["title", "Titel", "text"], ["text", "Aufgabe", "text"], ["goal", "Chip 1", "text"], ["time", "Chip 2", "text"], ["status", "Status", "select", STATUS]],
