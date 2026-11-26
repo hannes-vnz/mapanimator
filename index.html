@@ -2145,6 +2145,15 @@ button.btn:disabled{opacity:.45; cursor:default;}
 .mchip:hover{opacity:1; filter:none;}
 .mchip.def{opacity:.95; filter:none; border-style:dashed; border-color:var(--line-2);}
 .mchip.on{opacity:1; filter:none; border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 0 1px var(--accent);}
+.mmore{flex:none; width:30px; height:30px; border-radius:8px; border:1px dashed var(--line-2); background:none; color:var(--muted); font-weight:800;}
+.mmore.on, .mmore:hover{border-color:var(--accent); color:var(--text);}
+.mpick{margin:0 0 8px; padding:8px; border:1px solid var(--line); border-radius:10px; background:var(--field); display:flex; flex-direction:column; gap:8px;}
+.mgrp > span{display:block; font-size:10px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin-bottom:4px;}
+.mgrp > div{display:grid; grid-template-columns:repeat(3,1fr); gap:4px;}
+.mopt{display:flex; align-items:center; gap:5px; padding:5px 6px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:#c9cad1; font-size:11px; text-align:left; white-space:nowrap; overflow:hidden;}
+.mopt em{font-style:normal; font-size:15px;}
+.mopt:hover{border-color:var(--muted);}
+.mopt.on{border-color:var(--accent); background:var(--accent-soft); color:#fff;}
 .lspeed{flex:none; height:30px; min-width:38px; border-radius:8px; border:1px solid var(--line-2); background:var(--field); color:var(--text); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;}
 .lspeed:hover{border-color:var(--accent);}
 .wp .idx{position:absolute; top:12px; left:-9px; width:20px; height:20px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-size:10.5px; display:grid; place-items:center; font-weight:800; box-shadow:0 0 0 3px var(--card);}
@@ -2421,7 +2430,7 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
           <div class="setting adv"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
           <div class="setting adv"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
           <div class="setting adv"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>
-          <div class="setting adv"><label>Konstante Geschwindigkeit</label><input type="checkbox" id="constSpeed" checked></div>
+          <div class="setting adv"><label>Tempo nach Bildschirm-Strecke</label><input type="checkbox" id="constSpeed" checked></div>
           <div class="setting adv"><label>Linien-Beschleunigung</label>
             <select id="legEase">
               <option value="linear">Linear (konstant)</option>
@@ -2839,8 +2848,95 @@ const M3D = (() => {
       m.box(0.1, 0, 0.48, 1.3, 0.06, 0.012, DARK, { tag: 1 }).box(0.1, 0, 0.48, 0.06, 1.3, 0.012, DARK, { tag: 1 });
       return { m, size: 1.05, air: true }; }
   };
-  const ALIAS = { car: "car", camper: "camper", bus: "bus", moto: "moto", bike: "bike", foot: "foot",
-                  train: "train", ferry: "ferry", boat: "boat", fly: "fly", heli: "heli" };
+
+  const BROWN = hex("#6b4a2c"), WOOD = hex("#8a6a45"), CABLE = hex("#2b2d31");
+  Object.assign(BUILD, {
+    truck(C){ const m = new Mesh(), L = mix(C, [1, 1, 1], 0.15);
+      m.box(0.62, 0, 0.3, 0.36, 0.46, 0.44, C, { top: L });
+      m.box(0.75, 0, 0.4, 0.11, 0.44, 0.16, GLASS, { taperX: 0.3 });
+      m.box(-0.2, 0, 0.36, 1.2, 0.5, 0.52, WHITE, { top: hex("#e6e6e6") });
+      m.box(-0.2, 0, 0.36, 1.21, 0.51, 0.06, C);
+      [[0.62, 0.22], [0.62, -0.22], [-0.05, 0.23], [-0.05, -0.23], [-0.55, 0.23], [-0.55, -0.23]].forEach(([x, y]) => m.wheel(x, y, 0.11));
+      return { m, size: 1.5 }; },
+    caravan(C){ const { m } = BUILD.car(C);
+      m.box(-0.6, 0, 0.2, 0.2, 0.04, 0.03, GREY);
+      m.box(-1.1, 0, 0.34, 0.8, 0.46, 0.4, WHITE, { top: hex("#ececec") });
+      m.box(-1.1, 0, 0.3, 0.81, 0.47, 0.05, C);
+      m.box(-1.0, 0.235, 0.4, 0.3, 0.01, 0.1, GLASS).box(-1.0, -0.235, 0.4, 0.3, 0.01, 0.1, GLASS);
+      m.wheel(-1.1, 0.23, 0.1).wheel(-1.1, -0.23, 0.1);
+      return { m, size: 1.25 }; },
+    horse(C){ const m = new Mesh(), HB = hex("#7a4b2a"), DK = hex("#3b2414");
+      m.box(0, 0, 0.42, 0.62, 0.2, 0.22, HB);
+      m.box(0.33, 0, 0.56, 0.14, 0.12, 0.26, HB, { shiftX: 0.08 });
+      m.box(0.46, 0, 0.66, 0.22, 0.1, 0.1, HB);
+      m.box(-0.34, 0, 0.42, 0.08, 0.05, 0.22, DK, { shiftX: -0.06 });
+      [[0.22, 0.07, 3], [0.22, -0.07, 4], [-0.22, 0.07, 4], [-0.22, -0.07, 3]].forEach(([x, y, tg]) => m.box(x, y, 0.16, 0.06, 0.06, 0.32, DK, { tag: tg }));
+      m.box(-0.02, 0, 0.7, 0.14, 0.2, 0.26, C);
+      m.box(0, 0, 0.9, 0.12, 0.12, 0.12, SKIN).box(0, 0, 0.97, 0.15, 0.15, 0.04, DK);
+      return { m, size: 0.95 }; },
+    ski(C){ const m = new Mesh();
+      m.box(0.05, 0.07, 0.02, 0.8, 0.05, 0.02, C).box(0.05, -0.07, 0.02, 0.8, 0.05, 0.02, C);
+      m.box(0, 0.07, 0.16, 0.08, 0.07, 0.26, DARK, { shiftX: 0.06 }).box(0, -0.07, 0.16, 0.08, 0.07, 0.26, DARK, { shiftX: 0.06 });
+      m.box(0.08, 0, 0.42, 0.18, 0.24, 0.28, C, { shiftX: 0.08 });
+      m.box(0.16, 0, 0.64, 0.12, 0.12, 0.12, SKIN).box(0.16, 0, 0.71, 0.14, 0.14, 0.05, hex("#f2f2f2"));
+      m.box(-0.08, 0.17, 0.25, 0.02, 0.02, 0.5, GREY, { shiftX: -0.12 }).box(-0.08, -0.17, 0.25, 0.02, 0.02, 0.5, GREY, { shiftX: -0.12 });
+      return { m, size: 0.8 }; },
+    chairlift(C){ const m = new Mesh();
+      m.box(0, 0, 1.0, 1.6, 0.025, 0.025, CABLE);
+      m.box(0, 0, 0.98, 0.12, 0.08, 0.06, GREY);
+      m.box(0, 0, 0.72, 0.03, 0.03, 0.5, GREY);
+      m.box(0, 0, 0.42, 0.12, 0.62, 0.04, GREY);
+      m.box(-0.07, 0, 0.56, 0.03, 0.62, 0.28, GREY);
+      m.box(-0.0, 0.15, 0.58, 0.14, 0.17, 0.24, C).box(-0.0, -0.15, 0.58, 0.14, 0.17, 0.24, mix(C, [0, 0, 1], 0.4));
+      m.box(0, 0.15, 0.76, 0.1, 0.1, 0.1, SKIN).box(0, -0.15, 0.76, 0.1, 0.1, 0.1, SKIN);
+      m.box(0.12, 0.15, 0.34, 0.5, 0.05, 0.02, hex("#e33")).box(0.12, -0.15, 0.34, 0.5, 0.05, 0.02, hex("#e33"));
+      return { m, size: 0.95, hang: true }; },
+    cablecar(C){ const m = new Mesh(), L = mix(C, [1, 1, 1], 0.2);
+      m.box(0, 0.06, 1.05, 1.8, 0.02, 0.02, CABLE).box(0, -0.06, 1.05, 1.8, 0.02, 0.02, CABLE);
+      m.box(0, 0, 1.0, 0.36, 0.14, 0.08, GREY);
+      m.box(0, 0, 0.8, 0.04, 0.04, 0.34, GREY);
+      m.box(0, 0, 0.42, 0.7, 0.5, 0.42, C, { top: L });
+      m.box(0, 0, 0.47, 0.71, 0.51, 0.16, GLASS);
+      m.box(0, 0, 0.66, 0.66, 0.46, 0.04, L);
+      return { m, size: 1.0, hang: true }; },
+    kayak(C){ const m = new Mesh();
+      m.box(0, 0, 0.05, 0.8, 0.16, 0.08, C, { taperY: 0.3 });
+      m.box(0.48, 0, 0.05, 0.16, 0.16, 0.08, C, { taperY: 0.95 }).box(-0.48, 0, 0.05, 0.16, 0.16, 0.08, C, { taperY: 0.95 });
+      m.box(0, 0, 0.2, 0.12, 0.18, 0.22, hex("#f4c430"));
+      m.box(0, 0, 0.37, 0.1, 0.1, 0.1, SKIN);
+      m.box(0.04, 0, 0.26, 0.03, 0.9, 0.02, DARK, { tag: 1 });
+      return { m, size: 0.75, water: true }; },
+    cruise(C){ const m = new Mesh();
+      m.box(0, 0, 0.12, 1.6, 0.42, 0.24, WHITE, { taperY: 0.05 });
+      m.box(0.9, 0, 0.12, 0.2, 0.42, 0.24, WHITE, { taperY: 0.9 });
+      m.box(0, 0, 0.04, 1.61, 0.43, 0.06, hex("#1d2f52"));
+      for (let k = 0; k < 4; k++) m.box(-0.05 - k * 0.04, 0, 0.3 + k * 0.08, 1.2 - k * 0.22, 0.36, 0.08, WHITE).box(-0.05 - k * 0.04, 0, 0.3 + k * 0.08, 1.21 - k * 0.22, 0.37, 0.025, GLASS);
+      m.cyl(-0.35, 0, 0.7, 0.07, 0.2, "z", C, 10);
+      return { m, size: 1.6, water: true }; },
+    balloon(C){ const m = new Mesh(), W2 = mix(C, [1, 1, 1], 0.7);
+      const prof = [[0.12, 0.62], [0.26, 0.72], [0.36, 0.84], [0.4, 0.98], [0.38, 1.1], [0.3, 1.2], [0.16, 1.27], [0.0, 1.3]];
+      for (let i = 0; i < prof.length - 1; i++){
+        const [r0, z0] = prof[i], [r1, z1] = prof[i + 1];
+        m.cyl(0, 0, (z0 + z1) / 2, r0, z1 - z0, "z", i % 2 ? C : W2, 14, 0, r1);
+      }
+      m.box(0, 0, 0.1, 0.18, 0.18, 0.16, WOOD);
+      [[0.08, 0.08], [0.08, -0.08], [-0.08, 0.08], [-0.08, -0.08]].forEach(([x, y]) => m.box(x, y, 0.38, 0.012, 0.012, 0.5, CABLE));
+      return { m, size: 1.0, air: true, high: 0.35 }; },
+    paraglider(C){ const m = new Mesh(), N = 9;
+      for (let i = 0; i < N; i++){
+        const a0 = -0.9 + 1.8 * i / N, a1 = -0.9 + 1.8 * (i + 1) / N;
+        const P = (a, x) => [x, Math.sin(a) * 0.6, 0.85 + Math.cos(a) * 0.25];
+        m.quad(P(a0, 0.12), P(a1, 0.12), P(a1, -0.12), P(a0, -0.12), i % 2 ? C : mix(C, [1, 1, 1], 0.45));
+        m.quad(P(a0, -0.12), P(a1, -0.12), P(a1, 0.12), P(a0, 0.12), mix(C, [0, 0, 0], 0.2));
+      }
+      [-0.45, 0.45].forEach(y => m.tri([0, y, 0.95], [0.02, 0, 0.32], [-0.02, 0, 0.32], CABLE));
+      m.box(0, 0, 0.22, 0.2, 0.16, 0.2, DARK).box(0.02, 0, 0.38, 0.1, 0.1, 0.1, SKIN);
+      return { m, size: 1.0, air: true, high: 0.3 }; }
+  });
+  const ALIAS = { car: "car", camper: "camper", bus: "bus", moto: "moto", bike: "bike", foot: "foot", run: "foot",
+                  train: "train", ferry: "ferry", boat: "boat", fly: "fly", heli: "heli", truck: "truck", caravan: "caravan",
+                  horse: "horse", ski: "ski", chairlift: "chairlift", cablecar: "cablecar", kayak: "kayak", cruise: "cruise",
+                  balloon: "balloon", paraglider: "paraglider" };
 
   /* ---------- WebGL ---------- */
   const VS = `
@@ -2886,7 +2982,7 @@ const M3D = (() => {
     if (cache.has(key)) return cache.get(key);
     const b = (BUILD[ALIAS[mode]] || BUILD.car)(hex(color));
     const mk = arr => { const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); return buf; };
-    const o = { pos: mk(b.m.p), nor: mk(b.m.n), col: mk(b.m.c), tag: mk(b.m.tag), count: b.m.p.length / 3, size: b.size, air: b.air, water: b.water };
+    const o = { pos: mk(b.m.p), nor: mk(b.m.n), col: mk(b.m.c), tag: mk(b.m.tag), count: b.m.p.length / 3, size: b.size, air: b.air, water: b.water, high: b.high };
     cache.set(key, o);
     return o;
   }
@@ -2913,7 +3009,10 @@ const M3D = (() => {
         const mesh = meshFor(it.mode, it.color);
         const mc = maplibregl.MercatorCoordinate.fromLngLat(it.lngLat, 0);
         let ground = 0;
-        try { if (mapRef.getTerrain && mapRef.getTerrain()) ground = (mapRef.queryTerrainElevation(it.lngLat) || 0) * mc.meterInMercatorCoordinateUnits(); } catch {}
+        try {
+          if (it.groundM != null) ground = it.groundM * mc.meterInMercatorCoordinateUnits();
+          else if (mapRef.getTerrain && mapRef.getTerrain()) ground = (mapRef.queryTerrainElevation(it.lngLat) || 0) * mc.meterInMercatorCoordinateUnits();
+        } catch {}
         const T = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, mc.x, mc.y, ground, 1];
         g.uniformMatrix4fv(loc.u_matrix, false, new Float32Array(mul(main, T)));
         const h = it.heading || 0, c = Math.cos(h), s = Math.sin(h);
@@ -2922,7 +3021,8 @@ const M3D = (() => {
         g.uniformMatrix3fv(loc.u_rot, false, new Float32Array([c, s, 0, s * cr, -c * cr, sr, -s * sr, c * sr, cr]));
         const scale = (it.px || 54) * mesh.size * mercPerPx;
         let alt = 0;
-        if (mesh.air){ const k = Math.sin(Math.PI * Math.min(Math.max(it.prog || 0, 0), 1)); alt = (mesh.size * 0.4 * Math.pow(k, 0.6)) * scale / mesh.size; }
+        if (mesh.air && mesh.high){ alt = mesh.high * scale; }
+        else if (mesh.air){ const k = Math.sin(Math.PI * Math.min(Math.max(it.prog || 0, 0), 1)); alt = (mesh.size * 0.4 * Math.pow(k, 0.6)) * scale / mesh.size; }
         g.uniform1f(loc.u_scale, scale);
         g.uniform1f(loc.u_alt, alt);
         g.uniform1f(loc.u_spin, time * 28);
@@ -2947,7 +3047,8 @@ const M3D = (() => {
   return {
     addLayer(map){ if (!map.getLayer("tip-3d")) map.addLayer(layer); },
     update(list, t){ items = list || []; time = t || 0; if (mapRef) mapRef.triggerRepaint(); },
-    modes: Object.keys(BUILD)
+    modes: Object.keys(BUILD),
+    isAir(mode){ return ["fly", "heli", "balloon", "paraglider"].includes(ALIAS[mode] || mode); }
   };
 })();
 </script>
@@ -3003,11 +3104,11 @@ const EN = {
   "Fit":"Fit","✕ löschen":"✕ delete",
   // Labels
   "Linienfarbe":"Line color","Weiße Kontur":"White outline","Anreise per":"Arrive by","Standard":"Default",
-  "Auto":"Car","Camper":"Camper van","Motorrad":"Motorbike","Segelboot":"Sailboat","Heli":"Helicopter","Tempo dieser Etappe":"Speed of this leg",
+  "Auto":"Car","Laufen":"Running","Reiten":"Horse riding","Ski":"Skiing","Wohnwagen":"Caravan","LKW":"Truck","Seilbahn":"Cable car","Sessellift":"Chairlift","Kreuzfahrt":"Cruise ship","Kajak":"Kayak","Ballon":"Hot-air balloon","Gleitschirm":"Paraglider","Zu Fuß":"On foot","Land":"Land","Schiene & Seil":"Rail & cable","Wasser":"Water","Luft":"Air","Alle Verkehrsmittel":"All transports","Camper":"Camper van","Motorrad":"Motorbike","Segelboot":"Sailboat","Heli":"Helicopter","Tempo dieser Etappe":"Speed of this leg",
   "3D-Modell (Verkehrsmittel)":"3D model (transport)","Symbol (Verkehrsmittel)":"Icon (transport)","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
   "Standard-Fortbewegung":"Default travel mode","Linienbreite":"Line width","Linienstil":"Line style","Fortbewegung":"Travel mode",
   "Sekunden pro Etappe":"Seconds per leg","Pause am Stopp (s)":"Pause at stop (s)",
-  "Konstante Geschwindigkeit":"Constant speed","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
+  "Konstante Geschwindigkeit":"Constant speed","Tempo nach Bildschirm-Strecke":"Pace by on-screen distance","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
   "Zoom-In an Stopps":"Zoom in at stops","Neigung (Pitch)":"Tilt (pitch)","Kamera-Glättung":"Camera smoothing",
   "Rotation (°/s)":"Rotation (°/s)","Linien-Beschleunigung":"Line acceleration","Tempo ×":"Speed ×",
   "Übersicht am Ende":"Overview at end","Karten-Stil":"Map style","Pin-Stil":"Pin style","Linien-Glow":"Line glow",
@@ -3780,10 +3881,15 @@ function renderWpList(){
     const div = document.createElement("div");
     div.className = "wp";
     const cur = wp.mode || "";
-    const chips = Object.entries(MODES).map(([k, m]) =>
-      `<button type="button" class="mchip${cur === k ? " on" : ""}${!cur && val("travelMode") === k ? " def" : ""}" data-mode="${k}" title="${tr(m.label)}">${m.icon}</button>`).join("");
-    div.innerHTML = (i > 0 ? `<div class="legsel"><div class="mchips">${chips}</div>` +
-      `<button type="button" class="lspeed" title="${tr("Tempo dieser Etappe")}">${(wp.speed || 1) < 1 ? (wp.speed === 0.5 ? "½" : "¼") : (wp.speed || 1)}×</button></div>` : "") + `
+    const recent = recentModes().filter(k => MODES[k]);
+    const show = [...new Set([cur || val("travelMode"), ...recent, "car", "foot", "train", "ferry", "fly"])].filter(Boolean).slice(0, 6);
+    const chip = k => `<button type="button" class="mchip${cur === k ? " on" : ""}${!cur && val("travelMode") === k ? " def" : ""}" data-mode="${k}" title="${tr(MODES[k].label)}">${MODES[k].icon}</button>`;
+    const groups = {};
+    Object.entries(MODES).forEach(([k, m]) => (groups[m.group] = groups[m.group] || []).push(k));
+    const picker = `<div class="mpick" hidden>${Object.entries(groups).map(([g, ks]) =>
+      `<div class="mgrp"><span>${tr(g)}</span><div>${ks.map(k => `<button type="button" class="mopt${cur === k ? " on" : ""}" data-mode="${k}"><em>${MODES[k].icon}</em>${tr(MODES[k].label)}</button>`).join("")}</div></div>`).join("")}</div>`;
+    div.innerHTML = (i > 0 ? `<div class="legsel"><div class="mchips">${show.map(chip).join("")}<button type="button" class="mmore" title="${tr("Alle Verkehrsmittel")}">⋯</button></div>` +
+      `<button type="button" class="lspeed" title="${tr("Tempo dieser Etappe")}">${(wp.speed || 1) < 1 ? (wp.speed === 0.5 ? "½" : "¼") : (wp.speed || 1)}×</button></div>${picker}` : "") + `
       <div class="idx">${i + 1}</div>
       <div class="row">
         <input type="text" data-f="name" placeholder="${tr("Name")}" value="${escapeHtml(wp.name)}">
@@ -3804,10 +3910,13 @@ function renderWpList(){
         drawStatic();
       });
     });
-    div.querySelectorAll(".mchip").forEach(b => b.addEventListener("click", () => {
-      wp.mode = wp.mode === b.dataset.mode ? "" : b.dataset.mode;
+    div.querySelectorAll(".mchip, .mopt").forEach(b => b.addEventListener("click", () => {
+      wp.mode = wp.mode === b.dataset.mode && b.classList.contains("mchip") ? "" : b.dataset.mode;
+      if (wp.mode) pushRecentMode(wp.mode);
       renderWpList(); drawStatic();
     }));
+    const more = div.querySelector(".mmore");
+    if (more) more.addEventListener("click", () => { const pk = div.querySelector(".mpick"); pk.hidden = !pk.hidden; more.classList.toggle("on", !pk.hidden); });
     const sp = div.querySelector(".lspeed");
     if (sp) sp.addEventListener("click", () => {
       wp.speed = LEG_SPEEDS[(LEG_SPEEDS.indexOf(wp.speed || 1) + 1) % LEG_SPEEDS.length];
@@ -4216,19 +4325,32 @@ function arcLeg(a, b, n, bend){
    route: Routing-Profil (sonst Luftlinie/Bogen mit arc), pace: Dauer-Faktor (Gehen ≈ 2× Auto),
    zoom: Zoom-Versatz der Folgekamera (Flug weiter draußen), color/dash: fester Linienstil */
 const MODES = {
-  foot:   { group: "Land",   icon: "🚶", label: "Zu Fuß",    route: "foot", pace: 2,    zoom: 1.2 },
-  bike:   { group: "Land",   icon: "🚲", label: "Fahrrad",   route: "bike", pace: 1.4,  zoom: 0.6 },
-  car:    { group: "Land",   icon: "🚗", label: "Auto",      route: "car",  pace: 1,    zoom: 0 },
-  camper: { group: "Land",   icon: "🚐", label: "Camper",    route: "car",  pace: 1.15, zoom: 0 },
-  moto:   { group: "Land",   icon: "🏍️", label: "Motorrad",  route: "car",  pace: 0.9,  zoom: 0.2 },
-  bus:    { group: "Land",   icon: "🚌", label: "Bus",       route: "car",  pace: 1.1,  zoom: 0, color: "#ff9a1f", dash: 1 },
-  train:  { group: "Land",   icon: "🚆", label: "Zug",       arc: 0,        pace: 0.7,  zoom: -0.6, dash: 1 },
-  ferry:  { group: "Wasser", icon: "⛴️", label: "Fähre",     arc: 0.12,     pace: 0.9,  zoom: -1,   color: "#ffffff", dash: 1 },
-  boat:   { group: "Wasser", icon: "⛵", label: "Segelboot", arc: 0.07,     pace: 1.3,  zoom: -0.6, color: "#ffffff", dash: 1 },
-  fly:    { group: "Luft",   icon: "✈️", label: "Flug",      arc: 0.18,     pace: 0.45, zoom: -2.2 },
-  heli:   { group: "Luft",   icon: "🚁", label: "Heli",      arc: 0.04,     pace: 0.8,  zoom: -0.8 }
+  foot:      { group: "Zu Fuß",          icon: "🚶", label: "Zu Fuß",      route: "foot", pace: 2,    zoom: 1.2 },
+  run:       { group: "Zu Fuß",          icon: "🏃", label: "Laufen",      route: "foot", pace: 1.5,  zoom: 1.1 },
+  horse:     { group: "Zu Fuß",          icon: "🐎", label: "Reiten",      route: "foot", pace: 1.5,  zoom: 1 },
+  ski:       { group: "Zu Fuß",          icon: "⛷️", label: "Ski",         arc: 0,        pace: 1.2,  zoom: 1.2 },
+  bike:      { group: "Land",            icon: "🚲", label: "Fahrrad",     route: "bike", pace: 1.4,  zoom: 0.6 },
+  car:       { group: "Land",            icon: "🚗", label: "Auto",        route: "car",  pace: 1,    zoom: 0 },
+  caravan:   { group: "Land",            icon: "🏕️", label: "Wohnwagen",   route: "car",  pace: 1.2,  zoom: 0 },
+  camper:    { group: "Land",            icon: "🚐", label: "Camper",      route: "car",  pace: 1.15, zoom: 0 },
+  moto:      { group: "Land",            icon: "🏍️", label: "Motorrad",    route: "car",  pace: 0.9,  zoom: 0.2 },
+  bus:       { group: "Land",            icon: "🚌", label: "Bus",         route: "car",  pace: 1.1,  zoom: 0, color: "#ff9a1f", dash: 1 },
+  truck:     { group: "Land",            icon: "🚚", label: "LKW",         route: "car",  pace: 1.15, zoom: 0 },
+  train:     { group: "Schiene & Seil",  icon: "🚆", label: "Zug",         arc: 0,        pace: 0.7,  zoom: -0.6, dash: 1 },
+  cablecar:  { group: "Schiene & Seil",  icon: "🚡", label: "Seilbahn",    arc: 0,        pace: 2.2,  zoom: 1.2, color: "#2b2d31" },
+  chairlift: { group: "Schiene & Seil",  icon: "🚠", label: "Sessellift",  arc: 0,        pace: 2.4,  zoom: 1.4, color: "#2b2d31" },
+  ferry:     { group: "Wasser",          icon: "⛴️", label: "Fähre",       arc: 0.12,     pace: 0.9,  zoom: -1,   color: "#ffffff", dash: 1 },
+  cruise:    { group: "Wasser",          icon: "🛳️", label: "Kreuzfahrt",  arc: 0.1,      pace: 0.8,  zoom: -1.2, color: "#ffffff", dash: 1 },
+  boat:      { group: "Wasser",          icon: "⛵", label: "Segelboot",   arc: 0.07,     pace: 1.3,  zoom: -0.6, color: "#ffffff", dash: 1 },
+  kayak:     { group: "Wasser",          icon: "🛶", label: "Kajak",       arc: 0.03,     pace: 2.2,  zoom: 1,    color: "#ffffff", dash: 1 },
+  fly:       { group: "Luft",            icon: "✈️", label: "Flug",        arc: 0.18,     pace: 0.45, zoom: -2.2 },
+  heli:      { group: "Luft",            icon: "🚁", label: "Heli",        arc: 0.04,     pace: 0.8,  zoom: -0.8 },
+  balloon:   { group: "Luft",            icon: "🎈", label: "Ballon",      arc: 0.03,     pace: 2,    zoom: 0.3 },
+  paraglider:{ group: "Luft",            icon: "🪂", label: "Gleitschirm", arc: 0.05,     pace: 1.6,  zoom: 0.5 }
 };
 const LEG_SPEEDS = [1, 0.5, 0.25, 2, 4];
+function recentModes(){ try { return JSON.parse(localStorage.getItem("ma.recentModes") || "[]"); } catch { return []; } }
+function pushRecentMode(k){ try { localStorage.setItem("ma.recentModes", JSON.stringify([k, ...recentModes().filter(x => x !== k)].slice(0, 6))); } catch {} }
 function legMode(wp){ return (wp && wp.mode) || val("travelMode"); }
 
 function boundsOf(coords){
@@ -4334,6 +4456,25 @@ function setLineWidths(w){
 }
 
 /* ---------- Animations-Kontext (alle Routen) ---------- */
+/* Etappen-Dauer nach Bildschirm-Strecke: Wie weit wandert die Spitze im Bild,
+   wenn die Kamera (inkl. Auto-Rauszoomen) ihr folgt? Daraus + Tempo-Gefühl die Dauer.
+   Lange Etappen bekommen einen kleinen Distanz-Bonus, kurze eine Mindestdauer. */
+const SCREEN_SPEED = { gemuetlich: 0.3, normal: 0.45, rasant: 0.72 };   // Bildbreiten (kurze Seite) pro Sekunde
+function legScreenDur(coords, from, to, km, mode, followZoom, frameMin){
+  const bb = boundsOf(coords.slice(from, to + 1));
+  const fit = map.cameraForBounds(bb, { padding: 80 });
+  let z = followZoom == null ? (anim0Zoom ?? 5) : followZoom + ((MODES[mode] || {}).zoom || 0);
+  if (fit && followZoom != null) z = Math.min(z, fit.zoom + 0.35);
+  const lat = (bb[0][1] + bb[1][1]) / 2;
+  const mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * Math.pow(2, z));
+  const frac = (km * 1000 / mpp) / frameMin;
+  const v = SCREEN_SPEED[val("tplFeel")] || SCREEN_SPEED.normal;
+  let dur = frac / v * (1 + 0.22 * Math.log10(1 + km / 100));
+  dur *= Math.sqrt((MODES[mode] || {}).pace || 1);
+  const minDur = 1.2 + 0.55 * Math.log10(1 + km / 10);     // kurze Etappen nie hektisch, lange etwas länger
+  return Math.min(Math.max(dur, minDur), 10);
+}
+let anim0Zoom = null;
 async function prepareAnim(){
   const speed = Math.max(num("speedMult") || 1, 0.1);
   const legDurBase = (num("legDur") || 4) / speed;
@@ -4341,10 +4482,21 @@ async function prepareAnim(){
   const constSpeed = checked("constSpeed");
   const per = [];
   const allStopsFeats = [];
+  // 1. alle Routen bauen (für Übersichts-Zoom)
+  const built = [];
   for (let ri = 0; ri < routes.length; ri++){
+    const r = await buildRouteFor(routes[ri]);
+    if (r && r.coords.length >= 2) built.push({ ri, r });
+  }
+  if (built.length){
+    const oc = map.cameraForBounds(boundsOf(built.flatMap(b => b.r.coords)), { padding: 90 });
+    anim0Zoom = oc ? oc.zoom : null;
+  }
+  const followZoom = typeof CAM !== "undefined" ? CAM.followZoom() : num("zoom");
+  const [EW, EH] = val("resolution").split("x").map(Number);
+  const frameMin = Math.min(EW, EH) || 1080;
+  for (const { ri, r } of built){
     const rt = routes[ri];
-    const r = await buildRouteFor(rt);
-    if (!r || r.coords.length < 2) continue;
     const coords = r.coords;
     const cum = [0];
     for (let i = 1; i < coords.length; i++) cum.push(cum[i - 1] + haversine(coords[i - 1], coords[i]));
@@ -4354,17 +4506,17 @@ async function prepareAnim(){
     if (stopIdxs[stopIdxs.length - 1] !== coords.length - 1) stopIdxs.push(coords.length - 1);
     const legKm = [];
     for (let i = 0; i < stopIdxs.length - 1; i++) legKm.push(cum[stopIdxs[i + 1]] - cum[stopIdxs[i]]);
-    const avgKm = legKm.length ? legKm.reduce((a, b) => a + b, 0) / legKm.length : 1;
     const segs = [];
     for (let i = 0; i < stopIdxs.length; i++){
       segs.push({ type: "pause", at: stopIdxs[i], dur: Math.max(pauseDur, 0.6 / speed), stopNo: i });
       if (i < stopIdxs.length - 1){
-        let dur = legDurBase;
-        if (constSpeed && avgKm > 0)
-          dur = Math.min(Math.max(legDurBase * (legKm[i] / avgKm), 1.2 / speed), legDurBase * 4);
         const lg = r.legs && r.legs.length === stopIdxs.length - 1 ? r.legs[i] : null;
-        if (lg){ dur *= (MODES[lg.mode] || {}).pace || 1; dur /= lg.speed || 1; }
-        segs.push({ type: "leg", from: stopIdxs[i], to: stopIdxs[i + 1], dur });
+        const mode = lg ? lg.mode : legMode(null);
+        let dur;
+        if (constSpeed) dur = legScreenDur(coords, stopIdxs[i], stopIdxs[i + 1], legKm[i], mode, followZoom, frameMin) / speed;
+        else dur = legDurBase * (((MODES[mode] || {}).pace) || 1);
+        if (lg) dur /= lg.speed || 1;
+        segs.push({ type: "leg", from: stopIdxs[i], to: stopIdxs[i + 1], dur, km: legKm[i] });
       }
     }
     let tt = 0;
@@ -4519,7 +4671,17 @@ function renderAt(t, live){
     if (tipStyle !== "none" && t < total - 0.01 && !done){
       if (tipStyle === "model3d"){
         const span = Math.max(lg.to - lg.from, 1e-6);
-        models.push({ lngLat: tip, heading: headingAt(p, tipIdx), mode: lg.mode, color: p.rt.color,
+        // Luftfahrzeuge mit 3D-Terrain: ruhige Flughöhe über dem höchsten Punkt der Umgebung
+        let groundM = null;
+        if (M3D.isAir(lg.mode) && map.getTerrain()){
+          groundM = 0;
+          const n = 8, span2 = Math.max((lg.to - lg.from) * 0.12, 2);
+          for (let k = -n; k <= n; k++){
+            const ii = Math.min(Math.max(Math.round(tipIdx + k / n * span2), lg.from), lg.to);
+            groundM = Math.max(groundM, map.queryTerrainElevation(p.coords[ii]) || 0);
+          }
+        }
+        models.push({ groundM, lngLat: tip, heading: headingAt(p, tipIdx), mode: lg.mode, color: p.rt.color,
                       prog: (tipIdx - lg.from) / span, px: 64 * sampleNum(tracks.tipScale, t, num("tipScale")) });
       } else
         tipFeats.push({ type: "Feature",
@@ -5498,7 +5660,7 @@ const CAM_BLEND = 1.2;
 
 const CAM = (() => {
   const $ = id => document.getElementById(id);
-  let shots = [{ t: 0, mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0.8, auto: true }];
+  let shots = [{ t: 0, mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0, auto: true }];
   let sel = 0;
   const fitCache = new Map();
 
@@ -5528,7 +5690,9 @@ const CAM = (() => {
       zo += ((MODES[lg.mode] || {}).zoom || 0) * w;
       const h = headingAt(p, tp.idx); hx += Math.cos(h) * w; hy += Math.sin(h) * w;
     }
-    return { ll: unmerc(sx / sw, sy / sw), modeZoom: zo / sw, heading: Math.atan2(hy, hx) };
+    // Bildmitte = exakte Fahrzeugposition (Kamera hängt am Fahrzeug); geglättet werden nur Zoom und Richtung
+    const exact = tipAt(p, t + look).ll;
+    return { ll: exact, modeZoom: zo / sw, heading: Math.atan2(hy, hx) };
   }
   function legFitZoom(p, lg){
     const key = p.ri + ":" + lg.from + ":" + lg.to + ":" + map.getCanvas().width + "x" + map.getCanvas().height;
@@ -5560,7 +5724,7 @@ const CAM = (() => {
       return { c: s.center, z: zoom, b: s.bearing || 0, p: pitch };
     }
     const look = s.mode === "follow" ? (s.look || 0) : 0;
-    const st = smoothTip(p, t, look, 0.9);
+    const st = smoothTip(p, t, look, 1.2);
     let z = zoom + st.modeZoom;
     if (s.auto !== false) z = Math.min(z, autoZoom(p, t) + 0.35);
     if (s.mode === "follow"){
@@ -5680,14 +5844,14 @@ const CAM = (() => {
   }
 
   /* ---------- Presets (Kamera + Tempo) ---------- */
-  const F = (o) => Object.assign({ mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0.8, auto: true }, o);
+  const F = (o) => Object.assign({ mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0, auto: true }, o);
   const PRESETS = [
     { id: "classic", name: "Folgen", sub: "Standard: Übersicht → folgen → Übersicht", icon: "🎯",
       shots: T => [F({ t: 0, mode: "overview" }), F({ t: 1.4, zoom: 7 }), F({ t: Math.max(T - 2, 2), mode: "overview" })], tempo: { len: 0, feel: "normal" } },
     { id: "navi", name: "Navi", sub: "Fahrtrichtung oben, geneigt", icon: "🧭",
-      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "travel", look: 1 })], tempo: { len: 0, feel: "normal" } },
+      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "travel" })], tempo: { len: 0, feel: "normal" } },
     { id: "flyover", name: "3D-Flyover", sub: "Relive-Stil: tief, schräg, Fahrtrichtung", icon: "🏔️",
-      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "travel", look: 1.5 }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
+      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "travel" }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
       tempo: { len: 30, feel: "gemuetlich" }, terrain: true },
     { id: "recap", name: "Vlog-Recap", sub: "Weit folgen, Übersicht am Ende · flott", icon: "🎬",
       shots: T => [F({ t: 0, zoom: 4.6 }), F({ t: Math.max(T - 1.8, 2), mode: "overview" })], tempo: { len: 30, feel: "rasant" } },
@@ -5704,6 +5868,7 @@ const CAM = (() => {
   async function applyPreset(pr){
     if (playing) pause();
     tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
+    if (!pr.keyframes) shots = pr.shots(timelineTotal());          // vorläufig: Zoom fürs Tempo
     if (pr.tempo) await MA_TEMPLATES.applyTempo(pr.tempo.len, pr.tempo.feel);
     if (pr.terrain && !$("terrain3d").checked){ $("terrain3d").checked = true; if (num("terrainEx") < 1.5) $("terrainEx").value = 1.5; applyTerrain(); }
     await ensureAnim();
@@ -5739,7 +5904,12 @@ const CAM = (() => {
     get: () => JSON.parse(JSON.stringify(shots)),
     set(v){ if (Array.isArray(v) && v.length) shots = v; sel = 0; renderTimeline(); renderEditor();
             document.querySelectorAll(".campre").forEach(b => b.classList.toggle("active", b.dataset.id === $("camPresetId").value)); },
-    clearCache(){ fitCache.clear(); }
+    clearCache(){ fitCache.clear(); },
+    // Zoom der Folgekamera für die Tempo-Berechnung (null = Kamera steht → Übersichts-Zoom)
+    followZoom(){
+      const s = sorted().find(x => x.mode === "follow" || x.mode === "tripod" || x.mode === "orbit");
+      return s ? (s.zoom == null ? num("zoom") : s.zoom) : null;
+    }
   };
 })();
 </script>

@@ -49,11 +49,11 @@ const EN = {
   "Fit":"Fit","✕ löschen":"✕ delete",
   // Labels
   "Linienfarbe":"Line color","Weiße Kontur":"White outline","Anreise per":"Arrive by","Standard":"Default",
-  "Auto":"Car","Camper":"Camper van","Motorrad":"Motorbike","Segelboot":"Sailboat","Heli":"Helicopter","Tempo dieser Etappe":"Speed of this leg",
+  "Auto":"Car","Laufen":"Running","Reiten":"Horse riding","Ski":"Skiing","Wohnwagen":"Caravan","LKW":"Truck","Seilbahn":"Cable car","Sessellift":"Chairlift","Kreuzfahrt":"Cruise ship","Kajak":"Kayak","Ballon":"Hot-air balloon","Gleitschirm":"Paraglider","Zu Fuß":"On foot","Land":"Land","Schiene & Seil":"Rail & cable","Wasser":"Water","Luft":"Air","Alle Verkehrsmittel":"All transports","Camper":"Camper van","Motorrad":"Motorbike","Segelboot":"Sailboat","Heli":"Helicopter","Tempo dieser Etappe":"Speed of this leg",
   "3D-Modell (Verkehrsmittel)":"3D model (transport)","Symbol (Verkehrsmittel)":"Icon (transport)","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
   "Standard-Fortbewegung":"Default travel mode","Linienbreite":"Line width","Linienstil":"Line style","Fortbewegung":"Travel mode",
   "Sekunden pro Etappe":"Seconds per leg","Pause am Stopp (s)":"Pause at stop (s)",
-  "Konstante Geschwindigkeit":"Constant speed","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
+  "Konstante Geschwindigkeit":"Constant speed","Tempo nach Bildschirm-Strecke":"Pace by on-screen distance","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
   "Zoom-In an Stopps":"Zoom in at stops","Neigung (Pitch)":"Tilt (pitch)","Kamera-Glättung":"Camera smoothing",
   "Rotation (°/s)":"Rotation (°/s)","Linien-Beschleunigung":"Line acceleration","Tempo ×":"Speed ×",
   "Übersicht am Ende":"Overview at end","Karten-Stil":"Map style","Pin-Stil":"Pin style","Linien-Glow":"Line glow",
@@ -826,10 +826,15 @@ function renderWpList(){
     const div = document.createElement("div");
     div.className = "wp";
     const cur = wp.mode || "";
-    const chips = Object.entries(MODES).map(([k, m]) =>
-      `<button type="button" class="mchip${cur === k ? " on" : ""}${!cur && val("travelMode") === k ? " def" : ""}" data-mode="${k}" title="${tr(m.label)}">${m.icon}</button>`).join("");
-    div.innerHTML = (i > 0 ? `<div class="legsel"><div class="mchips">${chips}</div>` +
-      `<button type="button" class="lspeed" title="${tr("Tempo dieser Etappe")}">${(wp.speed || 1) < 1 ? (wp.speed === 0.5 ? "½" : "¼") : (wp.speed || 1)}×</button></div>` : "") + `
+    const recent = recentModes().filter(k => MODES[k]);
+    const show = [...new Set([cur || val("travelMode"), ...recent, "car", "foot", "train", "ferry", "fly"])].filter(Boolean).slice(0, 6);
+    const chip = k => `<button type="button" class="mchip${cur === k ? " on" : ""}${!cur && val("travelMode") === k ? " def" : ""}" data-mode="${k}" title="${tr(MODES[k].label)}">${MODES[k].icon}</button>`;
+    const groups = {};
+    Object.entries(MODES).forEach(([k, m]) => (groups[m.group] = groups[m.group] || []).push(k));
+    const picker = `<div class="mpick" hidden>${Object.entries(groups).map(([g, ks]) =>
+      `<div class="mgrp"><span>${tr(g)}</span><div>${ks.map(k => `<button type="button" class="mopt${cur === k ? " on" : ""}" data-mode="${k}"><em>${MODES[k].icon}</em>${tr(MODES[k].label)}</button>`).join("")}</div></div>`).join("")}</div>`;
+    div.innerHTML = (i > 0 ? `<div class="legsel"><div class="mchips">${show.map(chip).join("")}<button type="button" class="mmore" title="${tr("Alle Verkehrsmittel")}">⋯</button></div>` +
+      `<button type="button" class="lspeed" title="${tr("Tempo dieser Etappe")}">${(wp.speed || 1) < 1 ? (wp.speed === 0.5 ? "½" : "¼") : (wp.speed || 1)}×</button></div>${picker}` : "") + `
       <div class="idx">${i + 1}</div>
       <div class="row">
         <input type="text" data-f="name" placeholder="${tr("Name")}" value="${escapeHtml(wp.name)}">
@@ -850,10 +855,13 @@ function renderWpList(){
         drawStatic();
       });
     });
-    div.querySelectorAll(".mchip").forEach(b => b.addEventListener("click", () => {
-      wp.mode = wp.mode === b.dataset.mode ? "" : b.dataset.mode;
+    div.querySelectorAll(".mchip, .mopt").forEach(b => b.addEventListener("click", () => {
+      wp.mode = wp.mode === b.dataset.mode && b.classList.contains("mchip") ? "" : b.dataset.mode;
+      if (wp.mode) pushRecentMode(wp.mode);
       renderWpList(); drawStatic();
     }));
+    const more = div.querySelector(".mmore");
+    if (more) more.addEventListener("click", () => { const pk = div.querySelector(".mpick"); pk.hidden = !pk.hidden; more.classList.toggle("on", !pk.hidden); });
     const sp = div.querySelector(".lspeed");
     if (sp) sp.addEventListener("click", () => {
       wp.speed = LEG_SPEEDS[(LEG_SPEEDS.indexOf(wp.speed || 1) + 1) % LEG_SPEEDS.length];
@@ -1262,19 +1270,32 @@ function arcLeg(a, b, n, bend){
    route: Routing-Profil (sonst Luftlinie/Bogen mit arc), pace: Dauer-Faktor (Gehen ≈ 2× Auto),
    zoom: Zoom-Versatz der Folgekamera (Flug weiter draußen), color/dash: fester Linienstil */
 const MODES = {
-  foot:   { group: "Land",   icon: "🚶", label: "Zu Fuß",    route: "foot", pace: 2,    zoom: 1.2 },
-  bike:   { group: "Land",   icon: "🚲", label: "Fahrrad",   route: "bike", pace: 1.4,  zoom: 0.6 },
-  car:    { group: "Land",   icon: "🚗", label: "Auto",      route: "car",  pace: 1,    zoom: 0 },
-  camper: { group: "Land",   icon: "🚐", label: "Camper",    route: "car",  pace: 1.15, zoom: 0 },
-  moto:   { group: "Land",   icon: "🏍️", label: "Motorrad",  route: "car",  pace: 0.9,  zoom: 0.2 },
-  bus:    { group: "Land",   icon: "🚌", label: "Bus",       route: "car",  pace: 1.1,  zoom: 0, color: "#ff9a1f", dash: 1 },
-  train:  { group: "Land",   icon: "🚆", label: "Zug",       arc: 0,        pace: 0.7,  zoom: -0.6, dash: 1 },
-  ferry:  { group: "Wasser", icon: "⛴️", label: "Fähre",     arc: 0.12,     pace: 0.9,  zoom: -1,   color: "#ffffff", dash: 1 },
-  boat:   { group: "Wasser", icon: "⛵", label: "Segelboot", arc: 0.07,     pace: 1.3,  zoom: -0.6, color: "#ffffff", dash: 1 },
-  fly:    { group: "Luft",   icon: "✈️", label: "Flug",      arc: 0.18,     pace: 0.45, zoom: -2.2 },
-  heli:   { group: "Luft",   icon: "🚁", label: "Heli",      arc: 0.04,     pace: 0.8,  zoom: -0.8 }
+  foot:      { group: "Zu Fuß",          icon: "🚶", label: "Zu Fuß",      route: "foot", pace: 2,    zoom: 1.2 },
+  run:       { group: "Zu Fuß",          icon: "🏃", label: "Laufen",      route: "foot", pace: 1.5,  zoom: 1.1 },
+  horse:     { group: "Zu Fuß",          icon: "🐎", label: "Reiten",      route: "foot", pace: 1.5,  zoom: 1 },
+  ski:       { group: "Zu Fuß",          icon: "⛷️", label: "Ski",         arc: 0,        pace: 1.2,  zoom: 1.2 },
+  bike:      { group: "Land",            icon: "🚲", label: "Fahrrad",     route: "bike", pace: 1.4,  zoom: 0.6 },
+  car:       { group: "Land",            icon: "🚗", label: "Auto",        route: "car",  pace: 1,    zoom: 0 },
+  caravan:   { group: "Land",            icon: "🏕️", label: "Wohnwagen",   route: "car",  pace: 1.2,  zoom: 0 },
+  camper:    { group: "Land",            icon: "🚐", label: "Camper",      route: "car",  pace: 1.15, zoom: 0 },
+  moto:      { group: "Land",            icon: "🏍️", label: "Motorrad",    route: "car",  pace: 0.9,  zoom: 0.2 },
+  bus:       { group: "Land",            icon: "🚌", label: "Bus",         route: "car",  pace: 1.1,  zoom: 0, color: "#ff9a1f", dash: 1 },
+  truck:     { group: "Land",            icon: "🚚", label: "LKW",         route: "car",  pace: 1.15, zoom: 0 },
+  train:     { group: "Schiene & Seil",  icon: "🚆", label: "Zug",         arc: 0,        pace: 0.7,  zoom: -0.6, dash: 1 },
+  cablecar:  { group: "Schiene & Seil",  icon: "🚡", label: "Seilbahn",    arc: 0,        pace: 2.2,  zoom: 1.2, color: "#2b2d31" },
+  chairlift: { group: "Schiene & Seil",  icon: "🚠", label: "Sessellift",  arc: 0,        pace: 2.4,  zoom: 1.4, color: "#2b2d31" },
+  ferry:     { group: "Wasser",          icon: "⛴️", label: "Fähre",       arc: 0.12,     pace: 0.9,  zoom: -1,   color: "#ffffff", dash: 1 },
+  cruise:    { group: "Wasser",          icon: "🛳️", label: "Kreuzfahrt",  arc: 0.1,      pace: 0.8,  zoom: -1.2, color: "#ffffff", dash: 1 },
+  boat:      { group: "Wasser",          icon: "⛵", label: "Segelboot",   arc: 0.07,     pace: 1.3,  zoom: -0.6, color: "#ffffff", dash: 1 },
+  kayak:     { group: "Wasser",          icon: "🛶", label: "Kajak",       arc: 0.03,     pace: 2.2,  zoom: 1,    color: "#ffffff", dash: 1 },
+  fly:       { group: "Luft",            icon: "✈️", label: "Flug",        arc: 0.18,     pace: 0.45, zoom: -2.2 },
+  heli:      { group: "Luft",            icon: "🚁", label: "Heli",        arc: 0.04,     pace: 0.8,  zoom: -0.8 },
+  balloon:   { group: "Luft",            icon: "🎈", label: "Ballon",      arc: 0.03,     pace: 2,    zoom: 0.3 },
+  paraglider:{ group: "Luft",            icon: "🪂", label: "Gleitschirm", arc: 0.05,     pace: 1.6,  zoom: 0.5 }
 };
 const LEG_SPEEDS = [1, 0.5, 0.25, 2, 4];
+function recentModes(){ try { return JSON.parse(localStorage.getItem("ma.recentModes") || "[]"); } catch { return []; } }
+function pushRecentMode(k){ try { localStorage.setItem("ma.recentModes", JSON.stringify([k, ...recentModes().filter(x => x !== k)].slice(0, 6))); } catch {} }
 function legMode(wp){ return (wp && wp.mode) || val("travelMode"); }
 
 function boundsOf(coords){
@@ -1380,6 +1401,25 @@ function setLineWidths(w){
 }
 
 /* ---------- Animations-Kontext (alle Routen) ---------- */
+/* Etappen-Dauer nach Bildschirm-Strecke: Wie weit wandert die Spitze im Bild,
+   wenn die Kamera (inkl. Auto-Rauszoomen) ihr folgt? Daraus + Tempo-Gefühl die Dauer.
+   Lange Etappen bekommen einen kleinen Distanz-Bonus, kurze eine Mindestdauer. */
+const SCREEN_SPEED = { gemuetlich: 0.3, normal: 0.45, rasant: 0.72 };   // Bildbreiten (kurze Seite) pro Sekunde
+function legScreenDur(coords, from, to, km, mode, followZoom, frameMin){
+  const bb = boundsOf(coords.slice(from, to + 1));
+  const fit = map.cameraForBounds(bb, { padding: 80 });
+  let z = followZoom == null ? (anim0Zoom ?? 5) : followZoom + ((MODES[mode] || {}).zoom || 0);
+  if (fit && followZoom != null) z = Math.min(z, fit.zoom + 0.35);
+  const lat = (bb[0][1] + bb[1][1]) / 2;
+  const mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * Math.pow(2, z));
+  const frac = (km * 1000 / mpp) / frameMin;
+  const v = SCREEN_SPEED[val("tplFeel")] || SCREEN_SPEED.normal;
+  let dur = frac / v * (1 + 0.22 * Math.log10(1 + km / 100));
+  dur *= Math.sqrt((MODES[mode] || {}).pace || 1);
+  const minDur = 1.2 + 0.55 * Math.log10(1 + km / 10);     // kurze Etappen nie hektisch, lange etwas länger
+  return Math.min(Math.max(dur, minDur), 10);
+}
+let anim0Zoom = null;
 async function prepareAnim(){
   const speed = Math.max(num("speedMult") || 1, 0.1);
   const legDurBase = (num("legDur") || 4) / speed;
@@ -1387,10 +1427,21 @@ async function prepareAnim(){
   const constSpeed = checked("constSpeed");
   const per = [];
   const allStopsFeats = [];
+  // 1. alle Routen bauen (für Übersichts-Zoom)
+  const built = [];
   for (let ri = 0; ri < routes.length; ri++){
+    const r = await buildRouteFor(routes[ri]);
+    if (r && r.coords.length >= 2) built.push({ ri, r });
+  }
+  if (built.length){
+    const oc = map.cameraForBounds(boundsOf(built.flatMap(b => b.r.coords)), { padding: 90 });
+    anim0Zoom = oc ? oc.zoom : null;
+  }
+  const followZoom = typeof CAM !== "undefined" ? CAM.followZoom() : num("zoom");
+  const [EW, EH] = val("resolution").split("x").map(Number);
+  const frameMin = Math.min(EW, EH) || 1080;
+  for (const { ri, r } of built){
     const rt = routes[ri];
-    const r = await buildRouteFor(rt);
-    if (!r || r.coords.length < 2) continue;
     const coords = r.coords;
     const cum = [0];
     for (let i = 1; i < coords.length; i++) cum.push(cum[i - 1] + haversine(coords[i - 1], coords[i]));
@@ -1400,17 +1451,17 @@ async function prepareAnim(){
     if (stopIdxs[stopIdxs.length - 1] !== coords.length - 1) stopIdxs.push(coords.length - 1);
     const legKm = [];
     for (let i = 0; i < stopIdxs.length - 1; i++) legKm.push(cum[stopIdxs[i + 1]] - cum[stopIdxs[i]]);
-    const avgKm = legKm.length ? legKm.reduce((a, b) => a + b, 0) / legKm.length : 1;
     const segs = [];
     for (let i = 0; i < stopIdxs.length; i++){
       segs.push({ type: "pause", at: stopIdxs[i], dur: Math.max(pauseDur, 0.6 / speed), stopNo: i });
       if (i < stopIdxs.length - 1){
-        let dur = legDurBase;
-        if (constSpeed && avgKm > 0)
-          dur = Math.min(Math.max(legDurBase * (legKm[i] / avgKm), 1.2 / speed), legDurBase * 4);
         const lg = r.legs && r.legs.length === stopIdxs.length - 1 ? r.legs[i] : null;
-        if (lg){ dur *= (MODES[lg.mode] || {}).pace || 1; dur /= lg.speed || 1; }
-        segs.push({ type: "leg", from: stopIdxs[i], to: stopIdxs[i + 1], dur });
+        const mode = lg ? lg.mode : legMode(null);
+        let dur;
+        if (constSpeed) dur = legScreenDur(coords, stopIdxs[i], stopIdxs[i + 1], legKm[i], mode, followZoom, frameMin) / speed;
+        else dur = legDurBase * (((MODES[mode] || {}).pace) || 1);
+        if (lg) dur /= lg.speed || 1;
+        segs.push({ type: "leg", from: stopIdxs[i], to: stopIdxs[i + 1], dur, km: legKm[i] });
       }
     }
     let tt = 0;
@@ -1565,7 +1616,17 @@ function renderAt(t, live){
     if (tipStyle !== "none" && t < total - 0.01 && !done){
       if (tipStyle === "model3d"){
         const span = Math.max(lg.to - lg.from, 1e-6);
-        models.push({ lngLat: tip, heading: headingAt(p, tipIdx), mode: lg.mode, color: p.rt.color,
+        // Luftfahrzeuge mit 3D-Terrain: ruhige Flughöhe über dem höchsten Punkt der Umgebung
+        let groundM = null;
+        if (M3D.isAir(lg.mode) && map.getTerrain()){
+          groundM = 0;
+          const n = 8, span2 = Math.max((lg.to - lg.from) * 0.12, 2);
+          for (let k = -n; k <= n; k++){
+            const ii = Math.min(Math.max(Math.round(tipIdx + k / n * span2), lg.from), lg.to);
+            groundM = Math.max(groundM, map.queryTerrainElevation(p.coords[ii]) || 0);
+          }
+        }
+        models.push({ groundM, lngLat: tip, heading: headingAt(p, tipIdx), mode: lg.mode, color: p.rt.color,
                       prog: (tipIdx - lg.from) / span, px: 64 * sampleNum(tracks.tipScale, t, num("tipScale")) });
       } else
         tipFeats.push({ type: "Feature",

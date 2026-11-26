@@ -162,6 +162,15 @@ button.btn:disabled{opacity:.45; cursor:default;}
 .mchip:hover{opacity:1; filter:none;}
 .mchip.def{opacity:.95; filter:none; border-style:dashed; border-color:var(--line-2);}
 .mchip.on{opacity:1; filter:none; border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 0 1px var(--accent);}
+.mmore{flex:none; width:30px; height:30px; border-radius:8px; border:1px dashed var(--line-2); background:none; color:var(--muted); font-weight:800;}
+.mmore.on, .mmore:hover{border-color:var(--accent); color:var(--text);}
+.mpick{margin:0 0 8px; padding:8px; border:1px solid var(--line); border-radius:10px; background:var(--field); display:flex; flex-direction:column; gap:8px;}
+.mgrp > span{display:block; font-size:10px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin-bottom:4px;}
+.mgrp > div{display:grid; grid-template-columns:repeat(3,1fr); gap:4px;}
+.mopt{display:flex; align-items:center; gap:5px; padding:5px 6px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:#c9cad1; font-size:11px; text-align:left; white-space:nowrap; overflow:hidden;}
+.mopt em{font-style:normal; font-size:15px;}
+.mopt:hover{border-color:var(--muted);}
+.mopt.on{border-color:var(--accent); background:var(--accent-soft); color:#fff;}
 .lspeed{flex:none; height:30px; min-width:38px; border-radius:8px; border:1px solid var(--line-2); background:var(--field); color:var(--text); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;}
 .lspeed:hover{border-color:var(--accent);}
 .wp .idx{position:absolute; top:12px; left:-9px; width:20px; height:20px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-size:10.5px; display:grid; place-items:center; font-weight:800; box-shadow:0 0 0 3px var(--card);}

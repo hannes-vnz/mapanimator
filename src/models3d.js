@@ -142,8 +142,95 @@ const M3D = (() => {
       m.box(0.1, 0, 0.48, 1.3, 0.06, 0.012, DARK, { tag: 1 }).box(0.1, 0, 0.48, 0.06, 1.3, 0.012, DARK, { tag: 1 });
       return { m, size: 1.05, air: true }; }
   };
-  const ALIAS = { car: "car", camper: "camper", bus: "bus", moto: "moto", bike: "bike", foot: "foot",
-                  train: "train", ferry: "ferry", boat: "boat", fly: "fly", heli: "heli" };
+
+  const BROWN = hex("#6b4a2c"), WOOD = hex("#8a6a45"), CABLE = hex("#2b2d31");
+  Object.assign(BUILD, {
+    truck(C){ const m = new Mesh(), L = mix(C, [1, 1, 1], 0.15);
+      m.box(0.62, 0, 0.3, 0.36, 0.46, 0.44, C, { top: L });
+      m.box(0.75, 0, 0.4, 0.11, 0.44, 0.16, GLASS, { taperX: 0.3 });
+      m.box(-0.2, 0, 0.36, 1.2, 0.5, 0.52, WHITE, { top: hex("#e6e6e6") });
+      m.box(-0.2, 0, 0.36, 1.21, 0.51, 0.06, C);
+      [[0.62, 0.22], [0.62, -0.22], [-0.05, 0.23], [-0.05, -0.23], [-0.55, 0.23], [-0.55, -0.23]].forEach(([x, y]) => m.wheel(x, y, 0.11));
+      return { m, size: 1.5 }; },
+    caravan(C){ const { m } = BUILD.car(C);
+      m.box(-0.6, 0, 0.2, 0.2, 0.04, 0.03, GREY);
+      m.box(-1.1, 0, 0.34, 0.8, 0.46, 0.4, WHITE, { top: hex("#ececec") });
+      m.box(-1.1, 0, 0.3, 0.81, 0.47, 0.05, C);
+      m.box(-1.0, 0.235, 0.4, 0.3, 0.01, 0.1, GLASS).box(-1.0, -0.235, 0.4, 0.3, 0.01, 0.1, GLASS);
+      m.wheel(-1.1, 0.23, 0.1).wheel(-1.1, -0.23, 0.1);
+      return { m, size: 1.25 }; },
+    horse(C){ const m = new Mesh(), HB = hex("#7a4b2a"), DK = hex("#3b2414");
+      m.box(0, 0, 0.42, 0.62, 0.2, 0.22, HB);
+      m.box(0.33, 0, 0.56, 0.14, 0.12, 0.26, HB, { shiftX: 0.08 });
+      m.box(0.46, 0, 0.66, 0.22, 0.1, 0.1, HB);
+      m.box(-0.34, 0, 0.42, 0.08, 0.05, 0.22, DK, { shiftX: -0.06 });
+      [[0.22, 0.07, 3], [0.22, -0.07, 4], [-0.22, 0.07, 4], [-0.22, -0.07, 3]].forEach(([x, y, tg]) => m.box(x, y, 0.16, 0.06, 0.06, 0.32, DK, { tag: tg }));
+      m.box(-0.02, 0, 0.7, 0.14, 0.2, 0.26, C);
+      m.box(0, 0, 0.9, 0.12, 0.12, 0.12, SKIN).box(0, 0, 0.97, 0.15, 0.15, 0.04, DK);
+      return { m, size: 0.95 }; },
+    ski(C){ const m = new Mesh();
+      m.box(0.05, 0.07, 0.02, 0.8, 0.05, 0.02, C).box(0.05, -0.07, 0.02, 0.8, 0.05, 0.02, C);
+      m.box(0, 0.07, 0.16, 0.08, 0.07, 0.26, DARK, { shiftX: 0.06 }).box(0, -0.07, 0.16, 0.08, 0.07, 0.26, DARK, { shiftX: 0.06 });
+      m.box(0.08, 0, 0.42, 0.18, 0.24, 0.28, C, { shiftX: 0.08 });
+      m.box(0.16, 0, 0.64, 0.12, 0.12, 0.12, SKIN).box(0.16, 0, 0.71, 0.14, 0.14, 0.05, hex("#f2f2f2"));
+      m.box(-0.08, 0.17, 0.25, 0.02, 0.02, 0.5, GREY, { shiftX: -0.12 }).box(-0.08, -0.17, 0.25, 0.02, 0.02, 0.5, GREY, { shiftX: -0.12 });
+      return { m, size: 0.8 }; },
+    chairlift(C){ const m = new Mesh();
+      m.box(0, 0, 1.0, 1.6, 0.025, 0.025, CABLE);
+      m.box(0, 0, 0.98, 0.12, 0.08, 0.06, GREY);
+      m.box(0, 0, 0.72, 0.03, 0.03, 0.5, GREY);
+      m.box(0, 0, 0.42, 0.12, 0.62, 0.04, GREY);
+      m.box(-0.07, 0, 0.56, 0.03, 0.62, 0.28, GREY);
+      m.box(-0.0, 0.15, 0.58, 0.14, 0.17, 0.24, C).box(-0.0, -0.15, 0.58, 0.14, 0.17, 0.24, mix(C, [0, 0, 1], 0.4));
+      m.box(0, 0.15, 0.76, 0.1, 0.1, 0.1, SKIN).box(0, -0.15, 0.76, 0.1, 0.1, 0.1, SKIN);
+      m.box(0.12, 0.15, 0.34, 0.5, 0.05, 0.02, hex("#e33")).box(0.12, -0.15, 0.34, 0.5, 0.05, 0.02, hex("#e33"));
+      return { m, size: 0.95, hang: true }; },
+    cablecar(C){ const m = new Mesh(), L = mix(C, [1, 1, 1], 0.2);
+      m.box(0, 0.06, 1.05, 1.8, 0.02, 0.02, CABLE).box(0, -0.06, 1.05, 1.8, 0.02, 0.02, CABLE);
+      m.box(0, 0, 1.0, 0.36, 0.14, 0.08, GREY);
+      m.box(0, 0, 0.8, 0.04, 0.04, 0.34, GREY);
+      m.box(0, 0, 0.42, 0.7, 0.5, 0.42, C, { top: L });
+      m.box(0, 0, 0.47, 0.71, 0.51, 0.16, GLASS);
+      m.box(0, 0, 0.66, 0.66, 0.46, 0.04, L);
+      return { m, size: 1.0, hang: true }; },
+    kayak(C){ const m = new Mesh();
+      m.box(0, 0, 0.05, 0.8, 0.16, 0.08, C, { taperY: 0.3 });
+      m.box(0.48, 0, 0.05, 0.16, 0.16, 0.08, C, { taperY: 0.95 }).box(-0.48, 0, 0.05, 0.16, 0.16, 0.08, C, { taperY: 0.95 });
+      m.box(0, 0, 0.2, 0.12, 0.18, 0.22, hex("#f4c430"));
+      m.box(0, 0, 0.37, 0.1, 0.1, 0.1, SKIN);
+      m.box(0.04, 0, 0.26, 0.03, 0.9, 0.02, DARK, { tag: 1 });
+      return { m, size: 0.75, water: true }; },
+    cruise(C){ const m = new Mesh();
+      m.box(0, 0, 0.12, 1.6, 0.42, 0.24, WHITE, { taperY: 0.05 });
+      m.box(0.9, 0, 0.12, 0.2, 0.42, 0.24, WHITE, { taperY: 0.9 });
+      m.box(0, 0, 0.04, 1.61, 0.43, 0.06, hex("#1d2f52"));
+      for (let k = 0; k < 4; k++) m.box(-0.05 - k * 0.04, 0, 0.3 + k * 0.08, 1.2 - k * 0.22, 0.36, 0.08, WHITE).box(-0.05 - k * 0.04, 0, 0.3 + k * 0.08, 1.21 - k * 0.22, 0.37, 0.025, GLASS);
+      m.cyl(-0.35, 0, 0.7, 0.07, 0.2, "z", C, 10);
+      return { m, size: 1.6, water: true }; },
+    balloon(C){ const m = new Mesh(), W2 = mix(C, [1, 1, 1], 0.7);
+      const prof = [[0.12, 0.62], [0.26, 0.72], [0.36, 0.84], [0.4, 0.98], [0.38, 1.1], [0.3, 1.2], [0.16, 1.27], [0.0, 1.3]];
+      for (let i = 0; i < prof.length - 1; i++){
+        const [r0, z0] = prof[i], [r1, z1] = prof[i + 1];
+        m.cyl(0, 0, (z0 + z1) / 2, r0, z1 - z0, "z", i % 2 ? C : W2, 14, 0, r1);
+      }
+      m.box(0, 0, 0.1, 0.18, 0.18, 0.16, WOOD);
+      [[0.08, 0.08], [0.08, -0.08], [-0.08, 0.08], [-0.08, -0.08]].forEach(([x, y]) => m.box(x, y, 0.38, 0.012, 0.012, 0.5, CABLE));
+      return { m, size: 1.0, air: true, high: 0.35 }; },
+    paraglider(C){ const m = new Mesh(), N = 9;
+      for (let i = 0; i < N; i++){
+        const a0 = -0.9 + 1.8 * i / N, a1 = -0.9 + 1.8 * (i + 1) / N;
+        const P = (a, x) => [x, Math.sin(a) * 0.6, 0.85 + Math.cos(a) * 0.25];
+        m.quad(P(a0, 0.12), P(a1, 0.12), P(a1, -0.12), P(a0, -0.12), i % 2 ? C : mix(C, [1, 1, 1], 0.45));
+        m.quad(P(a0, -0.12), P(a1, -0.12), P(a1, 0.12), P(a0, 0.12), mix(C, [0, 0, 0], 0.2));
+      }
+      [-0.45, 0.45].forEach(y => m.tri([0, y, 0.95], [0.02, 0, 0.32], [-0.02, 0, 0.32], CABLE));
+      m.box(0, 0, 0.22, 0.2, 0.16, 0.2, DARK).box(0.02, 0, 0.38, 0.1, 0.1, 0.1, SKIN);
+      return { m, size: 1.0, air: true, high: 0.3 }; }
+  });
+  const ALIAS = { car: "car", camper: "camper", bus: "bus", moto: "moto", bike: "bike", foot: "foot", run: "foot",
+                  train: "train", ferry: "ferry", boat: "boat", fly: "fly", heli: "heli", truck: "truck", caravan: "caravan",
+                  horse: "horse", ski: "ski", chairlift: "chairlift", cablecar: "cablecar", kayak: "kayak", cruise: "cruise",
+                  balloon: "balloon", paraglider: "paraglider" };
 
   /* ---------- WebGL ---------- */
   const VS = `
@@ -189,7 +276,7 @@ const M3D = (() => {
     if (cache.has(key)) return cache.get(key);
     const b = (BUILD[ALIAS[mode]] || BUILD.car)(hex(color));
     const mk = arr => { const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); return buf; };
-    const o = { pos: mk(b.m.p), nor: mk(b.m.n), col: mk(b.m.c), tag: mk(b.m.tag), count: b.m.p.length / 3, size: b.size, air: b.air, water: b.water };
+    const o = { pos: mk(b.m.p), nor: mk(b.m.n), col: mk(b.m.c), tag: mk(b.m.tag), count: b.m.p.length / 3, size: b.size, air: b.air, water: b.water, high: b.high };
     cache.set(key, o);
     return o;
   }
@@ -216,7 +303,10 @@ const M3D = (() => {
         const mesh = meshFor(it.mode, it.color);
         const mc = maplibregl.MercatorCoordinate.fromLngLat(it.lngLat, 0);
         let ground = 0;
-        try { if (mapRef.getTerrain && mapRef.getTerrain()) ground = (mapRef.queryTerrainElevation(it.lngLat) || 0) * mc.meterInMercatorCoordinateUnits(); } catch {}
+        try {
+          if (it.groundM != null) ground = it.groundM * mc.meterInMercatorCoordinateUnits();
+          else if (mapRef.getTerrain && mapRef.getTerrain()) ground = (mapRef.queryTerrainElevation(it.lngLat) || 0) * mc.meterInMercatorCoordinateUnits();
+        } catch {}
         const T = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, mc.x, mc.y, ground, 1];
         g.uniformMatrix4fv(loc.u_matrix, false, new Float32Array(mul(main, T)));
         const h = it.heading || 0, c = Math.cos(h), s = Math.sin(h);
@@ -225,7 +315,8 @@ const M3D = (() => {
         g.uniformMatrix3fv(loc.u_rot, false, new Float32Array([c, s, 0, s * cr, -c * cr, sr, -s * sr, c * sr, cr]));
         const scale = (it.px || 54) * mesh.size * mercPerPx;
         let alt = 0;
-        if (mesh.air){ const k = Math.sin(Math.PI * Math.min(Math.max(it.prog || 0, 0), 1)); alt = (mesh.size * 0.4 * Math.pow(k, 0.6)) * scale / mesh.size; }
+        if (mesh.air && mesh.high){ alt = mesh.high * scale; }
+        else if (mesh.air){ const k = Math.sin(Math.PI * Math.min(Math.max(it.prog || 0, 0), 1)); alt = (mesh.size * 0.4 * Math.pow(k, 0.6)) * scale / mesh.size; }
         g.uniform1f(loc.u_scale, scale);
         g.uniform1f(loc.u_alt, alt);
         g.uniform1f(loc.u_spin, time * 28);
@@ -250,6 +341,7 @@ const M3D = (() => {
   return {
     addLayer(map){ if (!map.getLayer("tip-3d")) map.addLayer(layer); },
     update(list, t){ items = list || []; time = t || 0; if (mapRef) mapRef.triggerRepaint(); },
-    modes: Object.keys(BUILD)
+    modes: Object.keys(BUILD),
+    isAir(mode){ return ["fly", "heli", "balloon", "paraglider"].includes(ALIAS[mode] || mode); }
   };
 })();

@@ -19,7 +19,7 @@ const CAM_BLEND = 1.2;
 
 const CAM = (() => {
   const $ = id => document.getElementById(id);
-  let shots = [{ t: 0, mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0.8, auto: true }];
+  let shots = [{ t: 0, mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0, auto: true }];
   let sel = 0;
   const fitCache = new Map();
 
@@ -49,7 +49,9 @@ const CAM = (() => {
       zo += ((MODES[lg.mode] || {}).zoom || 0) * w;
       const h = headingAt(p, tp.idx); hx += Math.cos(h) * w; hy += Math.sin(h) * w;
     }
-    return { ll: unmerc(sx / sw, sy / sw), modeZoom: zo / sw, heading: Math.atan2(hy, hx) };
+    // Bildmitte = exakte Fahrzeugposition (Kamera hängt am Fahrzeug); geglättet werden nur Zoom und Richtung
+    const exact = tipAt(p, t + look).ll;
+    return { ll: exact, modeZoom: zo / sw, heading: Math.atan2(hy, hx) };
   }
   function legFitZoom(p, lg){
     const key = p.ri + ":" + lg.from + ":" + lg.to + ":" + map.getCanvas().width + "x" + map.getCanvas().height;
@@ -81,7 +83,7 @@ const CAM = (() => {
       return { c: s.center, z: zoom, b: s.bearing || 0, p: pitch };
     }
     const look = s.mode === "follow" ? (s.look || 0) : 0;
-    const st = smoothTip(p, t, look, 0.9);
+    const st = smoothTip(p, t, look, 1.2);
     let z = zoom + st.modeZoom;
     if (s.auto !== false) z = Math.min(z, autoZoom(p, t) + 0.35);
     if (s.mode === "follow"){
@@ -201,14 +203,14 @@ const CAM = (() => {
   }
 
   /* ---------- Presets (Kamera + Tempo) ---------- */
-  const F = (o) => Object.assign({ mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0.8, auto: true }, o);
+  const F = (o) => Object.assign({ mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0, auto: true }, o);
   const PRESETS = [
     { id: "classic", name: "Folgen", sub: "Standard: Übersicht → folgen → Übersicht", icon: "🎯",
       shots: T => [F({ t: 0, mode: "overview" }), F({ t: 1.4, zoom: 7 }), F({ t: Math.max(T - 2, 2), mode: "overview" })], tempo: { len: 0, feel: "normal" } },
     { id: "navi", name: "Navi", sub: "Fahrtrichtung oben, geneigt", icon: "🧭",
-      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "travel", look: 1 })], tempo: { len: 0, feel: "normal" } },
+      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "travel" })], tempo: { len: 0, feel: "normal" } },
     { id: "flyover", name: "3D-Flyover", sub: "Relive-Stil: tief, schräg, Fahrtrichtung", icon: "🏔️",
-      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "travel", look: 1.5 }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
+      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "travel" }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
       tempo: { len: 30, feel: "gemuetlich" }, terrain: true },
     { id: "recap", name: "Vlog-Recap", sub: "Weit folgen, Übersicht am Ende · flott", icon: "🎬",
       shots: T => [F({ t: 0, zoom: 4.6 }), F({ t: Math.max(T - 1.8, 2), mode: "overview" })], tempo: { len: 30, feel: "rasant" } },
@@ -225,6 +227,7 @@ const CAM = (() => {
   async function applyPreset(pr){
     if (playing) pause();
     tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
+    if (!pr.keyframes) shots = pr.shots(timelineTotal());          // vorläufig: Zoom fürs Tempo
     if (pr.tempo) await MA_TEMPLATES.applyTempo(pr.tempo.len, pr.tempo.feel);
     if (pr.terrain && !$("terrain3d").checked){ $("terrain3d").checked = true; if (num("terrainEx") < 1.5) $("terrainEx").value = 1.5; applyTerrain(); }
     await ensureAnim();
@@ -260,6 +263,11 @@ const CAM = (() => {
     get: () => JSON.parse(JSON.stringify(shots)),
     set(v){ if (Array.isArray(v) && v.length) shots = v; sel = 0; renderTimeline(); renderEditor();
             document.querySelectorAll(".campre").forEach(b => b.classList.toggle("active", b.dataset.id === $("camPresetId").value)); },
-    clearCache(){ fitCache.clear(); }
+    clearCache(){ fitCache.clear(); },
+    // Zoom der Folgekamera für die Tempo-Berechnung (null = Kamera steht → Übersichts-Zoom)
+    followZoom(){
+      const s = sorted().find(x => x.mode === "follow" || x.mode === "tripod" || x.mode === "orbit");
+      return s ? (s.zoom == null ? num("zoom") : s.zoom) : null;
+    }
   };
 })();
