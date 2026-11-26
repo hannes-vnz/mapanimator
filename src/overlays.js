@@ -287,7 +287,7 @@ const OVL = (() => {
     g.save();
     g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = u * 0.02; g.shadowOffsetY = u * 0.004;
     g.translate(x, y + big); g.scale(pop, pop);
-    g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic";
+    g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic"; g.textAlign = "left";
     const num1 = String(k0 + n); g.fillText(num1, 0, 0);
     const nm = g.measureText(num1), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
     g.font = font(small); g.fillText(word, nw + small * 1.0, 0);          // Wort auf der Grundlinie, deutlich neben der Zahl

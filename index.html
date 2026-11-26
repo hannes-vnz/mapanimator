@@ -8233,7 +8233,7 @@ const OVL = (() => {
     g.save();
     g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = u * 0.02; g.shadowOffsetY = u * 0.004;
     g.translate(x, y + big); g.scale(pop, pop);
-    g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic";
+    g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic"; g.textAlign = "left";
     const num1 = String(k0 + n); g.fillText(num1, 0, 0);
     const nm = g.measureText(num1), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
     g.font = font(small); g.fillText(word, nw + small * 1.0, 0);          // Wort auf der Grundlinie, deutlich neben der Zahl
@@ -8665,7 +8665,7 @@ const ASSETS = (() => {
         const c = lookup(firstCountry(p)), im = c && flagImg(c.a2), sy = baseY + fs * 0.42, r = fs * 0.09;
         let tx = bx;
         if (im){ g.save(); g.globalAlpha *= clamp(sk * 4); flagCircle(g, im, bx + r, sy - r * 0.35, r, null); g.restore(); tx += r * 2.6; }
-        g.font = CF(fs * 0.21, 800); g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.75)"; g.shadowBlur = u * 0.025;
+        g.font = CF(fs * 0.21, 800); g.textAlign = "left"; g.textBaseline = "alphabetic"; g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.75)"; g.shadowBlur = u * 0.025;
         const shown = sub.slice(0, Math.ceil(sub.length * sk)).split("").join(" ");
         g.fillText(shown + (sk < 1 && Math.floor(lt * 10) % 2 ? "▍" : ""), tx, sy);
       }
@@ -8918,7 +8918,7 @@ const ASSETS = (() => {
       const last = shown[shown.length - 1], since = last ? lt - last.t : 9;
       const pop = since < 0.4 ? 1 + 0.25 * Math.sin(since / 0.4 * Math.PI) : 1;
       g.save(); g.translate(W * 0.08, y0 - r - u * 0.04); g.scale(pop, pop);
-      g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.02; g.fillStyle = "#fff"; g.textBaseline = "alphabetic";
+      g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.02; g.fillStyle = "#fff"; g.textBaseline = "alphabetic"; g.textAlign = "left";
       g.font = F(u * 0.1); const ns = String(n); g.fillText(ns, 0, 0); const nm = g.measureText(ns), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
       const word = (p.word || "LÄNDER").toUpperCase(); g.font = F(u * 0.038); g.fillText(n === 1 && word === "LÄNDER" ? "LAND" : word, nw + u * 0.035, 0);
       g.restore();
@@ -9453,7 +9453,11 @@ const ASSETS = (() => {
   }
 
   function drawAsset(g, W, H, a, lt){
-    g.save(); g.translate((a.dx || 0) * W, (a.dy || 0) * H);
+    g.save();
+    // gleicher Ausgangszustand für jedes Bild (Vorschau-Leinwand behält sonst Textausrichtung & Co. vom letzten Bild)
+    g.setTransform(1, 0, 0, 1, 0, 0); g.textAlign = "left"; g.textBaseline = "alphabetic"; g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+    g.shadowColor = "transparent"; g.shadowBlur = 0; g.shadowOffsetX = 0; g.shadowOffsetY = 0; g.filter = "none"; g.lineWidth = 1; g.setLineDash([]); g.lineCap = "butt"; g.lineJoin = "miter";
+    g.translate((a.dx || 0) * W, (a.dy || 0) * H);
     try { DRAW[a.type](g, W, H, a, Math.min(Math.max(lt, 0), a.dur), a.dur); } finally { g.restore(); }
   }
   /* ---------- Vorschau (eigene Bühne ohne Karte) ---------- */
@@ -9471,7 +9475,7 @@ const ASSETS = (() => {
     const bg = val("asBg"); if (bg === "black"){ g.fillStyle = "#000"; g.fillRect(0, 0, W, H); } else if (bg === "green"){ g.fillStyle = "#00ff00"; g.fillRect(0, 0, W, H); }
     const a = list.find(x => x.id === sel);
     if (a){ const hold = drag ? drag.t : null, lt = ((performance.now() - start) / 1000) % (a.dur + 0.8); try { drawAsset(g, W, H, a, hold != null ? hold : lt); } catch (e) { console.warn("Asset:", e); } }
-    else { g.fillStyle = "rgba(255,255,255,.55)"; g.font = FS(Math.min(W, H) * 0.035, 600); g.textAlign = "center"; g.fillText(tr("Links ein Asset wählen oder hinzufügen"), W / 2, H / 2); }
+    else { g.save(); g.fillStyle = "rgba(255,255,255,.55)"; g.font = FS(Math.min(W, H) * 0.035, 600); g.textAlign = "center"; g.fillText(tr("Links ein Asset wählen oder hinzufügen"), W / 2, H / 2); g.restore(); }
     requestAnimationFrame(frame);
   }
   function setMode(on){
