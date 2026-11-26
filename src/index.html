@@ -242,6 +242,15 @@
           <div class="hint">Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.</div>
         </div>
         <div class="card">
+          <h2>Übergänge</h2>
+          <div class="setting"><label>Whip-Pan am Anfang</label><input type="checkbox" id="whipIn"></div>
+          <div class="setting"><label>Whip-Pan am Ende</label><input type="checkbox" id="whipOut"></div>
+          <div class="setting"><label>Schwenkrichtung</label>
+            <select id="whipDir"><option value="right" selected>nach rechts</option><option value="left">nach links</option><option value="up">nach oben</option><option value="down">nach unten</option></select>
+          </div>
+          <div class="hint">Schneller Schwenk mit Bewegungsunschärfe in den ersten/letzten 0,5 s – wie Ein- und Ausstieg in Reise-Vlogs. Im MP4 echt gerechnet; die WebM-Echtzeitaufnahme hat keine Unschärfe.</div>
+        </div>
+        <div class="card">
           <h2>Kamera-Abschnitte</h2>
           <div id="shotEditor"></div>
           <div class="hint">Jeder Abschnitt gilt bis zum nächsten; Übergänge werden weich überblendet. Blöcke in der Timeline anklicken oder an der Kante ziehen.</div>
@@ -348,6 +357,7 @@
 
   <div id="main">
     <div id="stage">
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="whipBlur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur id="whipBlurFe" stdDeviation="0 0" edgeMode="duplicate"/></filter></svg>
       <div id="mapwrap"><div id="map"></div><canvas id="ovl"></canvas><div id="safezone" aria-hidden="true"><i class="sz-top"></i><i class="sz-bottom"></i><i class="sz-right"></i></div></div>
       <div id="status" role="status" aria-live="polite"></div>
     </div>

@@ -70,7 +70,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - Modi „Folgen“ (mit Vorausschau und automatischem Rauszoomen bei langen Etappen), „Still“, „Stativ“, „Orbit“.
    - „Norden oben“ / „Fahrtrichtung oben“.
    - Kamera-Segmente als Blöcke in der Timeline.
-4. **Whip-Pan-Übergänge** am Anfang/Ende: schneller Schwenk mit starker Richtungsunschärfe, wie der Ein- und Ausstieg in Kamelfamilie.
+4. **Whip-Pan-Übergänge** – erledigt (`whipState()` in camera.js, Vorschau per SVG-Filter, MP4 echt verschmiert; nicht im WebM): schneller Schwenk mit starker Richtungsunschärfe, wie der Ein- und Ausstieg in Kamelfamilie.
 5. **Landmarkierungen (GeoLayers-Stil, geolayers.app):**
    - Länder, Regionen, Städte, Seen, Gebirge per Suche markieren (Natural Earth / Nominatim-Polygone).
    - Fläche einfärben, Kontur zeichnet sich animiert (Strich „draw-on“), Innenglühen/Schatten, optional 3D-Extrusion.

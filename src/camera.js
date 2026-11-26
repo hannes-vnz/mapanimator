@@ -101,7 +101,58 @@ const CAM = (() => {
     return { c: st.ll, z, b: bearingBetween(P, st.ll), p: pitch || 50 };
   }
 
+  /* ---------- Whip-Pan: schneller Schwenk am Anfang/Ende ----------
+     off = Versatz in Bildbreiten (−: kommt von der Gegenseite, +: schwenkt raus), vel = Tempo (Bildbreiten/s) */
+  const WHIP_D = 0.5, WHIP_DIST = 2.2;
+  function whipState(t){
+    const T = timelineTotal(), d = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] }[val("whipDir")] || [1, 0];
+    let off = 0, vel = 0;
+    if (checked("whipIn") && t < WHIP_D){ const f = Math.max(t, 0) / WHIP_D; off = -Math.pow(1 - f, 3); vel = 3 * Math.pow(1 - f, 2) / WHIP_D; }
+    else if (checked("whipOut") && t > T - WHIP_D){ const f = Math.min((t - (T - WHIP_D)) / WHIP_D, 1); off = Math.pow(f, 3); vel = 3 * f * f / WHIP_D; }
+    return { off: off * WHIP_DIST, vel: vel * WHIP_DIST, dx: d[0], dy: d[1] };
+  }
+  function frameW(){ const [w, h] = val("resolution").split("x").map(Number); return w || 1920; }
+  function applyWhip(cam, t){
+    const w = whipState(t);
+    if (!w.off) return cam;
+    const b = cam.b * Math.PI / 180, mpp = 1 / (512 * Math.pow(2, cam.z)), dist = w.off * frameW() * mpp;
+    // Bildschirm-Richtung → Mercator (Karte um bearing gedreht)
+    const mx = w.dx * Math.cos(b) - w.dy * Math.sin(b), my = w.dx * Math.sin(b) + w.dy * Math.cos(b);
+    const M = merc(cam.c);
+    return Object.assign({}, cam, { c: unmerc(M.x + mx * dist, M.y + my * dist) });
+  }
+  // Unschärfe-Länge in Export-Pixeln (180°-Verschluss bei 30 fps)
+  function whipBlurPx(t, fps){ const w = whipState(t); return Math.min(w.vel * frameW() / (2 * (fps || 30)), frameW() * 0.4); }
+  function previewBlur(t){
+    const wrap = $("mapwrap"), fe = $("whipBlurFe");
+    const px = whipBlurPx(t, 30);
+    if (px < 1.5 || mp4Busy){ if (wrap.style.filter) wrap.style.filter = ""; return; }
+    const w = whipState(t), sd = px / 3;
+    fe.setAttribute("stdDeviation", (Math.abs(w.dx) * sd).toFixed(1) + " " + (Math.abs(w.dy) * sd).toFixed(1));
+    wrap.style.filter = "url(#whipBlur)";
+  }
+  // Export: Bild entlang der Schwenkrichtung verschmieren (gleichgewichtetes Mittel verschobener Kopien)
+  let tmpC = null;
+  function blurCanvas(g, W, H, t, fps){
+    const px = whipBlurPx(t, fps);
+    if (px < 1.5) return;
+    const w = whipState(t);
+    tmpC = tmpC || document.createElement("canvas");
+    if (tmpC.width !== W || tmpC.height !== H){ tmpC.width = W; tmpC.height = H; }
+    const tg = tmpC.getContext("2d"); tg.clearRect(0, 0, W, H); tg.drawImage(g.canvas, 0, 0);
+    const N = Math.min(24, Math.max(6, Math.round(px / 8)));
+    for (let k = 0; k < N; k++){
+      const o = (k / (N - 1) - 0.5) * px;
+      g.globalAlpha = 1 / (k + 2);
+      g.drawImage(tmpC, w.dx * o, w.dy * o);
+    }
+    g.globalAlpha = 1;
+  }
+
   function at(t){
+    return applyWhip(atRaw(t), t);
+  }
+  function atRaw(t){
     const S = sorted(), T = timelineTotal();
     let i = 0;
     for (let k = 0; k < S.length; k++) if (S[k].t <= t + 1e-9) i = k;
@@ -150,6 +201,8 @@ const CAM = (() => {
       lane.appendChild(b);
     });
   }
+  const baseRA = renderAt;
+  window.renderAt = renderAt = function (t, live){ baseRA(t, live); previewBlur(t); };
   const baseRT = renderTimeline;
   window.renderTimeline = renderTimeline = function (){ baseRT(); renderRow(); };
 
@@ -212,8 +265,8 @@ const CAM = (() => {
     { id: "flyover", name: "3D-Flyover", sub: "Relive-Stil: tief, schräg, Fahrtrichtung", icon: "🏔️",
       shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "travel" }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
       tempo: { len: 30, feel: "gemuetlich" }, terrain: true },
-    { id: "recap", name: "Vlog-Recap", sub: "Weit folgen, Übersicht am Ende · flott", icon: "🎬",
-      shots: T => [F({ t: 0, zoom: 4.6 }), F({ t: Math.max(T - 1.8, 2), mode: "overview" })], tempo: { len: 30, feel: "rasant" } },
+    { id: "recap", name: "Vlog-Recap", sub: "Whip-Pan rein/raus, weit folgen · flott", icon: "🎬",
+      shots: T => [F({ t: 0, zoom: 4.6 }), F({ t: Math.max(T - 1.8, 2), mode: "overview" })], tempo: { len: 30, feel: "rasant" }, whip: true },
     { id: "static", name: "Feste Karte", sub: "Indiana-Jones-Stil: ganze Route, Linie wächst", icon: "🗺️",
       shots: () => [F({ t: 0, mode: "overview" })], tempo: { len: 15, feel: "gemuetlich" } },
     { id: "snap70", name: "Snap-Zooms", sub: "70-Sekunden-Wiki: Ruck + Drift", icon: "⚡", keyframes: "snap70", tempo: { len: 15, feel: "normal" } },
@@ -227,6 +280,7 @@ const CAM = (() => {
   async function applyPreset(pr){
     if (playing) pause();
     tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
+    $("whipIn").checked = $("whipOut").checked = !!pr.whip;
     if (!pr.keyframes) shots = pr.shots(timelineTotal());          // vorläufig: Zoom fürs Tempo
     if (pr.tempo) await MA_TEMPLATES.applyTempo(pr.tempo.len, pr.tempo.feel);
     if (pr.terrain && !$("terrain3d").checked){ $("terrain3d").checked = true; if (num("terrainEx") < 1.5) $("terrainEx").value = 1.5; applyTerrain(); }
@@ -256,10 +310,12 @@ const CAM = (() => {
     "Aktuelle Kartenansicht übernehmen": "Use current map view", "Neigung": "Tilt", "Drehung": "Rotation", "Startwinkel": "Start angle",
     "Vorausschau (s)": "Look-ahead (s)", "Umdrehungen": "Turns", "Lange Etappen: rauszoomen": "Long legs: zoom out",
     "Neuer Abschnitt am Playhead": "New shot at playhead", "Abschnitt löschen": "Delete shot", "Ansicht übernommen.": "View captured.",
-    "Hier beginnt schon ein Abschnitt.": "A shot already starts here." });
+    "Hier beginnt schon ein Abschnitt.": "A shot already starts here.",
+    "Übergänge": "Transitions", "Whip-Pan am Anfang": "Whip pan at start", "Whip-Pan am Ende": "Whip pan at end", "Schwenkrichtung": "Pan direction",
+    "nach rechts": "right", "nach links": "left", "nach oben": "up", "nach unten": "down" });
 
   return {
-    at, renderRow, renderEditor, applyPreset, presets: PRESETS,
+    at, renderRow, renderEditor, applyPreset, presets: PRESETS, blurCanvas, whipBlurPx,
     get: () => JSON.parse(JSON.stringify(shots)),
     set(v){ if (Array.isArray(v) && v.length) shots = v; sel = 0; renderTimeline(); renderEditor();
             document.querySelectorAll(".campre").forEach(b => b.classList.toggle("active", b.dataset.id === $("camPresetId").value)); },

@@ -99,6 +99,13 @@ try {
       return map.getStyle().layers.length + " Layer";
     }, th));
   }
+  await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
+    document.getElementById("whipIn").checked = true;
+    const a = CAM.at(0.05).c, b = CAM.at(0.6).c;
+    if (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) < 1e-4) throw new Error("kein Schwenk");
+    if (CAM.whipBlurPx(0.05, 30) < 20) throw new Error("keine Unschärfe");
+    return "ok";
+  }));
   await step("MP4 1 s rendern", () => page.evaluate(async () => {
     let got = null;
     window.dl = (b, n) => { if (!got) got = { n, size: b.size }; };
