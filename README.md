@@ -2,7 +2,7 @@
 
 Browser-based map animation tool for travel videos: draw routes on a map, animate them with a keyframe timeline and export the result as video for editing in DaVinci Resolve. Think of it as a free, self-built alternative to tools like GeoLayers.
 
-**[Live demo](https://USERNAME.github.io/kartenanimator/)** · Single HTML file, no build step, no framework
+**[Live demo]([https://USERNAME.github.io/kartenanimator/](https://hannes-vnz.github.io/mapanimator/))** · Single HTML file, no build step, no framework
 
 <!-- ![Screenshot](screenshots/preview.png) -->
 
