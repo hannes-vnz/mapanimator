@@ -17,6 +17,7 @@ Sprache im Tool und in der Kommunikation: Deutsch.
   - `src/labels.js`: Labels (`LABELS`, aufs Overlay `#ovl` gezeichnet → automatisch im MP4; Stile pill/callout/marker/spaced/plain, Animationen pop/fade/type, Balken in der Timeline; Namen aus Markierungen, Distanz-Labels je Etappe).
   - `src/signs.js`: Schilder & Fotokarten (`SIGNS`; Polaroid an Schnur, Typen pin/tent/hotel/flag/star/view, Anzeige pass/passHide/always/window, EXIF-GPS-Parser, „Hier anhalten“ → `pausesFor()` teilt Etappen in `prepareAnim`).
   - Stopp-Pins ohne Foto werden automatisch als Marker gezeichnet (`buildPinImage`, Stil `marker`).
+  - `src/regions.js`: Regionslabels (`REGIONS`, Natural Earth 50m regions + marine, NAME_DE, Ebenen `rg-0…4` nach MIN_LABEL-Rang; wichtigste zuletzt = Vorrang).
   - `src/templates.js`: Looks (`TEMPLATES`, nur Aussehen) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
   - `src/ui.js`: Oberfläche (Einfach/Profi-Modus über `body.pro`, `.adv` = nur Profi), (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
   - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
@@ -89,7 +90,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - Anzeige: immer, wenn passiert, oder Zeitfenster; optional mit Pause.
    - Größenregler.
 8. **Avatar an der Spitze:** – erledigt (Spitzen-Stil `avatar`, `makeAvatarIcon()`; Foto wählen schaltet automatisch auf Avatar; ohne Foto → Marker). rundes Foto mit weißem Ring und Pin. Foto-Spitze gibt es schon, Look angleichen.
-9. **Gesperrte Regionslabels** („A L P E N“, „I R A N“) aus Natural Earth geography_regions (Gebirge, Wüsten, Meere).
+9. **Gesperrte Regionslabels** – erledigt (`regions.js`, Look-Tab; in den Looks Relief/Abenteuer/Vlog-Atlas/Erklär-Atlas an): („A L P E N“, „I R A N“) aus Natural Earth geography_regions (Gebirge, Wüsten, Meere).
 10. **Szenen:** mehrere Szenen pro Projekt, die nacheinander exportiert werden; Projekt als JSON-Datei.
 11. **Formate:** (erledigt: Buttons 9:16/4:5/1:1/16:9 und Safe-Zone in der Topbar)
    - 9:16, 4:5, 1:1, 16:9 als Buttons.

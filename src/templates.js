@@ -6,34 +6,34 @@
    ========================================================= */
 const TEMPLATES = [
   { id: "vlog", name: "Vlog-Atlas", sub: "Kamelfamilie: Länder-Töne, rote Linie", icon: "🐪", bg: ["#e7b9a3", "#5b78c2"],
-    set: { mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
+    set: { rgMtn: true, rgLand: false, rgSea: true, mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
            tipStyle: "avatar", pinStyle: "dot", popStyle: "pop", pinFont: "display" } },
   { id: "relief", name: "3D-Relief", sub: "70 Sekunden Wiki: Berge, Snap-Look", icon: "⛰️", bg: ["#97a3b9", "#121d38"],
-    set: { mapStyle: "relief", lineColor: "#dc2828", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: false,
+    set: { rgMtn: true, rgLand: true, rgSea: true, mapStyle: "relief", lineColor: "#dc2828", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: false,
            tipStyle: "dot", pinStyle: "dot", pinFont: "display", labelSize: 18 } },
   { id: "adventure", name: "Abenteuer-Karte", sub: "Indiana-Jones-Stil: Pergament, rote Linie", icon: "🧭", bg: ["#e9dcbc", "#a9c3c1"],
-    set: { mapStyle: "vintage", lineColor: "#c1272d", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: false,
+    set: { rgMtn: true, rgLand: true, rgSea: true, mapStyle: "vintage", lineColor: "#c1272d", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: false,
            tipStyle: "model3d", pinStyle: "dot", pinFont: "serif", labelSize: 16 } },
   { id: "gmaps", name: "Navi-Look", sub: "Google-Maps-Stil: blau mit Kontur", icon: "📍", bg: ["#f7f4ee", "#aecbfa"],
-    set: { mapStyle: "minimal", lineColor: "#1a73e8", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, mapStyle: "minimal", lineColor: "#1a73e8", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
            tipStyle: "pin", pinStyle: "badge", pinFont: "system" } },
   { id: "earth", name: "Satellit", sub: "Google-Earth-Stil: Luftbild, gelbe Linie", icon: "🛰️", bg: ["#3f5530", "#1d3550"],
-    set: { mapStyle: "satellit", lineColor: "#ffd23f", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: true,
+    set: { rgMtn: false, rgLand: false, rgSea: false, mapStyle: "satellit", lineColor: "#ffd23f", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "model3d", pinStyle: "photo" } },
   { id: "sport", name: "Sport-Track", sub: "Strava-Stil: hell, orange", icon: "🏃", bg: ["#f7f4ee", "#e0e7d4"],
-    set: { mapStyle: "minimal", lineColor: "#fc4c02", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, mapStyle: "minimal", lineColor: "#fc4c02", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
            tipStyle: "model3d", pinStyle: "badge", pinFont: "display" } },
   { id: "cream", name: "Vlog Hell", sub: "Creme, Weinrot, Foto-Badges", icon: "📸", bg: ["#f3eee5", "#c6dbe8"],
-    set: { mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: false,
            tipStyle: "stop", pinStyle: "badge", pinFont: "rounded" } },
   { id: "night", name: "Neon Nacht", sub: "Dunkel, Glow, Race-Look", icon: "🏁", bg: ["#1d1e22", "#303a46"],
-    set: { mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
+    set: { rgMtn: false, rgLand: false, rgSea: false, mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "dot", pinStyle: "dot", pinFont: "display" } },
   { id: "explain", name: "Erklär-Atlas", sub: "Länder leuchten, gestrichelt", icon: "🗺️", bg: ["#d9a390", "#5b78c2"],
-    set: { mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 6, lineStyle: "dashed", lineCasing: false, glow: false,
+    set: { rgMtn: true, rgLand: false, rgSea: true, mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 6, lineStyle: "dashed", lineCasing: false, glow: false,
            tipStyle: "mode", pinStyle: "dot", hlLine: true, hlOp: 0.7 } },
   { id: "clean", name: "Clean & Minimal", sub: "Ruhig, dünn, blau", icon: "◻️", bg: ["#f7f4ee", "#d6e4ee"],
-    set: { mapStyle: "minimal", lineColor: "#3a6fb0", lineWidth: 4.5, lineStyle: "dashed", lineCasing: false, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, mapStyle: "minimal", lineColor: "#3a6fb0", lineWidth: 4.5, lineStyle: "dashed", lineCasing: false, glow: false,
            tipStyle: "dot", pinStyle: "badge", pinFont: "system" } }
 ];
 
@@ -108,6 +108,7 @@ const LENGTHS = [0, 8, 15, 30, 60];
     }
     for (const [k, v] of Object.entries(s)) if (k !== "mapStyle") setv(k, v);
     applyTerrain();
+    if (typeof REGIONS !== "undefined") REGIONS.apply();
     await drawStatic();
     if (anim) renderAt(playheadT, false);
     renderTimeline(); changed();

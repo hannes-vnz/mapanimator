@@ -145,6 +145,14 @@ try {
     document.getElementById("tipStyle").value = "model3d";
     return "ok";
   }));
+  await step("Regionslabels", () => page.evaluate(async () => {
+    ["rgMtn", "rgLand", "rgSea"].forEach(id => document.getElementById(id).checked = true);
+    await REGIONS.apply();
+    map.jumpTo({ center: [10, 42], zoom: 3.5 }); await waitIdle(15000);
+    const vis = map.queryRenderedFeatures().filter(f => f.layer.id.startsWith("rg")).map(f => f.properties.de);
+    if (!vis.includes("ALPEN")) throw new Error("ALPEN fehlt: " + vis.join(","));
+    return vis.length + " sichtbar";
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     const a = CAM.at(0.05).c, b = CAM.at(0.6).c;

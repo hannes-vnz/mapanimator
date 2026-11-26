@@ -158,6 +158,14 @@
           <div class="setting"><label>Terrain-Überhöhung</label><input type="range" id="terrainEx" min="1" max="20" step="0.5" value="1.5"></div>
         </div>
         <div class="card">
+          <h2>Regionslabels</h2>
+          <div class="setting"><label>Gebirge</label><input type="checkbox" id="rgMtn"></div>
+          <div class="setting"><label>Wüsten &amp; Landschaften</label><input type="checkbox" id="rgLand"></div>
+          <div class="setting"><label>Meere &amp; Buchten</label><input type="checkbox" id="rgSea"></div>
+          <div class="setting"><label>Größe</label><input type="range" id="rgSize" min="0.6" max="2" step="0.05" value="1"></div>
+          <div class="hint">Gesperrte Namen wie „A L P E N“ oder „M I T T E L M E E R“ (Natural Earth). Wichtige Regionen erscheinen schon weit draußen, kleinere erst beim Reinzoomen.</div>
+        </div>
+        <div class="card">
           <h2>Pins &amp; Spitze</h2>
           <div class="setting"><label>Pin-Stil</label>
             <select id="pinStyle">
@@ -426,6 +434,7 @@
 <script src="marks.js"></script>
 <script src="labels.js"></script>
 <script src="signs.js"></script>
+<script src="regions.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>
