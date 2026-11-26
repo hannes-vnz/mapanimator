@@ -232,14 +232,14 @@ const DAVINCI = (() => {
   }
 
   // Grafik-Asset als Titel: Loader (PNG-Sequenz mit Alpha) → Transform (Position/Größe)
-  function loaderTitle(base, frames, W, H){
+  function loaderTitle(base, frames, W, H, folder = "Mapanimator"){
     pos = 0;
     const last = frames - 1;
     const tools = [`Clip = Loader {
 				Clips = {
 					Clip {
 						ID = "Clip1",
-						Filename = "Templates:Edit/Titles/Mapanimator/${base}/${base}_0000.png",
+						Filename = "Templates:Edit/Titles/${folder}/${base}/${base}_0000.png",
 						FormatID = "PNGFormat",
 						StartFrame = 0,
 						Length = ${frames},
@@ -297,8 +297,9 @@ const DAVINCI = (() => {
     const files = [], enc = new TextEncoder();
     for (const v of r.variants){
       const base = r.nameOf(v), own = r.files.filter(f => f.name.startsWith(base + "/")), n = own.length;
-      own.forEach(f => files.push({ name: "Edit/Titles/Mapanimator/" + f.name, data: f.data }));
-      files.push({ name: "Edit/Titles/Mapanimator/" + base + ".setting", data: enc.encode(loaderTitle(base, n, r.W, r.H)) });
+      const folder = opt.folder || "Mapanimator";
+      own.forEach(f => files.push({ name: "Edit/Titles/" + folder + "/" + f.name, data: f.data }));
+      files.push({ name: "Edit/Titles/" + folder + "/" + base + ".setting", data: enc.encode(loaderTitle(base, n, r.W, r.H, folder)) });
     }
     if (opt.collect) return files;
     return install(files, "Mapanimator-DaVinci-" + r.nameOf(r.variants[0]) + ".zip");
