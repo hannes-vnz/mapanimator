@@ -1308,7 +1308,10 @@ const ASSETS = (() => {
 
   function tinted(g, emoji, cx, cy, size, color){                           // Emoji in Stempelfarbe getönt (Details bleiben)
     const c = document.createElement("canvas"); c.width = c.height = Math.ceil(size * 1.4); const t = c.getContext("2d"), f = Math.round(size) + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
-    t.font = f; t.textAlign = "center"; t.textBaseline = "middle"; t.filter = "grayscale(1) contrast(1.3)"; t.fillText(emoji, c.width / 2, c.height / 2 + size * 0.06); t.filter = "none";
+    t.font = f; t.textAlign = "center"; t.textBaseline = "middle"; t.fillText(emoji, c.width / 2, c.height / 2 + size * 0.06);
+    { const d = t.getImageData(0, 0, c.width, c.height), px = d.data;                // Graustufen + Kontrast von Hand (Safari kennt ctx.filter nicht)
+      for (let i = 0; i < px.length; i += 4){ const l = Math.min(255, Math.max(0, ((0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) - 128) * 1.3 + 128)); px[i] = px[i + 1] = px[i + 2] = l; }
+      t.putImageData(d, 0, 0); }
     t.globalCompositeOperation = "multiply"; t.fillStyle = color; t.fillRect(0, 0, c.width, c.height);
     t.globalCompositeOperation = "destination-in"; t.fillText(emoji, c.width / 2, c.height / 2 + size * 0.06);
     g.drawImage(c, cx - c.width / 2, cy - c.height / 2);
@@ -1596,7 +1599,18 @@ const ASSETS = (() => {
     e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
     return new Blob([...parts, ...cent, new Uint8Array(e.buffer)], { type: "application/zip" });
   }
-  function download(blob, name){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+  // Download: automatisch versuchen + Knopf als Rückfall (Safari blockt Downloads manchmal nach langer Rechenzeit)
+  function download(blob, name){
+    const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    let bar = document.getElementById("asSaveBar");
+    if (!bar){ bar = document.createElement("div"); bar.id = "asSaveBar"; document.body.appendChild(bar); }
+    const b = document.createElement("a"); b.href = url; b.download = name; b.className = "asSave"; b.textContent = "⬇ " + name + " " + tr("speichern");
+    const x = document.createElement("button"); x.type = "button"; x.textContent = "✕"; x.title = tr("Schließen");
+    const row = document.createElement("div"); row.className = "asSaveRow"; row.append(b, x); bar.prepend(row);
+    x.addEventListener("click", () => { row.remove(); URL.revokeObjectURL(url); });
+    setTimeout(() => { if (row.isConnected){ row.remove(); URL.revokeObjectURL(url); } }, 10 * 60 * 1000);
+  }
+  function fail(e){ const m = (e && e.message) || String(e); setStatus("Export-Fehler: " + m); alert(tr("Export hat nicht geklappt") + ":\n" + m + "\n\n" + tr("Tipp: PNG-Export probieren oder Chrome nutzen.")); }
   async function exportAsset(a, fmt, opt = {}){
     const [W, H] = (opt.size || val("asRes") || "1920x1080").split("x").map(Number), fps = opt.fps || parseInt(val("expFps")) || 30;
     const multi = ["hexflag", "stamp", "flag"].includes(a.type) ? countriesOf(a) : [];
@@ -1607,7 +1621,7 @@ const ASSETS = (() => {
     const files = [], blobs = [];
     for (const v of variants){
       const n = Math.ceil(v.dur * fps), base = nameOf(v);
-      const draw = i => { g.clearRect(0, 0, W, H); if (fmt === "green"){ g.fillStyle = "#00ff00"; g.fillRect(0, 0, W, H); } drawAsset(g, W, H, v, i / fps); };
+      const key = val("asKey") || "#00ff00", draw = i => { g.clearRect(0, 0, W, H); if (fmt === "green"){ g.fillStyle = key; g.fillRect(0, 0, W, H); } drawAsset(g, W, H, v, i / fps); };
       if (fmt === "png"){
         for (let i = 0; i < n; i++){
           draw(i);
@@ -1617,7 +1631,10 @@ const ASSETS = (() => {
         }
         continue;
       }
-      let codec = "avc1.640034"; if (!(await VideoEncoder.isConfigSupported({ codec, width: W, height: H })).supported) codec = "avc1.4d0034";
+      if (!window.VideoEncoder){ setStatus(tr("Dieser Browser kann kein MP4 erzeugen – bitte Safari 17+, Chrome oder Edge nutzen, oder PNG exportieren.")); throw new Error("WebCodecs fehlt"); }
+      let codec = null;
+      for (const cand of ["avc1.640034", "avc1.640028", "avc1.4d0034", "avc1.4d0028", "avc1.42003e", "avc1.42001f"]){ try { if ((await VideoEncoder.isConfigSupported({ codec: cand, width: W, height: H, bitrate: 16e6, framerate: fps })).supported){ codec = cand; break; } } catch (e) {} }
+      if (!codec) throw new Error("kein H.264-Profil für " + W + "×" + H);
       const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: "avc", width: W, height: H, frameRate: fps }, fastStart: "in-memory" });
       let err = null; const enc = new VideoEncoder({ output: (ch, m) => muxer.addVideoChunk(ch, m), error: e => err = e });
       enc.configure({ codec, width: W, height: H, bitrate: 16e6, framerate: fps });
@@ -1627,9 +1644,9 @@ const ASSETS = (() => {
         enc.encode(vf, { keyFrame: i % fps === 0 }); vf.close();
         while (enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 5));
       }
-      await enc.flush(); muxer.finalize(); if (err) throw err;
+      await enc.flush(); if (err) throw err; muxer.finalize();
       const blob = new Blob([muxer.target.buffer], { type: "video/mp4" }); blobs.push(blob);
-      if (!opt.noDownload) download(blob, base + "_greenscreen.mp4");
+      if (!opt.noDownload) download(blob, base + "_" + ({ "#00ff00": "greenscreen", "#0000ff": "bluescreen", "#ff00ff": "magenta", "#000000": "schwarz" }[val("asKey")] || "key") + ".mp4");
     }
     if (fmt === "png"){
       const blob = zip(files);
@@ -1749,7 +1766,7 @@ const ASSETS = (() => {
         body.innerHTML = FIELDS[a.type].map(f => fld(...f)).join("") + fld("dur", "Dauer (s)", "number") + fld("pos", "Position", "select", POS) +
           `<div class="setting"><label>${tr("Größe")}</label><input type="range" data-k="size" min="0.3" max="2.5" step="0.05"></div>` +
           `<div class="hint">${tr("In der Vorschau ziehen = verschieben, Mausrad = Größe.")} <a href="#" data-a="center">${tr("Zur Mitte")}</a>${BRANDED.has(a.type) ? ` · <a href="#" data-a="brand">${tr("Hausfarbe nutzen")}</a>` : ""}</div>` +
-          `<div class="insexp"><span>${tr("Exportieren")} (${val("asRes")}):</span><button type="button" class="btn" data-a="png">PNG transparent (ZIP)</button><button type="button" class="btn ghost" data-a="green">Greenscreen-MP4</button><button type="button" class="btn ghost" data-a="dvr">→ DaVinci-Titel</button></div>`;
+          `<div class="insexp"><span>${tr("Exportieren")} (${val("asRes")}):</span><button type="button" class="btn" data-a="png">PNG transparent (ZIP)</button><button type="button" class="btn ghost" data-a="green">MP4 (${({ "#00ff00": "Grün", "#0000ff": "Blau", "#ff00ff": "Magenta", "#000000": "Schwarz" }[val("asKey")] || "Key")})</button><button type="button" class="btn ghost" data-a="dvr">→ DaVinci-Titel</button></div>`;
         body.querySelectorAll("[data-k]").forEach(inp => {
           const k = inp.dataset.k;
           if (inp.type === "checkbox") inp.checked = !!a[k];
@@ -1771,8 +1788,8 @@ const ASSETS = (() => {
         const ex = x => body.querySelector(`[data-a="${x}"]`);
         ex("center").addEventListener("click", e => { e.preventDefault(); a.dx = 0; a.dy = 0; });
         if (ex("brand")) ex("brand").addEventListener("click", e => { e.preventDefault(); delete a.color; render(); });
-        ex("png").addEventListener("click", () => exportAsset(a, "png").catch(e => setStatus("Export-Fehler: " + e.message)));
-        ex("green").addEventListener("click", () => exportAsset(a, "green").catch(e => setStatus("Export-Fehler: " + e.message)));
+        ex("png").addEventListener("click", () => exportAsset(a, "png").catch(fail));
+        ex("green").addEventListener("click", () => exportAsset(a, "green").catch(fail));
         ex("dvr").addEventListener("click", () => DAVINCI.exportAsset(a).catch(e => setStatus("DaVinci-Export: " + e.message)));
       }
       el.querySelector(".inshead").addEventListener("click", e => { if (e.target.closest("button")) return; sel = sel === a.id ? null : a.id; start = performance.now(); render(); });
@@ -1784,7 +1801,23 @@ const ASSETS = (() => {
   const addBox = $("asAdd");
   if (addBox) addBox.innerHTML = Object.entries(TYPES).map(([k, t]) => `<button type="button" class="btn ghost" data-as="${k}"><b>${t.icon}</b> ${tr(t.name)}</button>`).join("");
   document.querySelectorAll("[data-as]").forEach(b => b.addEventListener("click", () => add(b.dataset.as)));
-  ["asRes", "asBg", "asBrand"].forEach(id => $(id).addEventListener("input", () => { start = performance.now(); render(); }));
+  // alle angelegten Assets als MP4 in einem ZIP (ein Download – praktisch in Safari)
+  const allMp4 = $("asAllMp4");
+  if (allMp4) allMp4.addEventListener("click", async () => {
+    if (!list.length){ setStatus(tr("Erst Assets anlegen.")); return; }
+    try {
+      const files = [], enc = new TextEncoder(), used = new Set(), suf = ({ "#00ff00": "greenscreen", "#0000ff": "bluescreen", "#ff00ff": "magenta", "#000000": "schwarz" }[val("asKey")] || "key");
+      for (let i = 0; i < list.length; i++){
+        const a = list[i]; setStatus(tr("MP4") + " " + (i + 1) + "/" + list.length + " …");
+        const r = await exportAsset(a, "green", { noDownload: true });
+        let nm = String(i + 1).padStart(2, "0") + "_" + (TYPES[a.type].name + "-" + (a.country || a.text || a.title || a.label || "")).slice(0, 40).replace(/[^\wäöüÄÖÜß-]+/g, "_") + "_" + suf + ".mp4";
+        while (used.has(nm)) nm = "x" + nm; used.add(nm);
+        files.push({ name: nm, data: new Uint8Array(await r.blob.arrayBuffer()) });
+      }
+      download(zip(files), "Mapanimator-Assets-MP4.zip"); setStatus(files.length + " " + tr("MP4 im ZIP fertig"));
+    } catch (e){ fail(e); }
+  });
+  ["asRes", "asBg", "asBrand", "asKey"].forEach(id => $(id).addEventListener("input", () => { start = performance.now(); render(); }));
 
   Object.assign(EN, { "Asset": "Asset", "Hexagon-Flagge + Lametta": "Hexagon flag + tinsel", "Challenge-Karte": "Challenge card", "Regel-Karten": "Rule cards", "Geld-Zähler": "Money counter",
     "Uhrzeit-Chip": "Time chip", "Info-Box": "Info box", "Platzierung": "Placement", "Reisepass-Stempel": "Passport stamp", "Flagge (weht)": "Waving flag",
