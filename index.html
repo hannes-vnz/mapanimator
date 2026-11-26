@@ -2532,6 +2532,9 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
           <h2>Karten-Stil</h2>
           <div id="themeGrid" class="themegrid"></div>
           <div class="setting" style="margin-top:10px"><label>Globus-Ansicht</label><input type="checkbox" id="projGlobe"></div>
+          <div class="setting"><label>Wolkenschicht (NASA)</label><input type="checkbox" id="cloudLayer"></div>
+          <div class="setting"><label>Sternenhimmel</label><input type="checkbox" id="fxStars"></div>
+          <div class="setting"><label>Vignette</label><input type="checkbox" id="fxVignette"></div>
           <div class="setting sr-only-setting"><label>Karten-Stil</label>
             <select id="mapStyle">
               <option value="hell" selected>Vlog Hell (Creme)</option>
@@ -3216,7 +3219,7 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Nur letzte Etappe animieren":"Animate last leg only","Wolken-Einflug":"Fly in through clouds","Komplette Shots":"Complete shots","Etikett (Ortsname)":"Tag (place name)","Globus-Ansicht":"Globe view","Pastell-Topo":"Pastel topo","Nacht-GPS":"Night GPS","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
+  "Kamera-Presets":"Camera presets","Wolkenschicht (NASA)":"Cloud layer (NASA)","Sternenhimmel":"Starfield","Vignette":"Vignette","Nur letzte Etappe animieren":"Animate last leg only","Wolken-Einflug":"Fly in through clouds","Komplette Shots":"Complete shots","Etikett (Ortsname)":"Tag (place name)","Globus-Ansicht":"Globe view","Pastell-Topo":"Pastel topo","Nacht-GPS":"Night GPS","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
   "Fotos werden an ihren Aufnahmeort gesetzt (GPS aus dem Foto) und poppen als Polaroid auf, wenn die Linie vorbeikommt. Ohne GPS: zwischen zeitlich benachbarten Fotos oder per Klick. iPhone-Fotos (HEIC) vorher als JPEG exportieren, mit Ortsangabe.":"Photos are placed where they were taken (GPS from the photo) and pop up as instant prints when the line passes. Without GPS: between photos taken before/after, or by click. Export iPhone photos (HEIC) as JPEG with location first.",
   "Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.":"Your own labels on the map: pill, callout with a line to the point, marker with name, spaced title (“I T A L Y”). With pop, fade or typewriter animation and their own time window in the timeline.","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
   "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
@@ -3526,7 +3529,15 @@ function buildBaseStyle(name){
 
   if (dt("projGlobe")){
     style.projection = { type: "globe" };
-    style.sky = { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] };
+    style.sky = { "sky-color": "#0a1630", "horizon-color": "#7fb6ff", "fog-color": "#a9ccff", "horizon-fog-blend": 0.6, "sky-horizon-blend": 0.6,
+                  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] };
+  }
+  if (dt("cloudLayer")){
+    // NASA Blue Marble Wolken (gemeinfrei), transparente PNG
+    style.sources.clouds = { type: "image", url: "https://cdn.jsdelivr.net/gh/turban/webgl-earth@master/images/fair_clouds_4k.png",
+      coordinates: [[-180, 85.05], [180, 85.05], [180, -85.05], [-180, -85.05]] };
+    style.layers.push({ id: "clouds", type: "raster", source: "clouds", maxzoom: 7,
+      paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 2, 0.85, 5, 0.55, 7, 0], "raster-fade-duration": 0 } });
   }
   const noLabels = document.getElementById("dtLabels") && !document.getElementById("dtLabels").checked;
   if (noLabels) style.layers = style.layers.filter(l => l.type !== "symbol");
@@ -3714,6 +3725,11 @@ function addRuntimeLayers(){
     filter: ["==", ["get", "dash"], 0],
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": ["get", "color"], "line-width": 3.5 }
+  });
+  if (!map.getLayer("route-core")) map.addLayer({
+    id: "route-core", type: "line", source: "route",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#ffffff", "line-width": 1.2, "line-opacity": 0, "line-blur": 0.5 }
   });
   if (!map.getLayer("route-dash")) map.addLayer({
     id: "route-dash", type: "line", source: "route",
@@ -4496,7 +4512,7 @@ function readCustomColors(){
   document.getElementById(id).addEventListener("change", () => { readCustomColors(); rebuildStyle(); }));
 document.getElementById("ccReset").addEventListener("click", () => { customColors = null; rebuildStyle(); });
 document.getElementById("mtKey").addEventListener("change", rebuildStyle);
-["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns", "dtLabels", "projGlobe"].forEach(id =>
+["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns", "dtLabels", "projGlobe", "cloudLayer"].forEach(id =>
   document.getElementById(id).addEventListener("change", rebuildStyle));
 /* Stil wechseln: Terrain vorher aus (sonst rendert MapLibre Terrain ohne DEM-Quelle),
    Laufzeit-Ebenen neu anlegen, neu zeichnen. styleBusy = Promise bis alles fertig ist. */
@@ -4686,6 +4702,7 @@ function headingAt(p, tipIdx){
 }
 function setLineWidths(w){
   map.setPaintProperty("route-line", "line-width", w);
+  if (map.getLayer("route-core")) map.setPaintProperty("route-core", "line-width", Math.max(1, w * 0.32));
   if (map.getLayer("route-dash")) map.setPaintProperty("route-dash", "line-width", w);
   if (map.getLayer("route-casing")) map.setPaintProperty("route-casing", "line-width", w + Math.max(2.5, w * 0.8));
 }
@@ -4991,9 +5008,10 @@ function renderAt(t, live){
   const lwS = sampleNum(tracks.lineWidth, t, num("lineWidth") || 3.5);
   setLineWidths(lwS);
   const glowS = sampleNum(tracks.glowOp, t, checked("glow") ? 0.55 : 0);
-  map.setPaintProperty("route-glow", "line-opacity", glowS);
-  map.setPaintProperty("route-glow", "line-width", lwS * 3.2);
-  map.setPaintProperty("route-glow", "line-blur", lwS * 2.2);
+  map.setPaintProperty("route-glow", "line-opacity", glowS > 0 ? Math.min(1, glowS * 1.6) : 0);
+  map.setPaintProperty("route-glow", "line-width", lwS * 4.2);
+  map.setPaintProperty("route-glow", "line-blur", lwS * 3);
+  if (map.getLayer("route-core")) map.setPaintProperty("route-core", "line-opacity", glowS > 0 ? 0.9 : 0);
   if (map.getLayer("stops-icons"))
     map.setLayoutProperty("stops-icons", "icon-size", ["*", ["get", "size"], sampleNum(tracks.pinScale, t, num("pinScale"))]);
   if (map.getLayer("tip-pin"))
@@ -5076,9 +5094,10 @@ function applyStyleSettings(){
   map.setPaintProperty("route-line", "line-dasharray",
     style === "dashed" ? [2.2, 1.8] : style === "dotted" ? [0.1, 2] : [1, 0]);
   const glowOn = checked("glow");
-  map.setPaintProperty("route-glow", "line-width", width * 3.2);
-  map.setPaintProperty("route-glow", "line-blur", width * 2.2);
-  map.setPaintProperty("route-glow", "line-opacity", glowOn ? 0.55 : 0);
+  map.setPaintProperty("route-glow", "line-width", width * 4.2);
+  map.setPaintProperty("route-glow", "line-blur", width * 3);
+  map.setPaintProperty("route-glow", "line-opacity", glowOn ? 0.88 : 0);
+  if (map.getLayer("route-core")) map.setPaintProperty("route-core", "line-opacity", glowOn ? 0.9 : 0);
   map.setPaintProperty("tip-dot", "circle-radius", Math.max(6, width * 1.6));
   updateTipPin();
   if (map.getLayer("stops-icons")){
@@ -5579,6 +5598,7 @@ async function exportMP4(opts = {}){
       setPlayheadOnly(t);
       if (checked("expBlur")){
         // 6 Unterbilder über einen halben Frame (180°-Shutter) mitteln
+        if (typeof CAM !== "undefined") CAM.drawBackdrop(g, W, H);
         const S = 6;
         for (let k = 0; k < S; k++){
           const tt = Math.max(0, t + (k / S - 0.25) / fps);
@@ -5588,6 +5608,7 @@ async function exportMP4(opts = {}){
         g.globalAlpha = 1; renderAt(t, false);
       } else {
         renderAt(t, true); await waitIdle();
+        if (typeof CAM !== "undefined") CAM.drawBackdrop(g, W, H); else g.clearRect(0, 0, W, H);
         g.drawImage(map.getCanvas(), 0, 0, W, H);
       }
       if (typeof CAM !== "undefined") CAM.blurCanvas(g, W, H, t, fps);
@@ -5702,7 +5723,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","cloudLayer","fxVignette","fxStars","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {
@@ -5836,46 +5857,46 @@ setStatus(tr("Karte lädt …"));
    ========================================================= */
 const TEMPLATES = [
   { id: "vlog", name: "Vlog-Atlas", sub: "Kamelfamilie: Länder-Töne, rote Linie", icon: "🐪", bg: ["#e7b9a3", "#5b78c2"],
-    set: { rgMtn: true, rgLand: false, rgSea: true, projGlobe: false, mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
+    set: { rgMtn: true, rgLand: false, rgSea: true, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
            tipStyle: "avatar", pinStyle: "dot", popStyle: "pop", pinFont: "display" } },
   { id: "pastellvlog", name: "Reise-Vlog Pastell", sub: "Kara-&-Nate-Look: helle Topo, Avatar, Orts-Etiketten", icon: "🚐", bg: ["#ece9e3", "#bcd5e6"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: false, projGlobe: false, mapStyle: "pastell", lineColor: "#2b2d31", lineWidth: 3.5, lineStyle: "solid", lineCasing: false, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: false, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "pastell", lineColor: "#2b2d31", lineWidth: 3.5, lineStyle: "solid", lineCasing: false, glow: false,
            tipStyle: "avatar", pinStyle: "tag", pinFont: "rounded" } },
   { id: "racegps", name: "Race: Nacht-GPS", sub: "THE-RACE-Look: dunkler Stadtplan, Neon-Spuren, Team-Avatare", icon: "📡", bg: ["#131519", "#2e333b"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: true, projGlobe: false, mapStyle: "nacht", lineColor: "#3fa9ff", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: true,
+    set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: true, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: true, pinScale: 1.35, mapStyle: "nacht", lineColor: "#3fa9ff", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "avatar", pinStyle: "tag", pinFont: "display" } },
   { id: "raceglobe", name: "Race: Globus-Flug", sub: "Satelliten-Globus, roter Leuchtbogen, Flaggen-Etiketten", icon: "🌍", bg: ["#1d3550", "#0b0d12"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: false, projGlobe: true, mapStyle: "satellit", lineColor: "#ff2d3c", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: true,
+    set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: false, projGlobe: true, cloudLayer: true, fxStars: true, fxVignette: true, pinScale: 1.4, mapStyle: "satellit", lineColor: "#ff2d3c", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "dot", pinStyle: "tag", pinFont: "display", travelMode: "fly" } },
   { id: "raceborder", name: "Race: Grenz-Glühen", sub: "Dunkle Länderkarte, rote Leuchtlinie, kleine Namen", icon: "🟥", bg: ["#1d1e22", "#2a2c33"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: true, projGlobe: false, mapStyle: "dunkel", lineColor: "#ff2d3c", lineWidth: 4, lineStyle: "solid", lineCasing: false, glow: true,
+    set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: true, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: true, pinScale: 1.3, mapStyle: "dunkel", lineColor: "#ff2d3c", lineWidth: 4.5, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "dot", pinStyle: "tag", pinFont: "system" } },
   { id: "relief", name: "3D-Relief", sub: "70 Sekunden Wiki: Berge, Snap-Look", icon: "⛰️", bg: ["#97a3b9", "#121d38"],
-    set: { rgMtn: true, rgLand: true, rgSea: true, projGlobe: false, mapStyle: "relief", lineColor: "#dc2828", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: false,
+    set: { rgMtn: true, rgLand: true, rgSea: true, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "relief", lineColor: "#dc2828", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: false,
            tipStyle: "dot", pinStyle: "dot", pinFont: "display", labelSize: 18 } },
   { id: "adventure", name: "Abenteuer-Karte", sub: "Indiana-Jones-Stil: Pergament, rote Linie", icon: "🧭", bg: ["#e9dcbc", "#a9c3c1"],
-    set: { rgMtn: true, rgLand: true, rgSea: true, projGlobe: false, mapStyle: "vintage", lineColor: "#c1272d", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: false,
+    set: { rgMtn: true, rgLand: true, rgSea: true, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "vintage", lineColor: "#c1272d", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: false,
            tipStyle: "model3d", pinStyle: "dot", pinFont: "serif", labelSize: 16 } },
   { id: "gmaps", name: "Navi-Look", sub: "Google-Maps-Stil: blau mit Kontur", icon: "📍", bg: ["#f7f4ee", "#aecbfa"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, mapStyle: "minimal", lineColor: "#1a73e8", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "minimal", lineColor: "#1a73e8", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
            tipStyle: "pin", pinStyle: "badge", pinFont: "system" } },
   { id: "earth", name: "Satellit", sub: "Google-Earth-Stil: Luftbild, gelbe Linie", icon: "🛰️", bg: ["#3f5530", "#1d3550"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, mapStyle: "satellit", lineColor: "#ffd23f", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: true,
+    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "satellit", lineColor: "#ffd23f", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "model3d", pinStyle: "photo" } },
   { id: "sport", name: "Sport-Track", sub: "Strava-Stil: hell, orange", icon: "🏃", bg: ["#f7f4ee", "#e0e7d4"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, mapStyle: "minimal", lineColor: "#fc4c02", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "minimal", lineColor: "#fc4c02", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
            tipStyle: "model3d", pinStyle: "badge", pinFont: "display" } },
   { id: "cream", name: "Vlog Hell", sub: "Creme, Weinrot, Foto-Badges", icon: "📸", bg: ["#f3eee5", "#c6dbe8"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: false,
            tipStyle: "stop", pinStyle: "badge", pinFont: "rounded" } },
   { id: "night", name: "Neon Nacht", sub: "Dunkel, Glow, Race-Look", icon: "🏁", bg: ["#1d1e22", "#303a46"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
+    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "dot", pinStyle: "dot", pinFont: "display" } },
   { id: "explain", name: "Erklär-Atlas", sub: "Länder leuchten, gestrichelt", icon: "🗺️", bg: ["#d9a390", "#5b78c2"],
-    set: { rgMtn: true, rgLand: false, rgSea: true, projGlobe: false, mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 6, lineStyle: "dashed", lineCasing: false, glow: false,
+    set: { rgMtn: true, rgLand: false, rgSea: true, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 6, lineStyle: "dashed", lineCasing: false, glow: false,
            tipStyle: "mode", pinStyle: "dot", hlLine: true, hlOp: 0.7 } },
   { id: "clean", name: "Clean & Minimal", sub: "Ruhig, dünn, blau", icon: "◻️", bg: ["#f7f4ee", "#d6e4ee"],
-    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, mapStyle: "minimal", lineColor: "#3a6fb0", lineWidth: 4.5, lineStyle: "dashed", lineCasing: false, glow: false,
+    set: { rgMtn: false, rgLand: false, rgSea: false, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, mapStyle: "minimal", lineColor: "#3a6fb0", lineWidth: 4.5, lineStyle: "dashed", lineCasing: false, glow: false,
            tipStyle: "dot", pinStyle: "badge", pinFont: "system" } }
 ];
 
@@ -5943,7 +5964,7 @@ const LENGTHS = [0, 8, 15, 30, 60];
   async function applyTemplate(tpl){
     if (playing) pause();
     const s = tpl.set;
-    const STYLE_KEYS = ["dtLabels", "projGlobe", "dtRoads", "dtTowns"];       // fließen in den Kartenstil ein
+    const STYLE_KEYS = ["dtLabels", "projGlobe", "cloudLayer", "dtRoads", "dtTowns"];       // fließen in den Kartenstil ein
     const needSwap = (s.mapStyle && s.mapStyle !== val("mapStyle")) || STYLE_KEYS.some(k => k in s && String($(k).checked) !== String(s[k]));
     for (const [k, v] of Object.entries(s)) if (k !== "mapStyle") setv(k, v);   // vorher setzen (Stil liest sie)
     if (needSwap){
@@ -6112,8 +6133,15 @@ const CAM = (() => {
     const p = activePer();
     const pitch = s.pitch == null ? num("pitch") : s.pitch;
     const zoom = s.zoom == null ? num("zoom") : s.zoom;
-    const drift = (s.drift || 0) * Math.max(0, t - s.t);
-    if (s.mode === "overview" || !p){ const o = overviewCam(); return { c: o.c, z: (s.zoomAbs != null ? s.zoomAbs : o.z + (s.zoomAdj || 0)) + (s.zoomDrift || 0) * Math.max(0, t - s.t), b: (s.bearing || 0) + drift, p: pitch }; }
+    const r = evalShotBase(s, t, tEnd, p, pitch, zoom);
+    if (s.mode !== "orbit" && s.mode !== "tripod"){
+      const dt = Math.max(0, t - s.t);
+      r.b += (s.drift || 0) * dt; r.z += (s.zoomDrift || 0) * dt; r.p = Math.min(85, r.p + (s.pitchDrift || 0) * dt);
+    }
+    return r;
+  }
+  function evalShotBase(s, t, tEnd, p, pitch, zoom){
+    if (s.mode === "overview" || !p){ const o = overviewCam(); return { c: o.c, z: s.zoomAbs != null ? s.zoomAbs : o.z + (s.zoomAdj || 0), b: s.bearing || 0, p: pitch }; }
     if (s.mode === "still"){
       if (!s.center){ const o = overviewCam(); return { c: o.c, z: o.z, b: s.bearing || 0, p: pitch }; }
       return { c: s.center, z: zoom, b: s.bearing || 0, p: pitch };
@@ -6263,10 +6291,44 @@ const CAM = (() => {
   const baseRA = renderAt;
   window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); previewBlur(t); };
   // Wolken-Einflug: weiche Wolkenfetzen fliegen in den ersten 0,9 s auseinander und blenden aus
+  // Sternenhimmel (Globus): prozedural, deterministisch
+  let starsCanvas = null, starsURL = null;
+  function stars(){
+    if (starsCanvas) return starsCanvas;
+    const c = document.createElement("canvas"); c.width = 2048; c.height = 1152;
+    const g = c.getContext("2d"), gr = g.createRadialGradient(1024, 576, 100, 1024, 576, 1300);
+    gr.addColorStop(0, "#0b1226"); gr.addColorStop(1, "#010205"); g.fillStyle = gr; g.fillRect(0, 0, 2048, 1152);
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 1400; i++){
+      const x = rnd() * 2048, y = rnd() * 1152, m = rnd(), r = m > 0.985 ? 1.8 : m > 0.9 ? 1.1 : 0.6;
+      g.fillStyle = `rgba(${200 + rnd() * 55 | 0},${210 + rnd() * 45 | 0},255,${(0.35 + rnd() * 0.65).toFixed(2)})`;
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+    starsCanvas = c; starsURL = c.toDataURL("image/jpeg", 0.9);
+    return c;
+  }
+  const starsOn = () => checked("fxStars") && checked("projGlobe");
+  function drawBackdrop(g, W, H){
+    if (starsOn()) g.drawImage(stars(), 0, 0, W, H); else g.clearRect(0, 0, W, H);
+  }
+  let bdOn = null;
+  function syncBackdrop(){
+    const on = starsOn(); if (on === bdOn) return; bdOn = on;
+    const w = $("mapwrap");
+    if (on){ stars(); w.style.background = `#010205 url(${starsURL}) center / cover`; } else w.style.background = "";
+  }
+  ["fxStars", "projGlobe"].forEach(id => $(id).addEventListener("change", syncBackdrop));
+  document.addEventListener("ma:settings", syncBackdrop); document.addEventListener("ma:loaded", syncBackdrop);
   const CLOUDS = Array.from({ length: 16 }, (_, i) => { const a = i * 2.39996, r = 0.15 + ((i * 37) % 10) / 22; return { x: Math.cos(a) * r, y: Math.sin(a) * r * 0.7, s: 0.35 + ((i * 53) % 10) / 18 }; });
   const baseDO = drawOverlay;
   window.drawOverlay = drawOverlay = function (){
-    baseDO();
+    baseDO(); syncBackdrop();
+    if (checked("fxVignette")){
+      const c = $("ovl"), g = c.getContext("2d"), W = c.width, H = c.height;
+      const gr = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.55);
+      gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, "rgba(0,0,0,0.62)");
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    }
     if (!checked("fxClouds") || lastT == null || lastT > 0.95) return;
     const c = $("ovl"), g = c.getContext("2d"), W = c.width, H = c.height, k = lastT / 0.95;
     g.save();
@@ -6390,18 +6452,18 @@ const CAM = (() => {
       shots: () => [F({ t: 0, mode: "overview", zoomAbs: 2.2, pitch: 0 }), F({ t: 0.35, zoom: 7.2, pitch: 15 })], tempo: { len: 5.5, feel: "normal" } },
     { id: "s_globe", name: "Globus-Flug", sub: "THE RACE · 9 s: Crash-Zoom rein → Bogen zeichnet sich → Zielring → Crash-Zoom ins Ziel", icon: "🌍",
       look: "raceglobe", set: { legFocus: "last", fxClouds: false, whipIn: true, whipOut: true, whipDir: "zoom" },
-      shots: () => [F({ t: 0, mode: "overview", pitch: 48, bearing: -10, zoomAdj: -0.5, drift: 0.8, zoomDrift: 0.03 })], tempo: { len: 9, feel: "gemuetlich" },
-      extras: ["destPulse"] },
+      shots: () => [F({ t: 0, mode: "overview", pitch: 46, bearing: -14, zoomAdj: -0.7, drift: 2.4, zoomDrift: 0.07, pitchDrift: 0.6 })], tempo: { len: 9, feel: "gemuetlich" },
+      extras: ["startPulse", "destPulse"] },
     { id: "s_reveal", name: "Routen-Reveal", sub: "THE RACE · 12 s: Länder füllen sich rot, Linie wächst, Distanz-Chip, Zoom aufs Ziel", icon: "🟥",
       look: "raceborder", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, lineColor: "#ffffff", lineWidth: 3.5, glow: true },
-      shots: T => [F({ t: 0, mode: "overview", pitch: 0 }), F({ t: Math.max(T * 0.8, 1), mode: "still", zoomFromOv: 2.6 })], tempo: { len: 12, feel: "normal" },
-      extras: ["countriesRed", "totalKm", "destPulse"] },
+      shots: T => [F({ t: 0, mode: "overview", pitch: 28, bearing: -6, zoomAdj: -0.25, drift: 1.1, zoomDrift: 0.035 }), F({ t: Math.max(T * 0.8, 1), mode: "still", zoomFromOv: 2.6, pitch: 40, drift: 3, zoomDrift: 0.12 })], tempo: { len: 12, feel: "normal" },
+      extras: ["startPulse", "countriesRed", "totalKm", "destPulse"] },
     { id: "s_split", name: "Split-Kachel", sub: "THE RACE · 1:1-Karte für neben das Live-Bild: gestrichelte Route baut sich Stopp für Stopp auf", icon: "🧩",
       look: "racegps", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, resolution: "1080x1080", lineStyle: "dashed", lineColor: "#ff7a2f", glow: false, dtLabels: false },
-      shots: () => [F({ t: 0, pitch: 0, fitSoFar: true, maxZoom: 8 })], tempo: { len: 0, feel: "gemuetlich" }, extras: ["totalKmEnd"] },
+      shots: () => [F({ t: 0, pitch: 0, fitSoFar: true, maxZoom: 8 })], tempo: { len: 0, feel: "gemuetlich" }, extras: ["totalKmEnd", "startPulse"] },
     { id: "s_tracker", name: "Team-Tracker", sub: "THE RACE · 6 s: nah am Team auf dem Nacht-Stadtplan, Neon-Spur folgt", icon: "📡",
       look: "racegps", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false },
-      shots: () => [F({ t: 0, zoom: 14, pitch: 0, auto: false })], tempo: { len: 6, feel: "gemuetlich" } },
+      shots: () => [F({ t: 0, zoom: 15, pitch: 52, bearing: -24, auto: false, drift: 4, zoomDrift: -0.1 })], tempo: { len: 6, feel: "gemuetlich" } },
     { id: "s_recap", name: "Positions-Recap", sub: "THE RACE · 8 s: alle Teams mit Spuren, Kamera zieht raus bis alle sichtbar", icon: "🏁",
       look: "racegps", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false }, preset: "tracker", tempo: { len: 8, feel: "normal" } }
   ];
@@ -6431,7 +6493,11 @@ const CAM = (() => {
     const ls = lastStop();
     for (const ex of sh.extras || []){
       if (!ls) break;
-      if (ex === "destPulse"){
+      if (ex === "startPulse"){
+        const p0 = anim.per[0].coords[0];
+        MARKS.add("Start", { type: "Point", coordinates: p0 }, { shotExtra: true, color: "#ff3b45", t0: 0, t1: Math.max(1.5, arrivalTime(ls.p) * 0.4),
+          fx: { draw: false, glow: true, shadow: false, pulse: true, focus: false, extrude: false } });
+      } else if (ex === "destPulse"){
         MARKS.add("Ziel", { type: "Point", coordinates: ls.c }, { shotExtra: true, color: "#ffffff", t0: Math.max(0, arrivalTime(ls.p) - 0.2),
           fx: { draw: false, glow: true, shadow: false, pulse: true, focus: false, extrude: false } });
       } else if (ex === "countriesRed"){
@@ -6481,7 +6547,7 @@ const CAM = (() => {
     "nach rechts": "right", "Crash-Zoom (rein/raus)": "Crash zoom (in/out)", "nach links": "left", "nach oben": "up", "nach unten": "down" });
 
   return {
-    at, renderRow, renderEditor, applyPreset, presets: PRESETS, blurCanvas, whipBlurPx, applyShot, shots: SHOTS,
+    at, renderRow, renderEditor, applyPreset, presets: PRESETS, blurCanvas, whipBlurPx, applyShot, shots: SHOTS, drawBackdrop, syncBackdrop,
     get: () => JSON.parse(JSON.stringify(shots)),
     set(v){ if (Array.isArray(v) && v.length) shots = v; sel = 0; renderTimeline(); renderEditor();
             document.querySelectorAll(".campre").forEach(b => b.classList.toggle("active", b.dataset.id === $("camPresetId").value)); },
@@ -6655,8 +6721,11 @@ const MARKS = (() => {
       set(m, "pt", "circle-stroke-opacity", fillK);
       set(m, "ring", "circle-stroke-color", m.color);
       const rp = t == null ? 0.5 : (life * 0.9) % 1;
-      set(m, "ring", "circle-radius", 9 + 26 * rp);
-      set(m, "ring", "circle-stroke-opacity", (m.fx.pulse || m.fx.glow) ? (1 - rp) * fillK : 0);
+      const u = Math.min(map.getCanvas().width, map.getCanvas().height) / (map.getPixelRatio() || 1) / 1080;   // in Export-Pixeln skalieren
+      set(m, "ring", "circle-radius", (14 + 70 * rp) * u);
+      set(m, "ring", "circle-stroke-width", 5 * u);
+      set(m, "pt", "circle-radius", 12 * u);
+      set(m, "ring", "circle-stroke-opacity", (m.fx.pulse || m.fx.glow) ? Math.pow(1 - rp, 1.3) * fillK : 0);
     }
   }
   function extrudeH(m){
@@ -7884,7 +7953,7 @@ const SCENES = (() => {
   async function still(t){
     setPlayhead(t, true); await waitIdle();
     const mc = map.getCanvas(), c = document.createElement("canvas"); c.width = mc.width; c.height = mc.height;
-    const g = c.getContext("2d"); g.drawImage(mc, 0, 0); g.drawImage($("ovl"), 0, 0, c.width, c.height);
+    const g = c.getContext("2d"); if (typeof CAM !== "undefined") CAM.drawBackdrop(g, c.width, c.height); g.drawImage(mc, 0, 0); g.drawImage($("ovl"), 0, 0, c.width, c.height);
     return c.toDataURL("image/jpeg", 0.85);
   }
   function camAt(t){ setPlayhead(t, true); const c = map.getCenter(); return { c: [c.lng, c.lat], z: map.getZoom(), b: map.getBearing(), p: map.getPitch() }; }

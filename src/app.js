@@ -32,7 +32,7 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Nur letzte Etappe animieren":"Animate last leg only","Wolken-Einflug":"Fly in through clouds","Komplette Shots":"Complete shots","Etikett (Ortsname)":"Tag (place name)","Globus-Ansicht":"Globe view","Pastell-Topo":"Pastel topo","Nacht-GPS":"Night GPS","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
+  "Kamera-Presets":"Camera presets","Wolkenschicht (NASA)":"Cloud layer (NASA)","Sternenhimmel":"Starfield","Vignette":"Vignette","Nur letzte Etappe animieren":"Animate last leg only","Wolken-Einflug":"Fly in through clouds","Komplette Shots":"Complete shots","Etikett (Ortsname)":"Tag (place name)","Globus-Ansicht":"Globe view","Pastell-Topo":"Pastel topo","Nacht-GPS":"Night GPS","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
   "Fotos werden an ihren Aufnahmeort gesetzt (GPS aus dem Foto) und poppen als Polaroid auf, wenn die Linie vorbeikommt. Ohne GPS: zwischen zeitlich benachbarten Fotos oder per Klick. iPhone-Fotos (HEIC) vorher als JPEG exportieren, mit Ortsangabe.":"Photos are placed where they were taken (GPS from the photo) and pop up as instant prints when the line passes. Without GPS: between photos taken before/after, or by click. Export iPhone photos (HEIC) as JPEG with location first.",
   "Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.":"Your own labels on the map: pill, callout with a line to the point, marker with name, spaced title (“I T A L Y”). With pop, fade or typewriter animation and their own time window in the timeline.","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
   "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
@@ -342,7 +342,15 @@ function buildBaseStyle(name){
 
   if (dt("projGlobe")){
     style.projection = { type: "globe" };
-    style.sky = { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] };
+    style.sky = { "sky-color": "#0a1630", "horizon-color": "#7fb6ff", "fog-color": "#a9ccff", "horizon-fog-blend": 0.6, "sky-horizon-blend": 0.6,
+                  "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] };
+  }
+  if (dt("cloudLayer")){
+    // NASA Blue Marble Wolken (gemeinfrei), transparente PNG
+    style.sources.clouds = { type: "image", url: "https://cdn.jsdelivr.net/gh/turban/webgl-earth@master/images/fair_clouds_4k.png",
+      coordinates: [[-180, 85.05], [180, 85.05], [180, -85.05], [-180, -85.05]] };
+    style.layers.push({ id: "clouds", type: "raster", source: "clouds", maxzoom: 7,
+      paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 2, 0.85, 5, 0.55, 7, 0], "raster-fade-duration": 0 } });
   }
   const noLabels = document.getElementById("dtLabels") && !document.getElementById("dtLabels").checked;
   if (noLabels) style.layers = style.layers.filter(l => l.type !== "symbol");
@@ -530,6 +538,11 @@ function addRuntimeLayers(){
     filter: ["==", ["get", "dash"], 0],
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": ["get", "color"], "line-width": 3.5 }
+  });
+  if (!map.getLayer("route-core")) map.addLayer({
+    id: "route-core", type: "line", source: "route",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#ffffff", "line-width": 1.2, "line-opacity": 0, "line-blur": 0.5 }
   });
   if (!map.getLayer("route-dash")) map.addLayer({
     id: "route-dash", type: "line", source: "route",
@@ -1312,7 +1325,7 @@ function readCustomColors(){
   document.getElementById(id).addEventListener("change", () => { readCustomColors(); rebuildStyle(); }));
 document.getElementById("ccReset").addEventListener("click", () => { customColors = null; rebuildStyle(); });
 document.getElementById("mtKey").addEventListener("change", rebuildStyle);
-["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns", "dtLabels", "projGlobe"].forEach(id =>
+["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns", "dtLabels", "projGlobe", "cloudLayer"].forEach(id =>
   document.getElementById(id).addEventListener("change", rebuildStyle));
 /* Stil wechseln: Terrain vorher aus (sonst rendert MapLibre Terrain ohne DEM-Quelle),
    Laufzeit-Ebenen neu anlegen, neu zeichnen. styleBusy = Promise bis alles fertig ist. */
@@ -1502,6 +1515,7 @@ function headingAt(p, tipIdx){
 }
 function setLineWidths(w){
   map.setPaintProperty("route-line", "line-width", w);
+  if (map.getLayer("route-core")) map.setPaintProperty("route-core", "line-width", Math.max(1, w * 0.32));
   if (map.getLayer("route-dash")) map.setPaintProperty("route-dash", "line-width", w);
   if (map.getLayer("route-casing")) map.setPaintProperty("route-casing", "line-width", w + Math.max(2.5, w * 0.8));
 }
@@ -1807,9 +1821,10 @@ function renderAt(t, live){
   const lwS = sampleNum(tracks.lineWidth, t, num("lineWidth") || 3.5);
   setLineWidths(lwS);
   const glowS = sampleNum(tracks.glowOp, t, checked("glow") ? 0.55 : 0);
-  map.setPaintProperty("route-glow", "line-opacity", glowS);
-  map.setPaintProperty("route-glow", "line-width", lwS * 3.2);
-  map.setPaintProperty("route-glow", "line-blur", lwS * 2.2);
+  map.setPaintProperty("route-glow", "line-opacity", glowS > 0 ? Math.min(1, glowS * 1.6) : 0);
+  map.setPaintProperty("route-glow", "line-width", lwS * 4.2);
+  map.setPaintProperty("route-glow", "line-blur", lwS * 3);
+  if (map.getLayer("route-core")) map.setPaintProperty("route-core", "line-opacity", glowS > 0 ? 0.9 : 0);
   if (map.getLayer("stops-icons"))
     map.setLayoutProperty("stops-icons", "icon-size", ["*", ["get", "size"], sampleNum(tracks.pinScale, t, num("pinScale"))]);
   if (map.getLayer("tip-pin"))
@@ -1892,9 +1907,10 @@ function applyStyleSettings(){
   map.setPaintProperty("route-line", "line-dasharray",
     style === "dashed" ? [2.2, 1.8] : style === "dotted" ? [0.1, 2] : [1, 0]);
   const glowOn = checked("glow");
-  map.setPaintProperty("route-glow", "line-width", width * 3.2);
-  map.setPaintProperty("route-glow", "line-blur", width * 2.2);
-  map.setPaintProperty("route-glow", "line-opacity", glowOn ? 0.55 : 0);
+  map.setPaintProperty("route-glow", "line-width", width * 4.2);
+  map.setPaintProperty("route-glow", "line-blur", width * 3);
+  map.setPaintProperty("route-glow", "line-opacity", glowOn ? 0.88 : 0);
+  if (map.getLayer("route-core")) map.setPaintProperty("route-core", "line-opacity", glowOn ? 0.9 : 0);
   map.setPaintProperty("tip-dot", "circle-radius", Math.max(6, width * 1.6));
   updateTipPin();
   if (map.getLayer("stops-icons")){
@@ -2395,6 +2411,7 @@ async function exportMP4(opts = {}){
       setPlayheadOnly(t);
       if (checked("expBlur")){
         // 6 Unterbilder über einen halben Frame (180°-Shutter) mitteln
+        if (typeof CAM !== "undefined") CAM.drawBackdrop(g, W, H);
         const S = 6;
         for (let k = 0; k < S; k++){
           const tt = Math.max(0, t + (k / S - 0.25) / fps);
@@ -2404,6 +2421,7 @@ async function exportMP4(opts = {}){
         g.globalAlpha = 1; renderAt(t, false);
       } else {
         renderAt(t, true); await waitIdle();
+        if (typeof CAM !== "undefined") CAM.drawBackdrop(g, W, H); else g.clearRect(0, 0, W, H);
         g.drawImage(map.getCanvas(), 0, 0, W, H);
       }
       if (typeof CAM !== "undefined") CAM.blurCanvas(g, W, H, t, fps);
@@ -2518,7 +2536,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","cloudLayer","fxVignette","fxStars","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {

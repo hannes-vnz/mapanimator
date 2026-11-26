@@ -173,7 +173,7 @@
   async function still(t){
     setPlayhead(t, true); await waitIdle();
     const mc = map.getCanvas(), c = document.createElement("canvas"); c.width = mc.width; c.height = mc.height;
-    const g = c.getContext("2d"); g.drawImage(mc, 0, 0); g.drawImage($("ovl"), 0, 0, c.width, c.height);
+    const g = c.getContext("2d"); if (typeof CAM !== "undefined") CAM.drawBackdrop(g, c.width, c.height); g.drawImage(mc, 0, 0); g.drawImage($("ovl"), 0, 0, c.width, c.height);
     return c.toDataURL("image/jpeg", 0.85);
   }
   function camAt(t){ setPlayhead(t, true); const c = map.getCenter(); return { c: [c.lng, c.lat], z: map.getZoom(), b: map.getBearing(), p: map.getPitch() }; }

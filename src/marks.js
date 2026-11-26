@@ -158,8 +158,11 @@ const MARKS = (() => {
       set(m, "pt", "circle-stroke-opacity", fillK);
       set(m, "ring", "circle-stroke-color", m.color);
       const rp = t == null ? 0.5 : (life * 0.9) % 1;
-      set(m, "ring", "circle-radius", 9 + 26 * rp);
-      set(m, "ring", "circle-stroke-opacity", (m.fx.pulse || m.fx.glow) ? (1 - rp) * fillK : 0);
+      const u = Math.min(map.getCanvas().width, map.getCanvas().height) / (map.getPixelRatio() || 1) / 1080;   // in Export-Pixeln skalieren
+      set(m, "ring", "circle-radius", (14 + 70 * rp) * u);
+      set(m, "ring", "circle-stroke-width", 5 * u);
+      set(m, "pt", "circle-radius", 12 * u);
+      set(m, "ring", "circle-stroke-opacity", (m.fx.pulse || m.fx.glow) ? Math.pow(1 - rp, 1.3) * fillK : 0);
     }
   }
   function extrudeH(m){
