@@ -1,0 +1,5 @@
+node_modules/
+.claude/settings.local.json
+test-results/
+*.mp4
+*.webm

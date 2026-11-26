@@ -72,7 +72,6 @@ return maplibregl$1;
 
 }));
 //# sourceMappingURL=maplibre-gl.js.map
-
 </script>
 <script>
 "use strict";
@@ -1979,7 +1978,6 @@ If you want to offset all timestamps of a track such that the first one is zero,
   return __toCommonJS(src_exports);
 })();
 if (typeof module === "object" && typeof module.exports === "object") Object.assign(module.exports, Mp4Muxer)
-
 </script>
 <style>
   :root{
@@ -2947,6 +2945,7 @@ map.on("load", () => {
   setStatus(tr("Bereit. Orte suchen oder GPX laden."));
 });
 
+let prevStyle = "hell";
 document.getElementById("mapStyle").addEventListener("change", () => {
   if (playing) return;
   const name = val("mapStyle");
@@ -2954,6 +2953,8 @@ document.getElementById("mapStyle").addEventListener("change", () => {
   document.getElementById("lineColor").value = t.defaultLine;
   document.getElementById("glow").checked = t.glowDefault;
   if (t.relief){ document.getElementById("terrain3d").checked = true; document.getElementById("terrainEx").value = 12; }
+  else if (THEMES[prevStyle] && THEMES[prevStyle].relief){ document.getElementById("terrain3d").checked = false; document.getElementById("terrainEx").value = 1.5; }
+  prevStyle = name;
   map.setStyle(buildBaseStyle(name));
   map.once("styledata", () => {
     addRuntimeLayers();
@@ -3057,8 +3058,9 @@ async function buildPinImage(wp, styleOverride){
     }
   }
 
+  const bmp = await createImageBitmap(c);
   if (map.hasImage(name)) map.removeImage(name);
-  map.addImage(name, await createImageBitmap(c), { pixelRatio: 2 });
+  map.addImage(name, bmp, { pixelRatio: 2 });
   return name;
 }
 function roundRect(ctx, x, y, w, h, r){
@@ -3086,8 +3088,9 @@ async function makeTipPinFor(rt){
   ctx.fillStyle = "#ffffff";
   ctx.beginPath(); ctx.arc(36, 28, 9, 0, Math.PI * 2); ctx.fill();
   const name = "tipdrop-" + rt.id + "-" + rt.color.replace("#", "");
+  const bmp = await createImageBitmap(c);
   if (map.hasImage(name)) map.removeImage(name);
-  map.addImage(name, await createImageBitmap(c), { pixelRatio: 2 });
+  map.addImage(name, bmp, { pixelRatio: 2 });
   return name;
 }
 async function updateTipPin(){
@@ -4572,6 +4575,7 @@ document.getElementById("projLoad").addEventListener("change", e => {
         routes.push(rt);
       }
       activeRoute = 0;
+      prevStyle = val("mapStyle");
       // Stil neu aufbauen und alles zeichnen
       map.setStyle(buildBaseStyle(val("mapStyle")));
       map.once("styledata", async () => {
@@ -4598,7 +4602,6 @@ renderRoutes();
 syncRouteInputs();
 applyLang();
 setStatus(tr("Karte lädt …"));
-
 </script>
 </body>
 </html>

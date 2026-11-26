@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "mapanimator", "url": "http://localhost:8000", "port": 8000 }
+  ]
+}

@@ -1,0 +1,2202 @@
+"use strict";
+/* =========================================================
+   Kartenanimator v4
+   AE-Timeline · Linien-Speed-Keyframes · Scrubbing · 3D-Terrain
+   ========================================================= */
+
+window.addEventListener("error", e => {
+  const s = document.getElementById("status");
+  if (s) s.textContent = "Fehler: " + (e.message || "unbekannt") + (e.lineno ? " (Zeile " + e.lineno + ")" : "");
+});
+window.addEventListener("unhandledrejection", e => {
+  const s = document.getElementById("status");
+  if (s) s.textContent = "Fehler: " + (e.reason && e.reason.message ? e.reason.message : e.reason);
+});
+if (typeof maplibregl === "undefined") {
+  document.getElementById("status").textContent = "Interner Fehler: eingebettete Kartenbibliothek nicht gefunden.";
+  throw new Error("maplibre-gl nicht geladen");
+}
+
+const FONTS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+const PALETTE = ["#e2504c", "#2f6fde", "#e7772d", "#7c4fb5", "#2ea86c", "#d8a316"];
+/* Früh deklarieren – buildBaseStyle läuft schon bei der Map-Erzeugung */
+let customColors = null;      // {land, water, boundary, label}
+let features = [];            // {id, name, geometry, color, appearT, op}
+let featCounter = 0;
+let pois = [];                // {name, cat, lng, lat}
+
+/* ---------- Sprache (DE/EN) ---------- */
+let lang = "de";
+const EN = {
+  // Sektionen
+  "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
+  "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
+  "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
+  "Kamera-Presets":"Camera presets","Projekt":"Project","Export":"Export",
+  "Reise-Animationen im Vlog-Stil · rendert lokal im Browser":"Vlog-style travel animations · renders locally in your browser",
+  // Buttons
+  "Suchen":"Search","+ Stopp manuell (Koordinaten)":"+ Add stop manually (coordinates)",
+  "GPX-Track importieren":"Import GPX track","GeoJSON importieren":"Import GeoJSON",
+  "POIs laden":"Load POIs","Leeren":"Clear","＋ Route hinzufügen":"＋ Add route",
+  "Speichern":"Save","Laden":"Load","● Aufnehmen & Abspielen":"● Record & play",
+  "▶ Vorschau":"▶ Preview","Zurücksetzen":"Reset","Auf Theme zurücksetzen":"Reset to theme",
+  "＋ Kamera-KF am Playhead":"＋ Camera KF at playhead","Linie → Keyframes":"Line → keyframes",
+  "Wählen":"Choose","Foto ✓":"Photo ✓","Foto hinzufügen":"Add photo","Foto ✓ (ändern)":"Photo ✓ (change)",
+  "Fit":"Fit","✕ löschen":"✕ delete",
+  // Labels
+  "Linienfarbe":"Line color","Linienbreite":"Line width","Linienstil":"Line style","Fortbewegung":"Travel mode",
+  "Sekunden pro Etappe":"Seconds per leg","Pause am Stopp (s)":"Pause at stop (s)",
+  "Konstante Geschwindigkeit":"Constant speed","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
+  "Zoom-In an Stopps":"Zoom in at stops","Neigung (Pitch)":"Tilt (pitch)","Kamera-Glättung":"Camera smoothing",
+  "Rotation (°/s)":"Rotation (°/s)","Linien-Beschleunigung":"Line acceleration","Tempo ×":"Speed ×",
+  "Übersicht am Ende":"Overview at end","Karten-Stil":"Map style","Pin-Stil":"Pin style","Linien-Glow":"Line glow",
+  "Linienspitze":"Line tip","Foto/Logo Spitze":"Tip photo/logo","Name Spitze":"Tip name",
+  "Pin-Einblendung":"Pin reveal","Pin-Größe":"Pin size","Spitzen-Pin-Größe":"Tip pin size",
+  "Label-Größe (px)":"Label size (px)","Schrift (Pins)":"Font (pins)","MapTiler-Key (optional)":"MapTiler key (optional)",
+  "Land":"Land","Wasser":"Water","Grenzen":"Borders","Labels":"Labels","Vorschlag":"Preset",
+  "3D-Terrain":"3D terrain","Terrain-Überhöhung":"Terrain exaggeration","Auflösung":"Resolution",
+  "Bundesländer-Grenzen":"State borders","Hauptstraßen":"Major roads","Bahnlinien":"Railways",
+  "Wälder":"Forests","Siedlungsflächen":"Urban areas","Parks":"Parks","Dörfer anzeigen":"Show villages",
+  "Gipfel":"Peaks","Burgen & Schlösser":"Castles & palaces","Bahnhöfe":"Train stations",
+  "Sehenswürdigkeiten":"Sights","Korridor (km)":"Corridor (km)","Dauer (s)":"Duration (s)",
+  // Optionen
+  "Flug (Bogen)":"Flight (arc)","Auto (Straße)":"Car (roads)","Fahrrad (Straße)":"Bicycle (roads)","Zu Fuß (Wege)":"On foot (paths)",
+  "Gestrichelt":"Dashed","Durchgezogen":"Solid","Gepunktet":"Dotted",
+  "Linear (konstant)":"Linear (constant)","Quadratisch (weich)":"Quadratic (soft)","Kubisch (sehr weich)":"Cubic (very soft)",
+  "Schnell starten → ausrollen":"Fast start → ease out","Langsam anlaufen → schnell":"Slow start → fast",
+  "Folgt der Linie":"Follows the line","Feste Übersicht":"Fixed overview",
+  "Vlog Hell (Creme)":"Vlog light (cream)","Race Dunkel":"Race dark","Satellit":"Satellite","Minimal Flach":"Minimal flat",
+  "Foto-Pin (weiß)":"Photo pin (white)","Foto-Badge + Name":"Photo badge + name","Farbpunkt":"Color dot",
+  "Wie Stopp-Pins (Foto/Badge)":"Like stop pins (photo/badge)","Pin + Punkt (wie Google Maps)":"Pin + dot (Google Maps style)",
+  "Nur Punkt":"Dot only","Aus":"Off",
+  "Pop (Overshoot)":"Pop (overshoot)","Sanft":"Soft","Sofort":"Instant",
+  "System Sans":"System sans","Display (fett)":"Display (bold)",
+  "– wählen –":"– choose –","Vlog Standard (folgend)":"Vlog standard (following)","Cinematic Schwenk":"Cinematic pan",
+  "Drohnenflug":"Drone flight","Übersicht + Orbit":"Overview + orbit",
+  // Timeline
+  "Linie %":"Line %","Position":"Position","Zoom":"Zoom","Rotation":"Rotation","Neigung":"Tilt",
+  "Glow":"Glow","Spitzen-Größe":"Tip size",
+  "Ziehen in Spur/Lineal = Scrubben · ＋ oder Doppelklick in Spur = Keyframe · Raute ziehen = Zeit · Doppelklick auf Raute / Entf = löschen · Pfeiltasten = feinjustieren":
+    "Drag in track/ruler = scrub · ＋ or double-click track = keyframe · drag diamond = retime · double-click diamond / Del = delete · arrow keys = nudge",
+  "Kein Keyframe ausgewählt.":"No keyframe selected.","Zeit":"Time","Wert":"Value","Breite":"Lat","Länge":"Lng",
+  "an Linie":"on line","Easing":"Easing","linear":"linear","quadratisch":"quadratic","kubisch (sanft)":"cubic (soft)",
+  "ausklingend":"ease out","anlaufend":"ease in","folgt":"follows","Übersicht":"overview","KF":"KF",
+  // Platzhalter
+  "Ort suchen (z.B. Reykjavík) …":"Search a place (e.g. Reykjavík) …",
+  "Land/Region suchen (z.B. Bayern) …":"Search country/region (e.g. Bavaria) …",
+  "z.B. HANNES":"e.g. HANNES","für HQ-Tiles":"for HQ tiles","auto":"auto","immer":"always",
+  "Name":"Name","Ab (s)":"From (s)","Stoppfarbe":"Stop color","Entfernen":"Remove","Route entfernen":"Remove route",
+  "Name der Route:":"Route name:",
+  // Hinweise (lang)
+  "Presets erzeugen Keyframes in der Timeline unten – dort frei anpassbar. Ohne Keyframes gelten die Regler oben.":
+    "Presets create keyframes in the timeline below – edit them freely there. Without keyframes the sliders above apply.",
+  "Speichert Orte, Fotos, Stil, Keyframes als JSON-Datei.":"Saves places, photos, style and keyframes as a JSON file.",
+  "Paletten anklicken oder Farben einzeln setzen – wirkt auf jeden Karten-Stil.":
+    "Click a palette or set colors individually – applies to every map style.",
+  "Features erscheinen als Flächen/Linien unter der Route. „Ab (s)“ leer = immer sichtbar, sonst blendet das Feature zu diesem Zeitpunkt animiert ein (Race-Stil: Land leuchtet auf).":
+    "Features appear as areas/lines below the route. Leave “From (s)” empty for always visible, or set a time to fade the feature in (Race style: country lights up).",
+  "Lädt benannte Orte aus OpenStreetMap im Umkreis der Route und markiert sie mit Icons.":
+    "Loads named places from OpenStreetMap around the route and marks them with icons.",
+  // Status
+  "Karte lädt …":"Loading map …","Bereit. Orte suchen oder GPX laden.":"Ready. Search places or load a GPX.",
+  "Aktualisiert.":"Updated.","Fertig.":"Done.","Vorschau läuft …":"Preview running …",
+  "● Aufnahme läuft …":"● Recording …","Zurückgesetzt.":"Reset.","Projekt gespeichert.":"Project saved.",
+  "Projekt geladen.":"Project loaded.","Nichts gefunden.":"Nothing found.",
+  "Mindestens zwei Orte (oder ein GPX-Track) nötig.":"At least two places (or a GPX track) required.",
+  "Erst eine Route anlegen.":"Create a route first.","Mindestens eine POI-Kategorie wählen.":"Select at least one POI category.",
+  "Export gespeichert (map-animation.webm).":"Export saved (map-animation.webm)."
+};
+function tr(s){ return lang === "de" ? s : (EN[s] || s); }
+function applyLang(){
+  lang = document.getElementById("uiLang").value || "de";
+  document.querySelectorAll("#langSel .lbtn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+  const sel = "#sidebar h2, #sidebar h1 small, #sidebar .setting > label, " +
+    "#sidebar button:not(.lbtn):not(.del):not(.kfadd), #sidebar option, #sidebar .hint, " +
+    "#sidebar label.photo-label, #tlHead label, #tlHead .hint, #tlHead button.ghost";
+  document.querySelectorAll(sel).forEach(el => {
+    const tn = [...el.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+    if (!tn) return;
+    if (!el.dataset.de) el.dataset.de = tn.textContent.trim().replace(/\s+/g, " ");
+    tn.textContent = lang === "de" ? el.dataset.de : (EN[el.dataset.de] || el.dataset.de);
+  });
+  ["searchInput", "featInput", "tipLabel", "totalDur", "mtKey"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!el.dataset.de) el.dataset.de = el.placeholder || "";
+    el.placeholder = lang === "de" ? el.dataset.de : (EN[el.dataset.de] || el.dataset.de);
+  });
+  renderTimeline(); renderInspector(); renderWpList(); renderFeatList(); renderRoutes(); syncRouteInputs();
+}
+document.querySelectorAll("#langSel .lbtn").forEach(b => b.addEventListener("click", () => {
+  document.getElementById("uiLang").value = b.dataset.lang;
+  applyLang();
+}));
+
+const FONT_STACKS = {
+  system: "system-ui, sans-serif",
+  rounded: "'Trebuchet MS', 'Arial Rounded MT Bold', sans-serif",
+  serif: "Georgia, 'Times New Roman', serif",
+  display: "Impact, 'Arial Black', sans-serif",
+  mono: "'Courier New', monospace"
+};
+
+/* ---------- Themes ---------- */
+const THEMES = {
+  atlas: {
+    atlas: true, bg: "#5b78c2", water: "#5b78c2",
+    shades: ["#f3d2bf", "#e7b9a3", "#d9a390", "#c8907f", "#f6dfd0", "#b98676", "#e2c1ae"],
+    boundary: { color: "#fbe9de", width: 0.8, dash: null, opacity: 0.55 },
+    country: { color: "#ffffff", halo: "rgba(60,40,40,0.25)", upper: true, spacing: 0.35 },
+    city: { color: "#ffffff", halo: "rgba(60,40,40,0.3)" },
+    detail: { states: "#f1d6c7", road: "#c7a08d", rail: "#b48c7c", wood: "#d9b6a2", urban: "#d6ac98", park: "#dcb9a5" },
+    defaultLine: "#e3262b", glowDefault: false
+  },
+  relief: {
+    relief: true, bg: "#97a3b9", water: "#e6ebf3",
+    hills: { shadow: "#121d38", highlight: "#ffffff", accent: "#46557a", ex: 1 },
+    boundary: { color: "#ffffff", width: 1.1, dash: null, opacity: 0.55 },
+    country: { color: "#1f2a44", halo: "#e6ebf3", upper: true, spacing: 0.2 },
+    city: { color: "#1f2a44", halo: "#e6ebf3" },
+    detail: { states: "#c9d1e0", road: "#46557a", rail: "#5b6788", wood: "#8e9bb3", urban: "#aab4c8", park: "#8fa0b8" },
+    defaultLine: "#dc2828", glowDefault: false
+  },
+  hell: {
+    bg: "#f3eee5", water: "#c6dbe8", ice: "#fcfcfa", iceOp: 0.85,
+    hills: { shadow: "#b3a494", highlight: "#ffffff", accent: "#d9cdbd", ex: 0.35 },
+    boundary: { color: "#d3c4b6", width: 1, dash: [3, 2] },
+    country: { color: "#6d2e38", halo: "#f3eee5", upper: false, spacing: 0.06 },
+    city: { color: "#6d2e38", halo: "#f3eee5" },
+    detail: { states: "#c4b4a2", road: "#dfd3c0", rail: "#b9aa97", wood: "#e3e6d1", urban: "#eae1d0", park: "#dde5cc" },
+    defaultLine: "#6d2e38", glowDefault: false
+  },
+  dunkel: {
+    bg: "#1d1e22", water: "#303a46", ice: "#2e3036", iceOp: 0.6,
+    hills: { shadow: "#0a0a0c", highlight: "#4a505a", accent: "#2a2c33", ex: 0.5 },
+    boundary: { color: "#a03844", width: 1.6, dash: null },
+    country: { color: "#e8e9ee", halo: "#1d1e22", upper: true, spacing: 0.25 },
+    city: { color: "#c6c9d1", halo: "#1d1e22" },
+    detail: { states: "#6b3a45", road: "#34383f", rail: "#4a4e57", wood: "#22262a", urban: "#272a30", park: "#243029" },
+    defaultLine: "#f2506e", glowDefault: true
+  },
+  satellit: {
+    raster: true,
+    boundary: { color: "#ffffff", width: 0.8, dash: null, opacity: 0.5 },
+    country: { color: "#ffffff", halo: "#000000", upper: true, spacing: 0.2 },
+    city: { color: "#ffffff", halo: "#000000" },
+    detail: { states: "#ffffff", road: "#ffffff", rail: "#dddddd", wood: "#ffffff", urban: "#ffffff", park: "#ffffff" },
+    defaultLine: "#ffd23f", glowDefault: true
+  },
+  minimal: {
+    bg: "#f7f4ee", water: "#d6e4ee", ice: null,
+    hills: null,
+    boundary: { color: "#cfc6b8", width: 1, dash: [3, 2] },
+    country: { color: "#55565c", halo: "#f7f4ee", upper: false, spacing: 0.08 },
+    city: { color: "#7c7d84", halo: "#f7f4ee" },
+    detail: { states: "#c8bfae", road: "#e0dacb", rail: "#c2bcae", wood: "#e5e8da", urban: "#ebe6d9", park: "#e0e7d4" },
+    defaultLine: "#3a6fb0", glowDefault: false
+  }
+};
+
+function dt(id){ const el = document.getElementById(id); return el ? el.checked : false; }
+function buildBaseStyle(name){
+  const t = THEMES[name];
+  const cc = customColors || {};
+  const C = (k, fb) => cc[k] || fb;
+  const keyEl = document.getElementById("mtKey");
+  const key = keyEl ? keyEl.value.trim() : "";
+  const glyphs = key ? "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=" + key : FONTS;
+  const style = { version: 8, glyphs, sources: {}, layers: [] };
+  // DEM-Quelle immer bereitstellen (Hillshade + echtes 3D-Terrain)
+  style.sources.dem = key ? {
+    type: "raster-dem",
+    tiles: ["https://api.maptiler.com/tiles/terrain-rgb-v2/{z}/{x}/{y}.webp?key=" + key],
+    encoding: "mapbox", tileSize: 256, maxzoom: 12, attribution: "© MapTiler"
+  } : {
+    type: "raster-dem",
+    tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+    encoding: "terrarium", tileSize: 256, maxzoom: 13, attribution: "Terrain: Mapzen/AWS"
+  };
+  style.sources.omt = key
+    ? { type: "vector", url: "https://api.maptiler.com/tiles/v3/tiles.json?key=" + key }
+    : { type: "vector", url: "https://tiles.openfreemap.org/planet" };
+
+  if (t.raster){
+    style.sources.sat = key ? {
+      type: "raster",
+      tiles: ["https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=" + key],
+      tileSize: 256, maxzoom: 20, attribution: "© MapTiler, © Maxar"
+    } : {
+      type: "raster",
+      tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      tileSize: 256, maxzoom: 18, attribution: "Bilder: Esri, Maxar, Earthstar Geographics"
+    };
+    style.layers.push({ id: "sat", type: "raster", source: "sat" });
+  } else {
+    style.layers.push({ id: "bg", type: "background", paint: { "background-color": C("land", t.bg) } });
+    if (t.atlas){
+      style.sources.atlas = { type: "geojson", data: "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson" };
+      const sh = t.shades;
+      style.layers.push({ id: "atlas-fill", type: "fill", source: "atlas", paint: {
+        "fill-color": ["match", ["get", "MAPCOLOR7"], 1, sh[0], 2, sh[1], 3, sh[2], 4, sh[3], 5, sh[4], 6, sh[5], sh[6]], "fill-antialias": true } });
+    }
+    if (t.relief){
+      const demT = (ts) => ({ type: "raster-dem", encoding: "terrarium", tileSize: ts, maxzoom: 13,
+        tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"] });
+      style.sources.dem2 = demT(256); style.sources.demhs = demT(128);
+      const H = t.hills;
+      style.layers.push({ id: "relief-tint", type: "color-relief", source: "dem2", paint: { "color-relief-opacity": 0.55,
+        "color-relief-color": ["interpolate", ["linear"], ["elevation"], 0, "#93a2bc", 300, "#9aa5bb", 900, "#a19cb0", 1800, "#a597a6", 3000, "#d9dbe6"] } });
+      style.layers.push({ id: "hills", type: "hillshade", source: "demhs", paint: {
+        "hillshade-method": "multidirectional",
+        "hillshade-illumination-direction": [270, 315, 0, 340], "hillshade-illumination-altitude": [22, 22, 25, 45],
+        "hillshade-highlight-color": [H.highlight, H.highlight, "#e6ecf6", H.highlight],
+        "hillshade-shadow-color": [H.shadow, H.accent, H.shadow, H.shadow], "hillshade-exaggeration": 1 } });
+      style.layers.push({ id: "relief-sea", type: "color-relief", source: "dem2", paint: { "color-relief-opacity": 1,
+        "color-relief-color": ["interpolate", ["linear"], ["elevation"], -11000, C("water", t.water), -12, C("water", t.water), -4, "rgba(0,0,0,0)", 10000, "rgba(0,0,0,0)"] } });
+    } else if (t.hills){
+      style.layers.push({ id: "hills", type: "hillshade", source: "dem",
+        paint: {
+          "hillshade-shadow-color": t.hills.shadow,
+          "hillshade-highlight-color": t.hills.highlight,
+          "hillshade-accent-color": t.hills.accent,
+          "hillshade-exaggeration": t.hills.ex
+        } });
+    }
+    if (t.ice) style.layers.push({ id: "ice", type: "fill", source: "omt", "source-layer": "landcover",
+      filter: ["==", ["get", "class"], "ice"],
+      paint: { "fill-color": t.ice, "fill-opacity": t.iceOp } });
+    style.layers.push({ id: "water", type: "fill", source: "omt", "source-layer": "water",
+      paint: { "fill-color": C("water", t.water) } });
+    style.layers.push({ id: "waterway", type: "line", source: "omt", "source-layer": "waterway",
+      minzoom: 6,
+      paint: { "line-color": C("water", t.water), "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 12, 2] } });
+    if (dt("dtWood")) style.layers.push({ id: "dt-wood", type: "fill", source: "omt", "source-layer": "landcover",
+      filter: ["==", ["get", "class"], "wood"],
+      paint: { "fill-color": t.detail.wood, "fill-opacity": 0.7 } });
+    if (dt("dtUrban")) style.layers.push({ id: "dt-urban", type: "fill", source: "omt", "source-layer": "landuse",
+      filter: ["in", ["get", "class"], ["literal", ["residential", "suburb", "neighbourhood"]]],
+      paint: { "fill-color": t.detail.urban, "fill-opacity": 0.8 } });
+    if (dt("dtParks")) style.layers.push({ id: "dt-park", type: "fill", source: "omt", "source-layer": "park",
+      paint: { "fill-color": t.detail.park, "fill-opacity": 0.6 } });
+  }
+  if (dt("dtRoads")) style.layers.push({ id: "dt-roads", type: "line", source: "omt", "source-layer": "transportation",
+    filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary"]]],
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": t.detail.road, "line-opacity": t.raster ? 0.5 : 1,
+             "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.4, 9, 1.6, 13, 4] } });
+  if (dt("dtRail")) style.layers.push({ id: "dt-rail", type: "line", source: "omt", "source-layer": "transportation",
+    filter: ["==", ["get", "class"], "rail"],
+    paint: { "line-color": t.detail.rail, "line-opacity": t.raster ? 0.6 : 1,
+             "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.4, 12, 1.6], "line-dasharray": [4, 3] } });
+
+  if (dt("dtStates")) style.layers.push({ id: "dt-states", type: "line", source: "omt", "source-layer": "boundary",
+    filter: ["all", ["has", "admin_level"], ["==", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]],
+    paint: { "line-color": t.detail.states, "line-width": 1,
+             "line-opacity": t.raster ? 0.7 : 1, "line-dasharray": [2, 2] } });
+  const bPaint = { "line-color": C("boundary", t.boundary.color), "line-width": t.boundary.width };
+  if (t.boundary.dash) bPaint["line-dasharray"] = t.boundary.dash;
+  if (t.boundary.opacity != null) bPaint["line-opacity"] = t.boundary.opacity;
+  style.layers.push({ id: "boundary", type: "line", source: "omt", "source-layer": "boundary",
+    filter: ["all", ["has", "admin_level"], ["<=", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]],
+    paint: bPaint });
+
+  style.layers.push({ id: "place-city", type: "symbol", source: "omt", "source-layer": "place",
+    minzoom: 4.5,
+    filter: ["in", ["get", "class"], ["literal", dt("dtTowns") ? ["city", "town", "village"] : ["city", "town"]]],
+    layout: {
+      "text-field": ["coalesce", ["get", "name:de"], ["get", "name"]],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 5, 11, 10, 15],
+      "text-letter-spacing": 0.03
+    },
+    paint: { "text-color": C("label", t.city.color), "text-halo-color": C("land", t.city.halo), "text-halo-width": 1.2 } });
+
+  style.layers.push({ id: "place-country", type: "symbol", source: "omt", "source-layer": "place",
+    filter: ["==", ["get", "class"], "country"],
+    layout: {
+      "text-field": ["coalesce", ["get", "name:de"], ["get", "name"]],
+      "text-font": ["Noto Sans Bold"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 2, 12, 5, 20, 8, 26],
+      "text-letter-spacing": t.country.spacing,
+      "text-transform": t.country.upper ? "uppercase" : "none"
+    },
+    paint: { "text-color": C("label", t.country.color), "text-halo-color": C("land", t.country.halo), "text-halo-width": 1.5 } });
+
+  return style;
+}
+
+/* ---------- Map ---------- */
+const map = new maplibregl.Map({
+  container: "map",
+  style: buildBaseStyle("hell"),
+  center: [10.5, 51.2], zoom: 5,
+  attributionControl: false,
+  canvasContextAttributes: { preserveDrawingBuffer: true, antialias: true },
+  fadeDuration: 0
+});
+map.addControl(new maplibregl.AttributionControl({
+  compact: true,
+  customAttribution: "© OpenStreetMap-Mitwirkende · © OpenFreeMap"
+}));
+let bootOK = false;
+map.on("load", () => { bootOK = true; });
+setTimeout(() => {
+  if (!bootOK) setStatus("Karte konnte nicht starten. Läuft die Datei in einer Vorschau/Sandbox? Bitte herunterladen und lokal im Browser öffnen (Internet nötig).");
+}, 8000);
+let tileErrShown = false;
+map.on("error", e => {
+  const m = e && e.error && e.error.message ? e.error.message : "";
+  if (m && !tileErrShown && /tile|source|fetch|network|failed/i.test(m)){
+    tileErrShown = true;
+    setStatus("Karten-Daten-Fehler: " + m + " – Internetverbindung prüfen.");
+  }
+});
+
+/* ---------- State ---------- */
+let routeCounter = 0;
+function newRoute(name, color){
+  return { id: ++routeCounter, name, color, waypoints: [], gpx: null,
+           tipPhoto: null, tipLabel: "", _tipIcon: null };
+}
+let routes = [];
+let activeRoute = 0;
+function R(){ return routes[activeRoute]; }
+let wpCounter = 0;
+let mapReady = false;
+let playing = false;
+let recorder = null, recChunks = [];
+/* Spitzen-Foto liegt jetzt pro Route */
+let anim = null;               // vorbereiteter Animations-Kontext
+let playheadT = 0;
+let selKf = null;              // {track, kf}
+let popT = {};                 // Stopp-Nr -> Zeitpunkt des Aufpoppens (Live-Playback)
+
+/* Keyframe-Tracks (Zeiten in Sekunden) – jedes animierbare Attribut */
+let tracks = { line: [], pos: [], zoom: [], bearing: [], pitch: [],
+               lineWidth: [], glowOp: [], pinScale: [], tipScale: [] };
+const TRACK_DEFS = [
+  { key: "line",      label: "Linie %",      cur: t => tipFracFallback(t) },
+  { key: "pos",       label: "Position" },
+  { key: "zoom",      label: "Zoom",         cur: () => map.getZoom() },
+  { key: "bearing",   label: "Rotation",     cur: () => map.getBearing() },
+  { key: "pitch",     label: "Neigung",      cur: () => map.getPitch() },
+  { key: "lineWidth", label: "Linienbreite", cur: () => num("lineWidth") || 3.5 },
+  { key: "glowOp",    label: "Glow",         cur: () => checked("glow") ? 0.55 : 0 },
+  { key: "pinScale",  label: "Pin-Größe",    cur: () => num("pinScale") },
+  { key: "tipScale",  label: "Spitzen-Größe", cur: () => num("tipScale") }
+];
+function ensureTrackKeys(){
+  for (const d of TRACK_DEFS) if (!tracks[d.key]) tracks[d.key] = [];
+}
+
+function emptyFC(){ return { type: "FeatureCollection", features: [] }; }
+function setStatus(msg, rec){ const s = document.getElementById("status"); s.textContent = msg; s.className = rec ? "rec" : ""; }
+function val(id){ return document.getElementById(id).value; }
+function num(id){ return parseFloat(document.getElementById(id).value); }
+function checked(id){ return document.getElementById(id).checked; }
+function invalidateAnim(){ anim = null; }
+
+/* ---------- Runtime-Layer ---------- */
+let HL_ALL = null, HL_LOADING = null;
+async function hlData(){
+  const iso = (val("hlIso") || "").toUpperCase().split(/[\s,;]+/).filter(Boolean);
+  if (!iso.length) return emptyFC();
+  if (!HL_ALL){
+    HL_LOADING = HL_LOADING || fetch("https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson").then(r => r.json());
+    HL_ALL = await HL_LOADING;
+  }
+  return { type: "FeatureCollection", features: HL_ALL.features.filter(f => iso.includes(f.properties.ADM0_A3) || iso.includes(f.properties.ISO_A3)) };
+}
+async function refreshHighlight(){
+  if (!map.getSource("hl")) return;
+  try { map.getSource("hl").setData(await hlData()); } catch(e){ setStatus("Länderdaten konnten nicht geladen werden."); }
+  applyHighlightStyle(); hlAnim(playheadT);
+}
+function applyHighlightStyle(){
+  if (!map.getLayer("hl-fill")) return;
+  map.setPaintProperty("hl-fill", "fill-color", val("hlColor") || "#86ccff");
+  const on = checked("hlLine");
+  map.setLayoutProperty("hl-line", "visibility", on ? "visible" : "none");
+  map.setLayoutProperty("hl-shadow", "visibility", on ? "visible" : "none");
+}
+function hlAnim(t){
+  if (!map.getLayer("hl-fill")) return;
+  const t0 = parseFloat(val("hlT0"));
+  const k = isNaN(t0) ? 1 : Math.min(Math.max((t - t0) / 0.45, 0), 1);
+  const e = easeOutC(k), op = num("hlOp");
+  map.setPaintProperty("hl-fill", "fill-opacity", (op === undefined || isNaN(op) ? 0.66 : op) * e);
+  map.setPaintProperty("hl-line", "line-opacity", e);
+  map.setPaintProperty("hl-shadow", "line-opacity", 0.5 * e);
+}
+function addHighlightLayers(){
+  if (!map.getSource("hl")) map.addSource("hl", { type: "geojson", data: emptyFC() });
+  const zw = (a, b) => ["interpolate", ["exponential", 1.5], ["zoom"], 3, a, 10, b];
+  if (!map.getLayer("hl-fill")) map.addLayer({ id: "hl-fill", type: "fill", source: "hl", paint: { "fill-color": "#86ccff", "fill-opacity": 0.66 } });
+  if (!map.getLayer("hl-shadow")) map.addLayer({ id: "hl-shadow", type: "line", source: "hl", layout: { "line-join": "round" },
+    paint: { "line-color": "#0b1630", "line-opacity": 0.5, "line-width": zw(5, 34), "line-blur": zw(4, 22), "line-translate": [4, 10] } });
+  if (!map.getLayer("hl-line")) map.addLayer({ id: "hl-line", type: "line", source: "hl", layout: { "line-join": "round" },
+    paint: { "line-color": "#ffffff", "line-width": zw(2.4, 18) } });
+  refreshHighlight();
+}
+["hlIso", "hlColor", "hlOp", "hlLine", "hlT0"].forEach(id => setTimeout(() => {
+  const el = document.getElementById(id); if (el) el.addEventListener("change", refreshHighlight);
+}, 0));
+
+function addRuntimeLayers(){
+  addHighlightLayers();
+  setTimeout(() => { try { applyTerrain(); } catch(e){} }, 0);
+  if (!map.getSource("features")) map.addSource("features", { type: "geojson", data: emptyFC() });
+  if (!map.getLayer("feat-fill")) map.addLayer({
+    id: "feat-fill", type: "fill", source: "features",
+    filter: ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon"]]],
+    paint: { "fill-color": ["get", "color"], "fill-opacity": ["*", ["get", "op"], 0.4] }
+  });
+  if (!map.getLayer("feat-line")) map.addLayer({
+    id: "feat-line", type: "line", source: "features",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": ["get", "color"], "line-width": 2.5, "line-opacity": ["get", "op"] }
+  });
+  if (!map.getLayer("feat-point")) map.addLayer({
+    id: "feat-point", type: "circle", source: "features",
+    filter: ["==", ["geometry-type"], "Point"],
+    paint: { "circle-color": ["get", "color"], "circle-radius": 6,
+             "circle-stroke-color": "#ffffff", "circle-stroke-width": 2,
+             "circle-opacity": ["get", "op"], "circle-stroke-opacity": ["get", "op"] }
+  });
+  if (!map.getSource("route")) map.addSource("route", { type: "geojson", data: emptyFC() });
+  if (!map.getSource("stops")) map.addSource("stops", { type: "geojson", data: emptyFC() });
+  if (!map.getSource("tip"))   map.addSource("tip",   { type: "geojson", data: emptyFC() });
+
+  if (!map.getLayer("route-glow")) map.addLayer({
+    id: "route-glow", type: "line", source: "route",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": ["get", "color"], "line-width": 12, "line-blur": 8, "line-opacity": 0 }
+  });
+  if (!map.getLayer("route-line")) map.addLayer({
+    id: "route-line", type: "line", source: "route",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": ["get", "color"], "line-width": 3.5 }
+  });
+  if (!map.getLayer("tip-dot")) map.addLayer({
+    id: "tip-dot", type: "circle", source: "tip",
+    paint: {
+      "circle-radius": 7, "circle-color": ["get", "color"],
+      "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5,
+      "circle-opacity": 0, "circle-stroke-opacity": 0
+    }
+  });
+  if (!map.getLayer("tip-pin")) map.addLayer({
+    id: "tip-pin", type: "symbol", source: "tip",
+    layout: {
+      "icon-image": ["get", "icon"], "icon-size": 1, "icon-anchor": "bottom",
+      "icon-offset": [0, -6],
+      "icon-allow-overlap": true, "icon-ignore-placement": true
+    },
+    paint: { "icon-opacity": 0 }
+  });
+  if (!map.getLayer("stops-icons")) map.addLayer({
+    id: "stops-icons", type: "symbol", source: "stops",
+    layout: {
+      "icon-image": ["get", "img"],
+      "icon-size": ["get", "size"],
+      "icon-anchor": "bottom",
+      "icon-allow-overlap": true, "icon-ignore-placement": true,
+      "text-field": ["get", "label"],
+      "text-font": ["Noto Sans Bold"],
+      "text-size": 14,
+      "text-anchor": "right",
+      "text-offset": [-2.2, -2.6],
+      "text-allow-overlap": true, "text-ignore-placement": true,
+      "text-optional": true
+    },
+    paint: {
+      "text-color": "#6d2e38",
+      "text-halo-color": "#ffffff", "text-halo-width": 1.6,
+      "text-opacity": ["get", "size"]
+    }
+  });
+  if (!map.getSource("pois")) map.addSource("pois", { type: "geojson", data: emptyFC() });
+  if (!map.getLayer("pois-icons")) map.addLayer({
+    id: "pois-icons", type: "symbol", source: "pois",
+    layout: {
+      "icon-image": ["get", "icon"], "icon-size": 0.8,
+      "icon-allow-overlap": false,
+      "text-field": ["get", "name"],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": 10.5,
+      "text-anchor": "top", "text-offset": [0, 1.4],
+      "text-optional": true
+    },
+    paint: { "text-color": "#6d2e38", "text-halo-color": "#ffffff", "text-halo-width": 1.3 }
+  }, "stops-icons");
+  buildPoiIcons();
+  refreshPois();
+  applyStyleSettings();
+  applyTerrain();
+}
+
+map.on("load", () => {
+  addRuntimeLayers();
+  mapReady = true;
+  renderTimeline();
+  setStatus(tr("Bereit. Orte suchen oder GPX laden."));
+});
+
+let prevStyle = "hell";
+document.getElementById("mapStyle").addEventListener("change", () => {
+  if (playing) return;
+  const name = val("mapStyle");
+  const t = THEMES[name];
+  document.getElementById("lineColor").value = t.defaultLine;
+  document.getElementById("glow").checked = t.glowDefault;
+  if (t.relief){ document.getElementById("terrain3d").checked = true; document.getElementById("terrainEx").value = 12; }
+  else if (THEMES[prevStyle] && THEMES[prevStyle].relief){ document.getElementById("terrain3d").checked = false; document.getElementById("terrainEx").value = 1.5; }
+  prevStyle = name;
+  map.setStyle(buildBaseStyle(name));
+  map.once("styledata", () => {
+    addRuntimeLayers();
+    refreshFeatures();
+    drawStatic();
+    setStatus("Stil „" + document.getElementById("mapStyle").selectedOptions[0].text + "“ aktiv.");
+  });
+});
+
+/* 3D-Terrain */
+function applyTerrain(){
+  if (!map.getSource("dem")) return;
+  if (checked("terrain3d")) map.setTerrain({ source: "dem", exaggeration: num("terrainEx") || 1.5 });
+  else map.setTerrain(null);
+}
+["terrain3d", "terrainEx"].forEach(id =>
+  document.getElementById(id).addEventListener("change", applyTerrain));
+
+/* ---------- Pin-Bilder ---------- */
+async function buildPinImage(wp, styleOverride){
+  const pinStyle = styleOverride || val("pinStyle");
+  const fontStack = FONT_STACKS[val("pinFont")] || FONT_STACKS.system;
+  const c = document.createElement("canvas");
+  const ctx = c.getContext("2d");
+  const name = "pin-" + wp.id + "-" + pinStyle + "-" + val("pinFont");
+
+  if (pinStyle === "dot"){
+    c.width = 64; c.height = 64;
+    ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.arc(32, 32, 18, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = wp.color;
+    ctx.beginPath(); ctx.arc(32, 32, 12, 0, Math.PI * 2); ctx.fill();
+  }
+  else if (pinStyle === "badge"){
+    const label = (wp.name || "STOPP").toUpperCase();
+    ctx.font = "700 30px " + fontStack;
+    const tw = Math.min(ctx.measureText(label).width, 300);
+    const W = Math.max(240, tw + 60), H = 258;
+    c.width = W; c.height = H;
+    const x2 = c.getContext("2d");
+    const cx = W / 2, cy = 108, R = 86, PR = 72;
+    x2.save();
+    x2.shadowColor = "rgba(0,0,0,.45)"; x2.shadowBlur = 16; x2.shadowOffsetY = 6;
+    x2.fillStyle = wp.color;
+    x2.beginPath(); x2.arc(cx, cy, R, 0, Math.PI * 2); x2.fill();
+    x2.restore();
+    x2.save();
+    x2.beginPath(); x2.arc(cx, cy, PR, 0, Math.PI * 2); x2.clip();
+    if (wp.photo){
+      const img = wp.photo;
+      const s = Math.max(PR * 2 / img.width, PR * 2 / img.height);
+      x2.drawImage(img, cx - img.width * s / 2, cy - img.height * s / 2, img.width * s, img.height * s);
+    } else {
+      x2.fillStyle = "#f2ede4";
+      x2.fillRect(cx - PR, cy - PR, PR * 2, PR * 2);
+    }
+    x2.restore();
+    x2.font = "700 30px " + fontStack;
+    const bw = tw + 44, bh = 48, by = cy + R - 14;
+    x2.save();
+    x2.shadowColor = "rgba(0,0,0,.35)"; x2.shadowBlur = 10; x2.shadowOffsetY = 4;
+    x2.fillStyle = wp.color;
+    roundRect(x2, cx - bw / 2, by, bw, bh, 14); x2.fill();
+    x2.restore();
+    x2.fillStyle = "#ffffff";
+    x2.textAlign = "center"; x2.textBaseline = "middle";
+    x2.fillText(label, cx, by + bh / 2 + 2, 300);
+    x2.fillStyle = wp.color;
+    x2.beginPath();
+    x2.moveTo(cx - 14, by + bh - 2);
+    x2.lineTo(cx + 14, by + bh - 2);
+    x2.lineTo(cx, by + bh + 26);
+    x2.closePath(); x2.fill();
+  }
+  else {
+    const S = 176, R = 62, PR = 56;
+    c.width = S; c.height = 168;
+    const cx = S / 2, cy = 74;
+    ctx.save();
+    ctx.shadowColor = "rgba(61,43,46,.35)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 5;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, cy + R - 14);
+    ctx.lineTo(cx + 16, cy + R - 14);
+    ctx.lineTo(cx, cy + R + 30);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    if (wp.photo){
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, PR, 0, Math.PI * 2); ctx.clip();
+      const img = wp.photo;
+      const s = Math.max(PR * 2 / img.width, PR * 2 / img.height);
+      ctx.drawImage(img, cx - img.width * s / 2, cy - img.height * s / 2, img.width * s, img.height * s);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = wp.color;
+      ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  const bmp = await createImageBitmap(c);
+  if (map.hasImage(name)) map.removeImage(name);
+  map.addImage(name, bmp, { pixelRatio: 2 });
+  return name;
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+async function makeTipPinFor(rt){
+  const c = document.createElement("canvas");
+  c.width = 72; c.height = 78;
+  const ctx = c.getContext("2d");
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,.4)"; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+  ctx.fillStyle = rt.color;
+  ctx.beginPath();
+  ctx.arc(36, 28, 22, Math.PI * 0.85, Math.PI * 0.15);
+  ctx.lineTo(36, 74);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(36, 28, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.arc(36, 28, 9, 0, Math.PI * 2); ctx.fill();
+  const name = "tipdrop-" + rt.id + "-" + rt.color.replace("#", "");
+  const bmp = await createImageBitmap(c);
+  if (map.hasImage(name)) map.removeImage(name);
+  map.addImage(name, bmp, { pixelRatio: 2 });
+  return name;
+}
+async function updateTipPin(){
+  if (!map.getLayer("tip-pin")) return;
+  const ts = val("tipStyle");
+  for (const rt of routes){
+    if (ts === "stop"){
+      const style = val("pinStyle") === "dot" ? "photo" : val("pinStyle");
+      rt._tipIcon = await buildPinImage(
+        { id: "tip" + rt.id, name: rt.tipLabel || rt.name || "ON TOUR", color: rt.color, photo: rt.tipPhoto }, style);
+      // Offset für Stopp-Stil neutral
+    } else {
+      rt._tipIcon = await makeTipPinFor(rt);
+    }
+  }
+  map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" ? [0, 0] : [0, -6]);
+  map.setLayoutProperty("tip-pin", "icon-size", num("tipScale"));
+}
+document.getElementById("tipPhoto").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    R().tipPhoto = img;
+    const lbl = document.getElementById("tipPhotoLbl");
+    lbl.classList.add("has-photo");
+    lbl.childNodes[0].textContent = "Foto ✓";
+    updateTipPin();
+  };
+  img.src = URL.createObjectURL(file);
+});
+document.getElementById("tipLabel").addEventListener("change", () => { R().tipLabel = val("tipLabel"); updateTipPin(); });
+
+function labelFor(wp){ return val("pinStyle") === "badge" ? "" : wp.name; }
+
+/* ---------- Routen-UI ---------- */
+function renderRoutes(){
+  const el = document.getElementById("routeChips");
+  el.innerHTML = "";
+  routes.forEach((rt, i) => {
+    const chip = document.createElement("div");
+    chip.className = "rchip" + (i === activeRoute ? " active" : "");
+    chip.innerHTML = `<span class="dot" style="background:${escapeHtml(rt.color)}"></span><span class="nm">${escapeHtml(rt.name)}</span>` +
+      (routes.length > 1 ? '<span class="x" title="' + tr("Route entfernen") + '">✕</span>' : "");
+    chip.addEventListener("click", e => {
+      if (e.target.classList.contains("x")) return;
+      activeRoute = i;
+      syncRouteInputs();
+      renderRoutes(); renderWpList();
+      drawStatic();
+    });
+    chip.addEventListener("dblclick", () => {
+      const n = prompt(tr("Name der Route:"), rt.name);
+      if (n){ rt.name = n; renderRoutes(); updateTipPin(); }
+    });
+    const x = chip.querySelector(".x");
+    if (x) x.addEventListener("click", () => {
+      routes.splice(i, 1);
+      if (activeRoute >= routes.length) activeRoute = routes.length - 1;
+      syncRouteInputs(); renderRoutes(); renderWpList(); drawStatic();
+    });
+    el.appendChild(chip);
+  });
+}
+function syncRouteInputs(){
+  const rt = R();
+  document.getElementById("lineColor").value = rt.color;
+  document.getElementById("tipLabel").value = rt.tipLabel || "";
+  const lbl = document.getElementById("tipPhotoLbl");
+  lbl.classList.toggle("has-photo", !!rt.tipPhoto);
+  lbl.childNodes[0].textContent = rt.tipPhoto ? tr("Foto ✓") : tr("Wählen");
+  document.getElementById("gpxInfo").textContent = rt.gpx ? "GPX aktiv (" + rt.gpx.length + " Punkte)" : "";
+}
+document.getElementById("routeAdd").addEventListener("click", () => {
+  routes.push(newRoute("Route " + (routes.length + 1), PALETTE[routes.length % PALETTE.length]));
+  activeRoute = routes.length - 1;
+  syncRouteInputs(); renderRoutes(); renderWpList(); drawStatic();
+});
+document.getElementById("lineColor").addEventListener("input", () => { R().color = val("lineColor"); renderRoutes(); });
+
+/* ---------- Waypoint-UI (aktive Route) ---------- */
+function addWaypoint(name, lat, lng){
+  R().waypoints.push({ id: ++wpCounter, name: name || "", lat, lng, photo: null,
+                       color: R().color });
+  renderWpList();
+  drawStatic();
+}
+
+function renderWpList(){
+  const list = document.getElementById("wpList");
+  list.innerHTML = "";
+  R().waypoints.forEach((wp, i) => {
+    const div = document.createElement("div");
+    div.className = "wp";
+    div.innerHTML = `
+      <div class="idx">${i + 1}</div>
+      <div class="row">
+        <input type="text" data-f="name" placeholder="${tr("Name")}" value="${escapeHtml(wp.name)}">
+        <input type="color" data-f="color" value="${escapeHtml(wp.color)}" title="${tr("Stoppfarbe")}" style="width:34px;flex:none;padding:1px;border:1px solid var(--line);border-radius:6px;background:#fff;">
+      </div>
+      <div class="row coords">
+        <input type="number" data-f="lat" step="0.0001" placeholder="${tr("Breite")}" value="${wp.lat.toFixed(4)}">
+        <input type="number" data-f="lng" step="0.0001" placeholder="${tr("Länge")}" value="${wp.lng.toFixed(4)}">
+      </div>
+      <div class="tools">
+        <label class="photo-label ${wp.photo ? "has-photo" : ""}">${wp.photo ? tr("Foto ✓ (ändern)") : tr("Foto hinzufügen")}<input type="file" accept="image/*"></label>
+        <button class="del" title="${tr("Entfernen")}">✕</button>
+      </div>`;
+    div.querySelectorAll("input[data-f]").forEach(inp => {
+      inp.addEventListener("change", () => {
+        const f = inp.dataset.f;
+        wp[f] = (f === "name" || f === "color") ? inp.value : parseFloat(inp.value);
+        drawStatic();
+      });
+    });
+    div.querySelector(".del").addEventListener("click", () => {
+      R().waypoints = R().waypoints.filter(w => w !== wp);
+      renderWpList(); drawStatic();
+    });
+    div.querySelector('input[type=file]').addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => { wp.photo = img; renderWpList(); drawStatic(); };
+      img.src = URL.createObjectURL(file);
+    });
+    list.appendChild(div);
+  });
+}
+function escapeHtml(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* Suche über Nominatim */
+document.getElementById("searchBtn").addEventListener("click", doSearch);
+document.getElementById("searchInput").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+async function doSearch(){
+  const q = document.getElementById("searchInput").value.trim();
+  if (!q) return;
+  setStatus("Suche „" + q + "“ …");
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=de&q=" + encodeURIComponent(q));
+    const res = await r.json();
+    if (!res.length){ setStatus(tr("Nichts gefunden.")); return; }
+    const hit = res[0];
+    const short = hit.display_name.split(",")[0];
+    addWaypoint(short, parseFloat(hit.lat), parseFloat(hit.lon));
+    document.getElementById("searchInput").value = "";
+    map.easeTo({ center: [parseFloat(hit.lon), parseFloat(hit.lat)], zoom: Math.max(map.getZoom(), 5) });
+    setStatus("„" + short + "“ hinzugefügt.");
+  } catch (e){ setStatus("Suche fehlgeschlagen (offline?). Koordinaten manuell eingeben."); }
+}
+
+document.getElementById("addManual").addEventListener("click", () => {
+  const c = map.getCenter();
+  addWaypoint("", c.lat, c.lng);
+});
+
+/* GPX-Import */
+document.getElementById("gpxInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const doc = new DOMParser().parseFromString(reader.result, "application/xml");
+    let pts = [...doc.querySelectorAll("trkpt")];
+    if (!pts.length) pts = [...doc.querySelectorAll("rtept")];
+    if (!pts.length){ setStatus("Keine Trackpunkte in der GPX-Datei gefunden."); return; }
+    let coords = pts.map(p => [parseFloat(p.getAttribute("lon")), parseFloat(p.getAttribute("lat"))]);
+    const step = Math.max(1, Math.floor(coords.length / 3000));
+    coords = coords.filter((_, i) => i % step === 0);
+    R().gpx = coords;
+    document.getElementById("gpxInfo").textContent = file.name + " · " + coords.length + " Punkte (Route „" + R().name + "“).";
+    drawStatic();
+    map.fitBounds(boundsOf(coords), { padding: 60, duration: 800 });
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- Feature-Browser ---------- */
+function featuresFC(){
+  return { type: "FeatureCollection", features: features.map(f => ({
+    type: "Feature",
+    properties: { fid: f.id, color: f.color, op: f.op },
+    geometry: f.geometry
+  })) };
+}
+function refreshFeatures(){
+  if (map.getSource("features")) map.getSource("features").setData(featuresFC());
+}
+function renderFeatList(){
+  const list = document.getElementById("featList");
+  list.innerHTML = "";
+  features.forEach(f => {
+    const div = document.createElement("div");
+    div.className = "wp";
+    div.innerHTML = `
+      <div class="row">
+        <input type="text" data-f="name" value="${escapeHtml(f.name)}" title="Name">
+        <input type="color" data-f="color" value="${escapeHtml(f.color)}" style="width:34px;flex:none;padding:1px;border:1px solid var(--line);border-radius:6px;background:#fff;">
+      </div>
+      <div class="tools">
+        <label style="font-size:11px;color:#8c7d72;display:flex;align-items:center;gap:4px;">${tr("Ab (s)")}
+          <input type="number" data-f="appearT" min="0" step="0.1" value="${escapeHtml(f.appearT)}" placeholder="${tr("immer")}" style="width:56px;border:1px solid var(--line);border-radius:6px;padding:3px 5px;font-size:12px;background:var(--cream);color:var(--ink);">
+        </label>
+        <button class="btn ghost" data-a="fit" style="padding:3px 8px;font-size:11px;">${tr("Fit")}</button>
+        <button class="del" title="Entfernen">✕</button>
+      </div>`;
+    div.querySelectorAll("[data-f]").forEach(inp => {
+      inp.addEventListener("change", () => {
+        const k = inp.dataset.f;
+        if (k === "appearT") f.appearT = inp.value === "" ? null : parseFloat(inp.value);
+        else f[k] = inp.value;
+        f.op = f.appearT == null ? 1 : 0;
+        refreshFeatures();
+      });
+    });
+    div.querySelector('[data-a="fit"]').addEventListener("click", () => {
+      const b = geomBounds(f.geometry);
+      if (b) map.fitBounds(b, { padding: 60, duration: 700 });
+    });
+    div.querySelector(".del").addEventListener("click", () => {
+      features = features.filter(x => x !== f);
+      renderFeatList(); refreshFeatures();
+    });
+    list.appendChild(div);
+  });
+}
+function geomBounds(g){
+  let minX = 180, minY = 90, maxX = -180, maxY = -90, any = false;
+  const walk = c => {
+    if (typeof c[0] === "number"){
+      any = true;
+      minX = Math.min(minX, c[0]); minY = Math.min(minY, c[1]);
+      maxX = Math.max(maxX, c[0]); maxY = Math.max(maxY, c[1]);
+    } else c.forEach(walk);
+  };
+  walk(g.coordinates);
+  return any ? [[minX, minY], [maxX, maxY]] : null;
+}
+function addFeature(name, geometry){
+  features.push({ id: ++featCounter, name, geometry,
+                  color: PALETTE[(featCounter - 1) % PALETTE.length], appearT: null, op: 1 });
+  renderFeatList(); refreshFeatures();
+}
+document.getElementById("featBtn").addEventListener("click", doFeatSearch);
+document.getElementById("featInput").addEventListener("keydown", e => { if (e.key === "Enter") doFeatSearch(); });
+async function doFeatSearch(){
+  const q = document.getElementById("featInput").value.trim();
+  if (!q) return;
+  setStatus("Suche Feature „" + q + "“ …");
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&polygon_geojson=1&accept-language=de&q=" + encodeURIComponent(q));
+    const res = await r.json();
+    if (!res.length || !res[0].geojson){ setStatus("Kein Geometrie-Treffer."); return; }
+    const short = res[0].display_name.split(",")[0];
+    addFeature(short, res[0].geojson);
+    document.getElementById("featInput").value = "";
+    const b = geomBounds(res[0].geojson);
+    if (b) map.fitBounds(b, { padding: 60, duration: 800 });
+    setStatus("Feature „" + short + "“ hinzugefügt.");
+  } catch (e){ setStatus("Feature-Suche fehlgeschlagen."); }
+}
+document.getElementById("geojsonInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const j = JSON.parse(reader.result);
+      const list = j.type === "FeatureCollection" ? j.features
+        : j.type === "Feature" ? [j]
+        : [{ type: "Feature", properties: {}, geometry: j }];
+      let n = 0;
+      for (const ft of list.slice(0, 50)){
+        if (!ft.geometry) continue;
+        addFeature((ft.properties && (ft.properties.name || ft.properties.NAME)) || "Feature " + (featCounter + 1), ft.geometry);
+        n++;
+      }
+      setStatus(n + " Feature(s) importiert.");
+    } catch (err){ setStatus("GeoJSON ungültig: " + err.message); }
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- POIs entlang der Route (Overpass) ---------- */
+const POI_CATS = {
+  peak:    { color: "#3f7d4e", label: "Gipfel" },
+  castle:  { color: "#7a4a2b", label: "Burg" },
+  station: { color: "#2f6fde", label: "Bahnhof" },
+  sight:   { color: "#c2733d", label: "Sehenswert" }
+};
+async function buildPoiIcons(){
+  for (const [cat, def] of Object.entries(POI_CATS)){
+    const c = document.createElement("canvas");
+    c.width = 52; c.height = 52;
+    const x = c.getContext("2d");
+    x.shadowColor = "rgba(0,0,0,.4)"; x.shadowBlur = 5; x.shadowOffsetY = 2;
+    x.fillStyle = "#ffffff";
+    x.beginPath(); x.arc(26, 26, 21, 0, Math.PI * 2); x.fill();
+    x.shadowColor = "transparent";
+    x.fillStyle = def.color;
+    x.beginPath(); x.arc(26, 26, 18, 0, Math.PI * 2); x.fill();
+    x.fillStyle = "#ffffff";
+    x.strokeStyle = "#ffffff"; x.lineWidth = 2.4; x.lineCap = "round";
+    if (cat === "peak"){
+      x.beginPath(); x.moveTo(15, 33); x.lineTo(24, 18); x.lineTo(29, 26); x.lineTo(33, 20); x.lineTo(38, 33); x.closePath(); x.fill();
+    } else if (cat === "castle"){
+      x.fillRect(16, 22, 20, 12);
+      x.fillRect(16, 17, 4, 5); x.fillRect(24, 17, 4, 5); x.fillRect(32, 17, 4, 5);
+    } else if (cat === "station"){
+      x.beginPath(); x.moveTo(18, 17); x.lineTo(34, 17); x.quadraticCurveTo(37, 17, 37, 21); x.lineTo(37, 29);
+      x.quadraticCurveTo(37, 32, 34, 32); x.lineTo(18, 32); x.quadraticCurveTo(15, 32, 15, 29); x.lineTo(15, 21);
+      x.quadraticCurveTo(15, 17, 18, 17); x.fill();
+      x.fillStyle = def.color; x.fillRect(19, 20, 14, 6);
+      x.fillStyle = "#ffffff";
+      x.beginPath(); x.arc(20, 35, 2.4, 0, Math.PI * 2); x.arc(32, 35, 2.4, 0, Math.PI * 2); x.fill();
+    } else {
+      x.beginPath();
+      for (let i = 0; i < 5; i++){
+        const a = -Math.PI / 2 + i * 2 * Math.PI / 5;
+        const b = a + Math.PI / 5;
+        x.lineTo(26 + Math.cos(a) * 10, 26 + Math.sin(a) * 10);
+        x.lineTo(26 + Math.cos(b) * 4.5, 26 + Math.sin(b) * 4.5);
+      }
+      x.closePath(); x.fill();
+    }
+    const name = "poi-" + cat;
+    if (map.hasImage(name)) map.removeImage(name);
+    map.addImage(name, await createImageBitmap(c), { pixelRatio: 2 });
+  }
+}
+function refreshPois(){
+  if (!map.getSource("pois")) return;
+  map.getSource("pois").setData({ type: "FeatureCollection", features: pois.map(p => ({
+    type: "Feature", properties: { icon: "poi-" + p.cat, name: p.name },
+    geometry: { type: "Point", coordinates: [p.lng, p.lat] }
+  })) });
+  document.getElementById("poiInfo").textContent = pois.length
+    ? pois.length + " POIs auf der Karte."
+    : "Lädt benannte Orte aus OpenStreetMap im Umkreis der Route und markiert sie mit Icons.";
+}
+document.getElementById("poiClear").addEventListener("click", () => { pois = []; refreshPois(); });
+document.getElementById("poiLoad").addEventListener("click", async () => {
+  const a = await ensureAnim();
+  if (!a){ setStatus(tr("Erst eine Route anlegen.")); return; }
+  // Korridor-Abfrage: Overpass filtert selbst entlang der Route (statt riesiger Bounding-Box)
+  const corridorM = Math.max((num("poiDist") || 8) * 1000, 1000);
+  const step = Math.max(1, Math.ceil(a.allCoords.length / 80));
+  const line = a.allCoords.filter((_, i) => i % step === 0 || i === a.allCoords.length - 1)
+    .map(c => c[1].toFixed(5) + "," + c[0].toFixed(5)).join(",");
+  const around = "(around:" + Math.round(corridorM) + "," + line + ")";
+  const parts = [];
+  if (checked("poiPeak"))    parts.push('node["natural"="peak"]["name"]' + around + ';');
+  if (checked("poiCastle"))  parts.push('node["historic"~"^(castle|fort|fortress)$"]["name"]' + around + ';');
+  if (checked("poiStation")) parts.push('node["railway"="station"]["name"]' + around + ';');
+  if (checked("poiSight"))   parts.push('node["tourism"~"^(attraction|viewpoint)$"]["name"]' + around + ';');
+  if (!parts.length){ setStatus(tr("Mindestens eine POI-Kategorie wählen.")); return; }
+  const q = "[out:json][timeout:40];(" + parts.join("") + ");out body 600;";
+  const SERVERS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter"
+  ];
+  let j = null, lastErr = null;
+  for (let i = 0; i < SERVERS.length && !j; i++){
+    setStatus("Lade POIs von OpenStreetMap (Server " + (i + 1) + "/" + SERVERS.length + ", kann 10–30 s dauern) …");
+    try {
+      const r = await fetch(SERVERS[i], {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "data=" + encodeURIComponent(q)
+      });
+      if (!r.ok) throw new Error("Server " + (i + 1) + " antwortet mit " + r.status);
+      j = await r.json();
+    } catch (err){ lastErr = err; setStatus("Server " + (i + 1) + " fehlgeschlagen (" + err.message + ") – versuche nächsten …"); }
+  }
+  try {
+    if (!j) throw lastErr || new Error("kein Server erreichbar");
+    // Abstand zur Route nur noch fürs Sortieren (Korridor filtert der Server)
+    const sStep = Math.max(1, Math.floor(a.allCoords.length / 200));
+    const samples = a.allCoords.filter((_, i) => i % sStep === 0);
+    const catOf = el => {
+      const tg = el.tags || {};
+      if (tg.natural === "peak") return "peak";
+      if (tg.historic) return "castle";
+      if (tg.railway === "station") return "station";
+      return "sight";
+    };
+    const cand = [];
+    for (const el of (j.elements || [])){
+      if (el.lat == null) continue;
+      let dmin = Infinity;
+      for (const s of samples){
+        const d = haversine(s, [el.lon, el.lat]);
+        if (d < dmin) dmin = d;
+      }
+      cand.push({ name: el.tags.name, cat: catOf(el), lng: el.lon, lat: el.lat,
+                  ele: parseFloat((el.tags.ele || "0").replace(",", ".")) || 0, d: dmin });
+    }
+    // Pro Kategorie begrenzen (Gipfel nach Höhe, Rest nach Nähe zur Route)
+    pois = [];
+    for (const cat of Object.keys(POI_CATS)){
+      const list = cand.filter(c => c.cat === cat);
+      list.sort((x, y) => cat === "peak" ? y.ele - x.ele : x.d - y.d);
+      pois.push(...list.slice(0, 25));
+    }
+    refreshPois();
+    setStatus(pois.length + " POIs geladen (" + cand.length + " im Korridor gefunden, pro Kategorie max. 25 angezeigt).");
+  } catch (err){ setStatus("POI-Laden fehlgeschlagen: " + err.message); }
+});
+
+/* ---------- Farb-Editor (5-Grundfarben-Prinzip) ---------- */
+const PALETTES = [
+  { land: "#f3eee5", water: "#c6dbe8", boundary: "#d3c4b6", label: "#6d2e38" },
+  { land: "#1d1e22", water: "#303a46", boundary: "#a03844", label: "#e8e9ee" },
+  { land: "#10131a", water: "#1c2740", boundary: "#2e4a7a", label: "#9fc2ff" },
+  { land: "#f7f1e1", water: "#a8c6b8", boundary: "#b8a888", label: "#3f4a3c" },
+  { land: "#efe6da", water: "#88b3c8", boundary: "#c58f6d", label: "#334455" },
+  { land: "#22262a", water: "#15393b", boundary: "#3e7a6c", label: "#c8f0dd" },
+  { land: "#fdf6ec", water: "#f0c9a8", boundary: "#d88c51", label: "#7a3b1e" },
+  { land: "#e8e8e8", water: "#ffffff", boundary: "#bbbbbb", label: "#333333" }
+];
+function renderPalettes(){
+  const el = document.getElementById("palList");
+  el.innerHTML = "";
+  PALETTES.forEach(p => {
+    const b = document.createElement("button");
+    b.style.cssText = "display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;cursor:pointer;padding:0;background:none;";
+    b.title = "Palette anwenden";
+    [p.land, p.water, p.boundary, p.label].forEach(c => {
+      const s = document.createElement("span");
+      s.style.cssText = "width:16px;height:20px;background:" + c;
+      b.appendChild(s);
+    });
+    b.addEventListener("click", () => {
+      document.getElementById("ccLand").value = p.land;
+      document.getElementById("ccWater").value = p.water;
+      document.getElementById("ccBoundary").value = p.boundary;
+      document.getElementById("ccLabel").value = p.label;
+      customColors = { ...p };
+      rebuildStyle();
+    });
+    el.appendChild(b);
+  });
+}
+function readCustomColors(){
+  customColors = {
+    land: val("ccLand"), water: val("ccWater"),
+    boundary: val("ccBoundary"), label: val("ccLabel")
+  };
+}
+["ccLand", "ccWater", "ccBoundary", "ccLabel"].forEach(id =>
+  document.getElementById(id).addEventListener("change", () => { readCustomColors(); rebuildStyle(); }));
+document.getElementById("ccReset").addEventListener("click", () => { customColors = null; rebuildStyle(); });
+document.getElementById("mtKey").addEventListener("change", rebuildStyle);
+["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns"].forEach(id =>
+  document.getElementById(id).addEventListener("change", rebuildStyle));
+function rebuildStyle(){
+  if (playing) return;
+  map.setStyle(buildBaseStyle(val("mapStyle")));
+  map.once("styledata", async () => {
+    addRuntimeLayers();
+    refreshFeatures();
+    await drawStatic();
+  });
+}
+
+/* ---------- Geometrie ---------- */
+function toRad(d){ return d * Math.PI / 180; }
+function toDeg(r){ return r * 180 / Math.PI; }
+function haversine(a, b){
+  const R = 6371, dLat = toRad(b[1] - a[1]), dLng = toRad(b[0] - a[0]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[1])) * Math.cos(toRad(b[1])) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function greatCircleLeg(a, b, n){
+  const lat1 = toRad(a[1]), lng1 = toRad(a[0]), lat2 = toRad(b[1]), lng2 = toRad(b[0]);
+  const d = 2 * Math.asin(Math.sqrt(Math.sin((lat2 - lat1) / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin((lng2 - lng1) / 2) ** 2));
+  if (d < 1e-9) return [a, b];
+  const out = [];
+  for (let i = 0; i <= n; i++){
+    const f = i / n;
+    const A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
+    const x = A * Math.cos(lat1) * Math.cos(lng1) + B * Math.cos(lat2) * Math.cos(lng2);
+    const y = A * Math.cos(lat1) * Math.sin(lng1) + B * Math.cos(lat2) * Math.sin(lng2);
+    const z = A * Math.sin(lat1) + B * Math.sin(lat2);
+    out.push([toDeg(Math.atan2(y, x)), toDeg(Math.atan2(z, Math.hypot(x, y)))]);
+  }
+  return out;
+}
+function boundsOf(coords){
+  let minX = 180, minY = 90, maxX = -180, maxY = -90;
+  coords.forEach(c => { minX = Math.min(minX, c[0]); minY = Math.min(minY, c[1]); maxX = Math.max(maxX, c[0]); maxY = Math.max(maxY, c[1]); });
+  return [[minX, minY], [maxX, maxY]];
+}
+function nearestIndex(coords, pt){
+  let best = 0, bd = Infinity;
+  coords.forEach((c, i) => {
+    const d = (c[0] - pt[0]) ** 2 + (c[1] - pt[1]) ** 2;
+    if (d < bd){ bd = d; best = i; }
+  });
+  return best;
+}
+
+/* Straßenrouting (FOSSGIS-OSRM) */
+const legCache = new Map();
+async function fetchRoadLeg(a, b, mode){
+  const prof = { car: "routed-car", bike: "routed-bike", foot: "routed-foot" }[mode];
+  const key = mode + "|" + a.join(",") + "|" + b.join(",");
+  if (legCache.has(key)) return legCache.get(key);
+  const url = "https://routing.openstreetmap.de/" + prof + "/route/v1/driving/" +
+    a[0] + "," + a[1] + ";" + b[0] + "," + b[1] + "?overview=full&geometries=geojson";
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("Routing-Server antwortet mit " + r.status);
+  const j = await r.json();
+  if (!j.routes || !j.routes.length) throw new Error("keine Route gefunden");
+  let coords = j.routes[0].geometry.coordinates;
+  const step = Math.max(1, Math.floor(coords.length / 1500));
+  coords = coords.filter((_, i) => i % step === 0 || i === coords.length - 1);
+  legCache.set(key, coords);
+  return coords;
+}
+
+async function buildRouteFor(rt){
+  const mode = val("travelMode");
+  if (rt.gpx){
+    const stops = rt.waypoints.map(wp => ({ wp, idx: nearestIndex(rt.gpx, [wp.lng, wp.lat]) }))
+                              .sort((a, b) => a.idx - b.idx);
+    return { coords: rt.gpx, stops };
+  }
+  if (rt.waypoints.length < 1) return null;
+  const coords = [];
+  const stops = [];
+  for (let i = 0; i < rt.waypoints.length; i++){
+    const a = [rt.waypoints[i].lng, rt.waypoints[i].lat];
+    if (i === 0){ coords.push(a); stops.push({ wp: rt.waypoints[0], idx: 0 }); continue; }
+    const prev = [rt.waypoints[i - 1].lng, rt.waypoints[i - 1].lat];
+    let leg;
+    if (mode === "fly"){
+      leg = greatCircleLeg(prev, a, 160);
+    } else {
+      try {
+        setStatus("Route „" + rt.name + "“: Etappe " + i + " von " + (rt.waypoints.length - 1) + " …");
+        leg = await fetchRoadLeg(prev, a, mode);
+      } catch (err){
+        setStatus("„" + rt.name + "“ Etappe " + i + ": Straßenroute fehlgeschlagen – Luftlinie verwendet.");
+        leg = greatCircleLeg(prev, a, 160);
+      }
+    }
+    coords.push(...leg.slice(1));
+    stops.push({ wp: rt.waypoints[i], idx: coords.length - 1 });
+  }
+  return { coords, stops };
+}
+
+/* ---------- Animations-Kontext (alle Routen) ---------- */
+async function prepareAnim(){
+  const speed = Math.max(num("speedMult") || 1, 0.1);
+  const legDurBase = (num("legDur") || 4) / speed;
+  const pauseDur = (num("pauseDur") || 0) / speed;
+  const constSpeed = checked("constSpeed");
+  const per = [];
+  const allStopsFeats = [];
+  for (let ri = 0; ri < routes.length; ri++){
+    const rt = routes[ri];
+    const r = await buildRouteFor(rt);
+    if (!r || r.coords.length < 2) continue;
+    const coords = r.coords;
+    const cum = [0];
+    for (let i = 1; i < coords.length; i++) cum.push(cum[i - 1] + haversine(coords[i - 1], coords[i]));
+    const totalKm = cum[cum.length - 1] || 1;
+    const stopIdxs = r.stops.map(s => s.idx);
+    if (!stopIdxs.length || stopIdxs[0] !== 0) stopIdxs.unshift(0);
+    if (stopIdxs[stopIdxs.length - 1] !== coords.length - 1) stopIdxs.push(coords.length - 1);
+    const legKm = [];
+    for (let i = 0; i < stopIdxs.length - 1; i++) legKm.push(cum[stopIdxs[i + 1]] - cum[stopIdxs[i]]);
+    const avgKm = legKm.length ? legKm.reduce((a, b) => a + b, 0) / legKm.length : 1;
+    const segs = [];
+    for (let i = 0; i < stopIdxs.length; i++){
+      segs.push({ type: "pause", at: stopIdxs[i], dur: Math.max(pauseDur, 0.6 / speed), stopNo: i });
+      if (i < stopIdxs.length - 1){
+        let dur = legDurBase;
+        if (constSpeed && avgKm > 0)
+          dur = Math.min(Math.max(legDurBase * (legKm[i] / avgKm), 1.2 / speed), legDurBase * 4);
+        segs.push({ type: "leg", from: stopIdxs[i], to: stopIdxs[i + 1], dur });
+      }
+    }
+    let tt = 0;
+    segs.forEach(s => { s.t0 = tt; tt += s.dur; s.t1 = tt; });
+    const stopMeta = [];
+    for (const s of r.stops){
+      const img = await buildPinImage(s.wp);
+      allStopsFeats.push({ type: "Feature",
+        geometry: { type: "Point", coordinates: coords[s.idx] || [s.wp.lng, s.wp.lat] },
+        properties: { img, size: 0, label: labelFor(s.wp) } });
+      stopMeta.push({ idx: s.idx, frac: cum[s.idx] / totalKm, feat: allStopsFeats.length - 1 });
+    }
+    per.push({ ri, rt, coords, cum, totalKm, segs, natural: tt, stops: stopMeta, _tipIdx: 0 });
+  }
+  if (!per.length){ anim = null; return null; }
+  const allCoords = per.flatMap(p => p.coords);
+  const natural = Math.max(...per.map(p => p.natural));
+  const ovCam = map.cameraForBounds(boundsOf(allCoords), { padding: 90 });
+  await updateTipPin();
+  anim = { per, natural, ovCam, allCoords,
+           stopsData: { type: "FeatureCollection", features: allStopsFeats } };
+  return anim;
+}
+async function ensureAnim(){
+  if (anim) return anim;
+  return await prepareAnim();
+}
+function timelineTotal(){
+  const td = num("totalDur");
+  if (td && td > 0) return td;
+  if (tracks.line.length) return Math.max(...tracks.line.map(k => k.t), 1);
+  return anim ? anim.natural : 10;
+}
+
+/* ---------- Sampling ---------- */
+function easeInOut(t){ return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+function easeOutC(t){ return 1 - Math.pow(1 - t, 3); }
+function easeInC(t){ return t * t * t; }
+function quadInOut(t){ return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+function backOut(t){ const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
+function lerp(a, b, f){ return a + (b - a) * f; }
+function applyEase(name, f){
+  switch (name){
+    case "linear":    return f;
+    case "quadInOut": return quadInOut(f);
+    case "easeOut":   return easeOutC(f);
+    case "easeIn":    return easeInC(f);
+    case "snap":      return 1 - Math.pow(1 - f, 5);
+    default:          return easeInOut(f);
+  }
+}
+
+function sortedTrack(arr){ return [...arr].sort((a, b) => a.t - b.t); }
+function sampleNum(arr, t, fb){
+  if (!arr.length) return fb;
+  const s = sortedTrack(arr);
+  if (t <= s[0].t) return s[0].v;
+  if (t >= s[s.length - 1].t) return s[s.length - 1].v;
+  for (let i = 0; i < s.length - 1; i++){
+    if (t >= s[i].t && t <= s[i + 1].t){
+      const f = applyEase(s[i + 1].ease, (t - s[i].t) / (s[i + 1].t - s[i].t || 1e-9));
+      return lerp(s[i].v, s[i + 1].v, f);
+    }
+  }
+  return fb;
+}
+function samplePos(arr, t, tip){
+  if (!arr.length) return null;
+  const s = sortedTrack(arr);
+  let a = s[0], b = s[s.length - 1], f = 0;
+  if (t <= s[0].t){ a = b = s[0]; }
+  else if (t >= s[s.length - 1].t){ a = b = s[s.length - 1]; }
+  else {
+    for (let i = 0; i < s.length - 1; i++){
+      if (t >= s[i].t && t <= s[i + 1].t){
+        a = s[i]; b = s[i + 1];
+        f = applyEase(b.ease, (t - a.t) / (b.t - a.t || 1e-9));
+        break;
+      }
+    }
+  }
+  const ca = a.follow ? tip : [a.lng, a.lat];
+  const cb = b.follow ? tip : [b.lng, b.lat];
+  return [lerp(ca[0], cb[0], f), lerp(ca[1], cb[1], f)];
+}
+
+/* Position der Linienspitze für Route p zum Zeitpunkt t */
+function tipIndexFor(p, t){
+  const total = timelineTotal();
+  if (tracks.line.length){
+    const frac = Math.min(Math.max(sampleNum(tracks.line, t, 0) / 100, 0), 1);
+    const target = frac * p.totalKm;
+    const cum = p.cum;
+    let lo = 0, hi = cum.length - 1;
+    while (lo < hi){ const mid = (lo + hi) >> 1; if (cum[mid] < target) lo = mid + 1; else hi = mid; }
+    const i = Math.max(lo, 1);
+    const span = cum[i] - cum[i - 1] || 1e-9;
+    return (i - 1) + Math.min(Math.max((target - cum[i - 1]) / span, 0), 1);
+  }
+  const ts = t * (anim.natural / total);
+  const easeFn = f => applyEase(val("legEase"), f);
+  let tipIdx = 0;
+  for (const seg of p.segs){
+    if (ts >= seg.t1){ if (seg.type === "leg") tipIdx = seg.to; continue; }
+    if (ts >= seg.t0){
+      if (seg.type === "leg"){
+        const pr = easeFn((ts - seg.t0) / seg.dur);
+        tipIdx = seg.from + (seg.to - seg.from) * pr;
+      } else tipIdx = seg.at;
+      break;
+    }
+  }
+  return tipIdx;
+}
+function tipFracFallback(t){
+  if (!anim || !anim.per.length) return 0;
+  const p = anim.per.find(x => x.ri === activeRoute) || anim.per[0];
+  const idx = tipIndexFor(p, t);
+  const i = Math.min(Math.floor(idx), p.cum.length - 1);
+  return p.cum[i] / p.totalKm * 100;
+}
+
+/* ---------- Zentrale Render-Funktion (Playback + Scrubbing) ---------- */
+let camPos = null;
+function renderAt(t, live){
+  if (!anim) return;
+  hlAnim(t);
+  const total = timelineTotal();
+  t = Math.min(Math.max(t, 0), total);
+  const tipStyle = val("tipStyle");
+  const popStyle = val("popStyle");
+  const popDur = popStyle === "instant" ? 0.01 : 0.6;
+
+  // Linien + Spitzen aller Routen
+  const lineFeats = [], tipFeats = [];
+  const activeP = anim.per.find(p => p.ri === activeRoute) || anim.per[0];
+  let activeTip = null;
+  for (const p of anim.per){
+    const tipIdx = tipIndexFor(p, t);
+    p._tipIdx = tipIdx;
+    const i0 = Math.floor(tipIdx), f = tipIdx - i0;
+    const line = p.coords.slice(0, i0 + 1);
+    if (f > 0 && i0 + 1 < p.coords.length){
+      const a = p.coords[i0], b = p.coords[i0 + 1];
+      line.push([lerp(a[0], b[0], f), lerp(a[1], b[1], f)]);
+    }
+    const tip = line[line.length - 1] || p.coords[0];
+    if (p === activeP) activeTip = tip;
+    if (line.length > 1)
+      lineFeats.push({ type: "Feature", properties: { color: p.rt.color },
+                       geometry: { type: "LineString", coordinates: line } });
+    const done = tipIdx >= p.coords.length - 1 - 1e-6;
+    if (tipStyle !== "none" && t < total - 0.01 && !done)
+      tipFeats.push({ type: "Feature",
+        properties: { color: p.rt.color, icon: p.rt._tipIcon || "" },
+        geometry: { type: "Point", coordinates: tip } });
+  }
+  map.getSource("route").setData({ type: "FeatureCollection", features: lineFeats });
+  map.getSource("tip").setData({ type: "FeatureCollection", features: tipFeats });
+  const anyTip = tipFeats.length > 0;
+  map.setPaintProperty("tip-dot", "circle-opacity", anyTip ? 1 : 0);
+  map.setPaintProperty("tip-dot", "circle-stroke-opacity", anyTip ? 1 : 0);
+  if (map.getLayer("tip-pin"))
+    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop") && anyTip ? 1 : 0);
+
+  // Stopps (pro Route, beim Überfahren)
+  let dirty = false;
+  for (const p of anim.per){
+    for (const st of p.stops){
+      const crossed = p._tipIdx >= st.idx - 1e-6;
+      const n = st.feat;
+      let size;
+      if (live){
+        if (crossed && popT[n] === undefined) popT[n] = t;
+        if (popT[n] === undefined) size = 0;
+        else {
+          const lp = Math.min((t - popT[n]) / popDur, 1);
+          size = popStyle === "pop" ? backOut(lp) : lp >= 1 ? 1 : easeInOut(lp);
+        }
+      } else size = crossed ? 1 : 0;
+      const v = Math.round(size * 100) / 100;
+      if (anim.stopsData.features[n].properties.size !== v){
+        anim.stopsData.features[n].properties.size = v; dirty = true;
+      }
+    }
+  }
+  if (dirty) map.getSource("stops").setData(anim.stopsData);
+
+  // Animierbare Stil-Attribute
+  const lwS = sampleNum(tracks.lineWidth, t, num("lineWidth") || 3.5);
+  map.setPaintProperty("route-line", "line-width", lwS);
+  const glowS = sampleNum(tracks.glowOp, t, checked("glow") ? 0.55 : 0);
+  map.setPaintProperty("route-glow", "line-opacity", glowS);
+  map.setPaintProperty("route-glow", "line-width", lwS * 3.2);
+  map.setPaintProperty("route-glow", "line-blur", lwS * 2.2);
+  if (map.getLayer("stops-icons"))
+    map.setLayoutProperty("stops-icons", "icon-size", ["*", ["get", "size"], sampleNum(tracks.pinScale, t, num("pinScale"))]);
+  if (map.getLayer("tip-pin"))
+    map.setLayoutProperty("tip-pin", "icon-size", sampleNum(tracks.tipScale, t, num("tipScale")));
+
+  // Feature-Einblendungen
+  let fDirty = false;
+  features.forEach(f => {
+    let op;
+    if (f.appearT == null) op = 1;
+    else if (t < f.appearT) op = 0;
+    else op = easeOutC(Math.min((t - f.appearT) / 0.8, 1));
+    op = Math.round(op * 100) / 100;
+    if (f.op !== op){ f.op = op; fDirty = true; }
+  });
+  if (fDirty) refreshFeatures();
+
+  // Kamera (folgt der aktiven Route)
+  const hasPos = tracks.pos.length > 0;
+  let zoomV = sampleNum(tracks.zoom, t, num("zoom"));
+  let bearV = tracks.bearing.length ? sampleNum(tracks.bearing, t, 0) : (num("rotSpeed") || 0) * t;
+  const pitchV = sampleNum(tracks.pitch, t, num("pitch"));
+  let center;
+  if (hasPos) center = samplePos(tracks.pos, t, activeTip || anim.allCoords[0]);
+  else if (val("camMode") === "overview"){
+    center = anim.ovCam.center;
+    if (!tracks.zoom.length) zoomV = anim.ovCam.zoom;
+  } else center = activeTip || anim.allCoords[0];
+
+  if (live && camPos){
+    const sm = Math.max(1 - num("smooth"), 0.15);
+    const cx = center.lng !== undefined ? center.lng : center[0];
+    const cy = center.lat !== undefined ? center.lat : center[1];
+    camPos.lng = hasPos ? cx : lerp(camPos.lng, cx, sm);
+    camPos.lat = hasPos ? cy : lerp(camPos.lat, cy, sm);
+    camPos.zoom = tracks.zoom.length ? zoomV : lerp(camPos.zoom, zoomV, sm * 0.7);
+    map.jumpTo({ center: [camPos.lng, camPos.lat], zoom: camPos.zoom, bearing: bearV, pitch: pitchV });
+  } else {
+    const c = center.lng !== undefined ? [center.lng, center.lat] : center;
+    camPos = { lng: c[0], lat: c[1], zoom: zoomV };
+    map.jumpTo({ center: c, zoom: zoomV, bearing: bearV, pitch: pitchV });
+  }
+}
+
+/* ---------- Statische Vorschau + Stil ---------- */
+async function drawStatic(){
+  if (!mapReady) return;
+  invalidateAnim();
+  applyStyleSettings();
+  const a = await prepareAnim();
+  map.getSource("tip").setData(emptyFC());
+  if (map.getLayer("tip-pin")) map.setPaintProperty("tip-pin", "icon-opacity", 0);
+  map.setPaintProperty("tip-dot", "circle-opacity", 0);
+  map.setPaintProperty("tip-dot", "circle-stroke-opacity", 0);
+  if (!a){ map.getSource("route").setData(emptyFC()); map.getSource("stops").setData(emptyFC()); renderTimeline(); return; }
+  map.getSource("route").setData({ type: "FeatureCollection",
+    features: a.per.map(p => ({ type: "Feature", properties: { color: p.rt.color },
+      geometry: { type: "LineString", coordinates: p.coords } })) });
+  features.forEach(f => f.op = 1);
+  refreshFeatures();
+  a.stopsData.features.forEach(ft => ft.properties.size = 0.75);
+  map.getSource("stops").setData(a.stopsData);
+  renderTimeline();
+}
+
+function applyStyleSettings(){
+  if (!map.getLayer("route-line")) return;
+  const width = num("lineWidth") || 3.5;
+  const style = val("lineStyle");
+  map.setPaintProperty("route-line", "line-width", width);
+  map.setPaintProperty("route-line", "line-dasharray",
+    style === "dashed" ? [2.2, 1.8] : style === "dotted" ? [0.1, 2] : [1, 0]);
+  const glowOn = checked("glow");
+  map.setPaintProperty("route-glow", "line-width", width * 3.2);
+  map.setPaintProperty("route-glow", "line-blur", width * 2.2);
+  map.setPaintProperty("route-glow", "line-opacity", glowOn ? 0.55 : 0);
+  map.setPaintProperty("tip-dot", "circle-radius", Math.max(6, width * 1.6));
+  updateTipPin();
+  if (map.getLayer("stops-icons")){
+    map.setLayoutProperty("stops-icons", "icon-anchor", val("pinStyle") === "dot" ? "center" : "bottom");
+    map.setLayoutProperty("stops-icons", "icon-size", ["*", ["get", "size"], num("pinScale")]);
+    map.setLayoutProperty("stops-icons", "text-size", num("labelSize") || 14);
+    const t = THEMES[val("mapStyle")];
+    const cc = customColors || {};
+    map.setPaintProperty("stops-icons", "text-color", cc.label || t.country.color);
+    map.setPaintProperty("stops-icons", "text-halo-color", cc.land || t.country.halo);
+    if (map.getLayer("pois-icons")){
+      map.setPaintProperty("pois-icons", "text-color", cc.label || t.country.color);
+      map.setPaintProperty("pois-icons", "text-halo-color", cc.land || t.country.halo);
+    }
+  }
+}
+["lineColor", "lineWidth", "lineStyle", "glow", "tipStyle", "travelMode", "pinStyle",
+ "pinScale", "tipScale", "labelSize", "pinFont", "legDur", "pauseDur", "constSpeed",
+ "speedMult", "legEase"].forEach(id =>
+  document.getElementById(id).addEventListener("change", async () => { await drawStatic(); setStatus(tr("Aktualisiert.")); }));
+document.getElementById("totalDur").addEventListener("change", renderTimeline);
+
+/* ---------- Timeline-UI ---------- */
+const tlRuler = document.getElementById("tlRuler");
+const tlTracksEl = document.getElementById("tlTracks");
+const tlPlayhead = document.getElementById("tlPlayhead");
+const tlTime = document.getElementById("tlTime");
+
+function laneWidth(){ return tlRuler.clientWidth || 1; }
+function t2x(t){ return t / timelineTotal() * laneWidth(); }
+function x2t(x){ return Math.min(Math.max(x / laneWidth(), 0), 1) * timelineTotal(); }
+
+function renderTimeline(){
+  const total = timelineTotal();
+  // Ruler
+  tlRuler.innerHTML = "";
+  const steps = [0.5, 1, 2, 5, 10, 15, 30, 60];
+  let step = steps.find(s => total / s <= 16) || 60;
+  for (let s = 0; s <= total + 1e-6; s += step){
+    const tick = document.createElement("div");
+    tick.className = "tick";
+    tick.style.left = t2x(s) + "px";
+    tick.textContent = (Math.round(s * 10) / 10) + "s";
+    tlRuler.appendChild(tick);
+  }
+  // Tracks
+  tlTracksEl.innerHTML = "";
+  TRACK_DEFS.forEach(def => {
+    const row = document.createElement("div");
+    row.className = "tlRow";
+    const lbl = document.createElement("div");
+    lbl.className = "tlabel";
+    lbl.textContent = tr(def.label);
+    const addBtn = document.createElement("button");
+    addBtn.className = "kfadd";
+    addBtn.textContent = "＋";
+    addBtn.title = "Keyframe am Playhead (aktueller Wert)";
+    addBtn.addEventListener("click", async e => {
+      e.stopPropagation();
+      await ensureAnim();
+      addKeyframe(def.key, Math.round(playheadT * 10) / 10);
+    });
+    const rv = document.createElement("span");
+    rv.className = "tlval";
+    rv.dataset.key = def.key;
+    lbl.appendChild(rv);
+    lbl.appendChild(addBtn);
+    const lane = document.createElement("div");
+    lane.className = "lane";
+    lane.dataset.track = def.key;
+    sortedTrack(tracks[def.key]).forEach(kf => {
+      const dia = document.createElement("div");
+      dia.className = "kfdia" + (selKf && selKf.kf === kf ? " sel" : "");
+      dia.style.left = t2x(kf.t) + "px";
+      dia.title = kf.t.toFixed(1) + " s" + (kf.v !== undefined ? " · " + kf.v : kf.follow ? " · an Linie" : "");
+      dia.addEventListener("dblclick", e => {
+        e.stopPropagation();
+        tracks[def.key] = tracks[def.key].filter(k => k !== kf);
+        if (selKf && selKf.kf === kf) selKf = null;
+        renderTimeline(); renderInspector();
+      });
+      dia.addEventListener("pointerdown", e => {
+        e.stopPropagation();
+        e.preventDefault();
+        const laneRect = lane.getBoundingClientRect();   // messen, solange die Spur noch im DOM ist
+        selKf = { track: def.key, kf };
+        document.querySelectorAll(".kfdia.sel").forEach(d => d.classList.remove("sel"));
+        dia.classList.add("sel");
+        renderInspector();
+        const move = ev => {
+          let nt = Math.round(x2t(ev.clientX - laneRect.left) * 10) / 10;
+          if (Math.abs(nt - playheadT) < 0.15) nt = Math.round(playheadT * 10) / 10;   // Snap an Playhead
+          nt = Math.max(0, Math.min(nt, timelineTotal()));
+          kf.t = nt;
+          dia.style.left = t2x(kf.t) + "px";
+          dia.title = kf.t.toFixed(1) + " s";
+          renderInspector();
+        };
+        const up = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+          renderTimeline();   // erst NACH dem Loslassen neu zeichnen
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+      });
+      lane.appendChild(dia);
+    });
+    lane.addEventListener("pointerdown", async e => {
+      if (e.target !== lane) return;
+      await ensureAnim();
+      popT = {};
+      const laneRect = lane.getBoundingClientRect();
+      const move = ev => setPlayhead(x2t(ev.clientX - laneRect.left));
+      move(e);
+      const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+    });
+    lane.addEventListener("dblclick", async e => {
+      if (e.target !== lane) return;
+      await ensureAnim();
+      const laneRect = lane.getBoundingClientRect();
+      addKeyframe(def.key, Math.round(x2t(e.clientX - laneRect.left) * 10) / 10);
+    });
+    row.appendChild(lbl); row.appendChild(lane);
+    tlTracksEl.appendChild(row);
+  });
+  setPlayhead(playheadT, false);
+}
+
+function addKeyframe(trackKey, t){
+  let kf;
+  const def = TRACK_DEFS.find(d => d.key === trackKey);
+  if (trackKey === "pos"){
+    const c = map.getCenter();
+    kf = { t, lat: c.lat, lng: c.lng, follow: false, ease: "easeInOut" };
+  } else if (trackKey === "line"){
+    const v = anim ? Math.round(sampleNum(tracks.line, t, tipFracFallback(t)) * 10) / 10 : 0;
+    kf = { t, v, ease: "easeInOut" };
+  } else {
+    kf = { t, v: Math.round((def.cur ? def.cur(t) : 0) * 100) / 100, ease: "easeInOut" };
+  }
+  tracks[trackKey].push(kf);
+  selKf = { track: trackKey, kf };
+  renderTimeline(); renderInspector();
+  setStatus("Keyframe „" + trackKey + "“ bei " + t.toFixed(1) + " s.");
+}
+/* tipFracFallback: siehe Definition bei tipIndexFor (Multi-Routen-Version) */
+
+function renderInspector(){
+  const el = document.getElementById("tlInspector");
+  if (!selKf){ el.innerHTML = '<span class="hint">' + tr("Kein Keyframe ausgewählt.") + '</span>'; return; }
+  const { track, kf } = selKf;
+  let html = `<b>${tr(TRACK_DEFS.find(d => d.key === track).label)}</b>
+    <label>${tr("Zeit")} <input type="number" data-f="t" step="0.1" min="0" value="${kf.t.toFixed(1)}"></label>`;
+  if (track === "pos"){
+    html += `<label>${tr("Breite")} <input type="number" data-f="lat" step="0.001" value="${kf.lat.toFixed(3)}" ${kf.follow ? "disabled" : ""}></label>
+      <label>${tr("Länge")} <input type="number" data-f="lng" step="0.001" value="${kf.lng.toFixed(3)}" ${kf.follow ? "disabled" : ""}></label>
+      <label><input type="checkbox" data-f="follow" ${kf.follow ? "checked" : ""} style="width:auto;accent-color:var(--wine)"> ${tr("an Linie")}</label>`;
+  } else {
+    html += `<label>${tr("Wert")} <input type="number" data-f="v" step="0.1" value="${kf.v}"></label>`;
+  }
+  html += `<label>${tr("Easing")} <select data-f="ease">
+      <option value="linear" ${kf.ease === "linear" ? "selected" : ""}>${tr("linear")}</option>
+      <option value="quadInOut" ${kf.ease === "quadInOut" ? "selected" : ""}>${tr("quadratisch")}</option>
+      <option value="easeInOut" ${kf.ease === "easeInOut" ? "selected" : ""}>${tr("kubisch (sanft)")}</option>
+      <option value="easeOut" ${kf.ease === "easeOut" ? "selected" : ""}>${tr("ausklingend")}</option>
+      <option value="easeIn" ${kf.ease === "easeIn" ? "selected" : ""}>${tr("anlaufend")}</option>
+      <option value="snap" ${kf.ease === "snap" ? "selected" : ""}>${tr("Snap (Ruck)")}</option>
+    </select></label>
+    <button class="del">${tr("✕ löschen")}</button>`;
+  el.innerHTML = html;
+  el.querySelectorAll("[data-f]").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const f = inp.dataset.f;
+      if (f === "follow") kf.follow = inp.checked;
+      else if (f === "ease") kf.ease = inp.value;
+      else kf[f] = parseFloat(inp.value);
+      renderTimeline(); renderInspector();
+    });
+  });
+  el.querySelector(".del").addEventListener("click", () => {
+    tracks[track] = tracks[track].filter(k => k !== kf);
+    selKf = null;
+    renderTimeline(); renderInspector();
+  });
+}
+
+function trackReadout(key, t){
+  if (key === "pos"){
+    if (!tracks.pos.length) return val("camMode") === "overview" ? tr("Übersicht") : tr("folgt");
+    return tr("KF");
+  }
+  const fb = key === "line" ? (anim ? tipFracFallback(t) : 0)
+    : key === "zoom" ? num("zoom") : key === "bearing" ? 0 : key === "pitch" ? num("pitch")
+    : key === "lineWidth" ? (num("lineWidth") || 3.5)
+    : key === "glowOp" ? (checked("glow") ? 0.55 : 0)
+    : key === "pinScale" ? num("pinScale") : num("tipScale");
+  const v = sampleNum(tracks[key], t, fb);
+  return (Math.round(v * 10) / 10) + (key === "line" ? " %" : "");
+}
+function updateReadouts(){
+  document.querySelectorAll(".tlval").forEach(el =>
+    el.textContent = trackReadout(el.dataset.key, playheadT));
+}
+function setPlayhead(t, render){
+  playheadT = Math.min(Math.max(t, 0), timelineTotal());
+  tlPlayhead.style.left = t2x(playheadT) + "px";
+  tlTime.textContent = playheadT.toFixed(1) + " s";
+  updateReadouts();
+  if (render !== false && anim) renderAt(playheadT, false);
+}
+tlRuler.addEventListener("pointerdown", async e => {
+  await ensureAnim();
+  const rect = tlRuler.getBoundingClientRect();
+  popT = {};
+  const move = ev => setPlayhead(x2t(ev.clientX - rect.left));
+  move(e);
+  const up = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+});
+
+/* Kamera-KF am Playhead aus aktueller Ansicht */
+document.getElementById("tlAddCam").addEventListener("click", async () => {
+  await ensureAnim();
+  const t = Math.round(playheadT * 10) / 10;
+  const c = map.getCenter();
+  tracks.pos.push({ t, lat: c.lat, lng: c.lng, follow: false, ease: "easeInOut" });
+  tracks.zoom.push({ t, v: Math.round(map.getZoom() * 10) / 10, ease: "easeInOut" });
+  tracks.bearing.push({ t, v: Math.round(map.getBearing()), ease: "easeInOut" });
+  tracks.pitch.push({ t, v: Math.round(map.getPitch()), ease: "easeInOut" });
+  renderTimeline();
+  setStatus("Kamera-Keyframes bei " + t.toFixed(1) + " s aus aktueller Ansicht angelegt.");
+});
+
+/* Linien-Verlauf in editierbare Keyframes umwandeln */
+document.getElementById("tlLineKF").addEventListener("click", async () => {
+  const a = await ensureAnim();
+  if (!a){ setStatus("Erst Route anlegen."); return; }
+  const total = timelineTotal();
+  const scale = total / a.natural;
+  tracks.line = [];
+  for (const seg of a.segs){
+    if (seg.type !== "leg") continue;
+    const f0 = a.cum[seg.from] / a.totalKm * 100;
+    const f1 = a.cum[seg.to] / a.totalKm * 100;
+    if (!tracks.line.length || Math.abs(tracks.line[tracks.line.length - 1].t - seg.t0 * scale) > 0.01)
+      tracks.line.push({ t: Math.round(seg.t0 * scale * 10) / 10, v: Math.round(f0 * 10) / 10, ease: "easeInOut" });
+    tracks.line.push({ t: Math.round(seg.t1 * scale * 10) / 10, v: Math.round(f1 * 10) / 10, ease: "easeInOut" });
+  }
+  renderTimeline();
+  setStatus("Linien-Keyframes erzeugt – Abstände = Geschwindigkeit, gleiche Werte = Pause.");
+});
+
+/* Presets */
+document.getElementById("camPreset").addEventListener("change", async () => {
+  const p = val("camPreset");
+  document.getElementById("camPreset").value = "";
+  if (!p) return;
+  await ensureAnim();
+  const T = timelineTotal();
+  const z = num("zoom");
+  const set = (id, v) => { const el = document.getElementById(id); el.type === "checkbox" ? el.checked = v : el.value = v; };
+  tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
+  if (p === "vlog"){
+    set("camMode", "follow"); set("smooth", 0.6); set("rotSpeed", 0); set("pitch", 0); set("stopZoom", false);
+  } else if (p === "cine"){
+    tracks.pos = [{ t: 0, lat: 0, lng: 0, follow: true, ease: "easeInOut" },
+                  { t: T, lat: 0, lng: 0, follow: true, ease: "easeInOut" }];
+    tracks.zoom = [{ t: 0, v: z - 0.4, ease: "easeInOut" }, { t: T, v: z + 0.4, ease: "easeInOut" }];
+    tracks.bearing = [{ t: 0, v: -14, ease: "easeInOut" }, { t: T, v: 14, ease: "easeInOut" }];
+    tracks.pitch = [{ t: 0, v: 32, ease: "easeInOut" }, { t: T, v: 46, ease: "easeInOut" }];
+  } else if (p === "drone"){
+    tracks.pos = [{ t: 0, lat: 0, lng: 0, follow: true, ease: "easeInOut" },
+                  { t: T, lat: 0, lng: 0, follow: true, ease: "easeInOut" }];
+    tracks.zoom = [{ t: 0, v: z + 1.4, ease: "easeInOut" }, { t: T / 2, v: z - 0.8, ease: "easeInOut" }, { t: T, v: z + 1.0, ease: "easeInOut" }];
+    tracks.bearing = [{ t: 0, v: 0, ease: "easeInOut" }, { t: T / 2, v: 25, ease: "easeInOut" }, { t: T, v: -15, ease: "easeInOut" }];
+    tracks.pitch = [{ t: 0, v: 52, ease: "easeInOut" }, { t: T / 2, v: 30, ease: "easeInOut" }, { t: T, v: 55, ease: "easeInOut" }];
+  } else if (p === "snap70"){
+    // Referenz 70 Sekunden Wiki: Snap-Zoom (3 Frames, ~13 %) direkt am Anfang, dann ruhiger Drift
+    // (Drehung ~1,6 °/s, Zoom-out ~2 %/s), alle ~2,5 s ein neuer Snap.
+    set("camMode", "overview");
+    const z0 = anim.ovCam.zoom, c0 = anim.ovCam.center;
+    const lng = c0.lng !== undefined ? c0.lng : c0[0], lat = c0.lat !== undefined ? c0.lat : c0[1];
+    tracks.pos = [{ t: 0, lat, lng, follow: false, ease: "linear" }];
+    tracks.pitch = [{ t: 0, v: 50, ease: "linear" }];
+    tracks.bearing = [{ t: 0, v: -12, ease: "linear" }, { t: T, v: -12 + 1.6 * T, ease: "linear" }];
+    const zk = [{ t: 0, v: z0, ease: "linear" }];
+    let z = z0 + 0.18; zk.push({ t: 0.1, v: z, ease: "snap" });
+    for (let t = 0.1; t < T - 0.3; ){
+      const nt = Math.min(t + 2.5, T);
+      z -= 0.03 * (nt - t); zk.push({ t: nt - (nt < T ? 0.1 : 0), v: z, ease: "linear" });
+      if (nt >= T) break;
+      z += 0.17; zk.push({ t: nt, v: z, ease: "snap" }); t = nt;
+    }
+    tracks.zoom = zk;
+  } else if (p === "orbit"){
+    set("camMode", "overview"); set("rotSpeed", 3); set("pitch", 40);
+  }
+  renderTimeline();
+  setStatus("Preset angewendet – Keyframes in der Timeline anpassbar.");
+});
+
+/* ---------- Playback ---------- */
+let animFrame = null;
+async function play(fromT, onDone){
+  const a = await ensureAnim();
+  if (!a){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); onDone && onDone(false); return; }
+  applyStyleSettings();
+  playing = true;
+  document.getElementById("tlPlay").textContent = "⏸";
+  popT = {};
+  camPos = null;
+  const total = timelineTotal();
+  if (fromT >= total - 0.05) fromT = 0;
+  const start = performance.now() - fromT * 1000;
+
+  function frame(now){
+    if (!playing) return;
+    const t = (now - start) / 1000;
+    setPlayheadOnly(t);
+    renderAt(t, true);
+    if (t >= total){
+      playing = false;
+      document.getElementById("tlPlay").textContent = "▶";
+      setStatus(tr("Fertig."));
+      onDone && onDone(true);
+      return;
+    }
+    animFrame = requestAnimationFrame(frame);
+  }
+  animFrame = requestAnimationFrame(frame);
+}
+function setPlayheadOnly(t){
+  playheadT = Math.min(Math.max(t, 0), timelineTotal());
+  tlPlayhead.style.left = t2x(playheadT) + "px";
+  tlTime.textContent = playheadT.toFixed(1) + " s";
+  updateReadouts();
+}
+function pause(){
+  playing = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  document.getElementById("tlPlay").textContent = "▶";
+}
+document.getElementById("tlPlay").addEventListener("click", () => {
+  if (playing) pause();
+  else play(playheadT);
+});
+document.getElementById("previewBtn").addEventListener("click", () => {
+  if (playing) return;
+  setStatus(tr("Vorschau läuft …"));
+  play(0);
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  pause();
+  playheadT = 0;
+  drawStatic();
+  setStatus(tr("Zurückgesetzt."));
+});
+
+/* ---------- Zähler-Overlay ---------- */
+function kmAt(){
+  if (!anim) return 0;
+  let km = 0;
+  for (const p of anim.per){
+    const idx = p._tipIdx || 0, i = Math.min(Math.floor(idx), p.cum.length - 1);
+    const f = idx - i, a = p.cum[i], b = p.cum[Math.min(i + 1, p.cum.length - 1)];
+    km += a + (b - a) * f;
+  }
+  return km;
+}
+function drawOverlay(){
+  const c = document.getElementById("ovl"), wrap = document.getElementById("mapwrap");
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  if (c.width !== W || c.height !== H){ c.width = W; c.height = H; }
+  const g = c.getContext("2d"); g.clearRect(0, 0, W, H);
+  if (!checked("ovOn") || !anim) return;
+  const total = anim.per.reduce((a, p) => a + p.totalKm, 0) || 1;
+  const km0 = num("ovKm0") || 0, rnd = Math.max(1, num("ovRound") || 10);
+  const km = kmAt(), kmTxt = String(Math.round((km0 + km) / rnd) * rnd);
+  const d0 = parseFloat(val("ovDay0")), d1 = parseFloat(val("ovDay1"));
+  const day = isNaN(d0) ? null : Math.round(isNaN(d1) ? d0 : d0 + (d1 - d0) * (km / total));
+  const u = Math.min(W, H * 0.5625);                 // Basis-Einheit (9:16 und 16:9 gleich groß)
+  const f1 = Math.round(u * 0.105), f2 = Math.round(u * 0.052), pad = Math.round(u * 0.02);
+  const font = (px) => "900 " + px + "px 'Archivo Black','Arial Black','Helvetica Neue',sans-serif";
+  const x = Math.round(W * 0.12);
+  let y = val("ovPos") === "bottom" ? Math.round(H * 0.78) : Math.round(H * 0.075);
+  const box = (parts) => {
+    let w = pad * 2; parts.forEach(([txt, px]) => { g.font = font(px); w += g.measureText(txt).width; });
+    w += pad * 0.6 * (parts.length - 1);
+    const h = Math.round(Math.max(...parts.map(p => p[1])) * 1.08);
+    g.fillStyle = "#ffffff"; g.fillRect(x, y, w, h);
+    let cx = x + pad; g.fillStyle = "#111111"; g.textBaseline = "alphabetic";
+    parts.forEach(([txt, px]) => { g.font = font(px); g.fillText(txt, cx, y + h * 0.86 - (h - px * 1.08) * 0.1); cx += g.measureText(txt).width + pad * 0.6; });
+    y += h + Math.round(u * 0.012);
+  };
+  box([[kmTxt, f1], ["KM", Math.round(f1 * 0.55)]]);
+  if (day !== null) box([[(val("ovPrefix") || "") + day, Math.round(f1 * 0.78)]]);
+}
+const __renderAt0 = renderAt;
+renderAt = function(t, live){ __renderAt0(t, live); drawOverlay(); };
+["ovOn", "ovKm0", "ovRound", "ovDay0", "ovDay1", "ovPrefix", "ovPos"].forEach(id =>
+  document.getElementById(id).addEventListener("input", () => { if (anim) renderAt(playheadT, false); else drawOverlay(); }));
+
+/* ---------- Export ---------- */
+async function waitIdle(ms = 25000){
+  const t0 = performance.now();
+  for (;;){
+    map.redraw();
+    if (map.loaded() && map.areTilesLoaded()){ map.redraw(); break; }
+    if (performance.now() - t0 > ms) break;
+    await new Promise(r => setTimeout(r, 25));
+  }
+}
+function dl(blob, name){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+let mp4Busy = false;
+document.getElementById("mp4Btn").addEventListener("click", async () => {
+  if (playing || mp4Busy) return;
+  if (!window.VideoEncoder || !window.Mp4Muxer){ setStatus("Dieser Browser kann kein MP4 kodieren (WebCodecs fehlt) – bitte aktuelles Chrome/Edge nutzen."); return; }
+  const a = await ensureAnim();
+  if (!a){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); return; }
+  mp4Busy = true;
+  const [W, H] = val("resolution").split("x").map(Number);
+  const fps = parseInt(val("expFps")) || 30, total = timelineTotal(), n = Math.round(total * fps);
+  const pr = map.getPixelRatio();
+  applyStyleSettings();
+  sizeStage(W, H); map.setPixelRatio(1); map.resize();
+  await new Promise(r => setTimeout(r, 300));
+  let codec = "avc1.640034";
+  if (!(await VideoEncoder.isConfigSupported({ codec, width: W, height: H })).supported) codec = "avc1.4d0034";
+  const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: "avc", width: W, height: H, frameRate: fps }, fastStart: "in-memory" });
+  let err = null;
+  const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => err = e });
+  enc.configure({ codec, width: W, height: H, bitrate: W * H > 4e6 ? 60e6 : 24e6, framerate: fps, latencyMode: "quality" });
+  const out = document.createElement("canvas"); out.width = W; out.height = H; const g = out.getContext("2d");
+  const pos = [], wantPos = checked("expPos"), t0 = performance.now();
+  popT = {}; camPos = null;
+  for (let i = 0; i < n && !err; i++){
+    const t = i / fps;
+    setPlayheadOnly(t);
+    if (checked("expBlur")){
+      // 6 Unterbilder über einen halben Frame (180°-Shutter) mitteln
+      const S = 6;
+      for (let k = 0; k < S; k++){
+        const tt = Math.max(0, t + (k / S - 0.25) / fps);
+        renderAt(tt, true); await waitIdle();
+        g.globalAlpha = 1 / (k + 1); g.drawImage(map.getCanvas(), 0, 0, W, H);
+      }
+      g.globalAlpha = 1; renderAt(t, false);
+    } else {
+      renderAt(t, true); await waitIdle();
+      g.drawImage(map.getCanvas(), 0, 0, W, H);
+    }
+    if (checked("ovOn")) g.drawImage(document.getElementById("ovl"), 0, 0, W, H);
+    if (wantPos){
+      const o = {};
+      a.stopsData.features.forEach((f, k) => { const p = map.project(f.geometry.coordinates);
+        o[(f.properties.label || f.properties.name || "stopp") + "#" + k] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; });
+      pos.push(o);
+    }
+    const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+    enc.encode(vf, { keyFrame: i % (fps * 2) === 0 }); vf.close();
+    while (enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 5));
+    if (i % 10 === 0) setStatus("■ Rendere Frame " + (i + 1) + " / " + n + " …", true);
+  }
+  await enc.flush(); muxer.finalize();
+  const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
+  dl(blob, "map-animation.mp4");
+  if (wantPos) setTimeout(() => dl(new Blob([JSON.stringify({ fps, w: W, h: H, pos })], { type: "application/json" }), "map-animation_punkte.json"), 800);
+  map.setPixelRatio(pr); sizeStage(null);
+  mp4Busy = false;
+  setStatus(err ? "Fehler beim Kodieren: " + err.message
+    : "MP4 gespeichert: " + n + " Frames, " + ((performance.now() - t0) / 1000).toFixed(0) + " s Renderzeit, " + (blob.size / 1e6).toFixed(1) + " MB.");
+});
+document.getElementById("recordBtn").addEventListener("click", async () => {
+  if (playing) return;
+  await ensureAnim();
+  const [w, h] = val("resolution").split("x").map(Number);
+  sizeStage(w, h);
+  await new Promise(r => setTimeout(r, 600));
+
+  const canvas = map.getCanvas();
+  const stream = canvas.captureStream(60);
+  const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
+  recChunks = [];
+  recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 24_000_000 });
+  recorder.ondataavailable = e => { if (e.data.size) recChunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(recChunks, { type: "video/webm" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "map-animation.webm";
+    a.click();
+    sizeStage(null);
+    setStatus(tr("Export gespeichert (map-animation.webm)."));
+  };
+  setStatus(tr("● Aufnahme läuft …"), true);
+  recorder.start();
+  play(0, () => { recorder.stop(); });
+});
+
+function sizeStage(w, h){
+  const wrap = document.getElementById("mapwrap");
+  const stage = document.getElementById("stage");
+  if (w == null){
+    wrap.style.width = "100%"; wrap.style.height = "100%"; wrap.style.transform = "none";
+  } else {
+    wrap.style.width = w + "px"; wrap.style.height = h + "px";
+    const s = Math.min(stage.clientWidth / w, stage.clientHeight / h);
+    wrap.style.transform = "scale(" + s + ")";
+  }
+  map.resize();
+}
+window.addEventListener("resize", () => {
+  const wrap = document.getElementById("mapwrap");
+  if (wrap.style.transform === "none" || !wrap.style.transform) map.resize();
+  renderTimeline();
+});
+sizeStage(null);
+
+/* Tastatur: Entf = Keyframe löschen, Pfeiltasten = verschieben (Shift = 1 s) */
+document.addEventListener("keydown", e => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "select" || tag === "textarea") return;
+  if (!selKf) return;
+  const { track, kf } = selKf;
+  if (e.key === "Delete" || e.key === "Backspace"){
+    tracks[track] = tracks[track].filter(k => k !== kf);
+    selKf = null;
+    renderTimeline(); renderInspector();
+    e.preventDefault();
+  } else if (e.key === "ArrowLeft" || e.key === "ArrowRight"){
+    const d = (e.shiftKey ? 1 : 0.1) * (e.key === "ArrowLeft" ? -1 : 1);
+    kf.t = Math.max(0, Math.round((kf.t + d) * 10) / 10);
+    renderTimeline(); renderInspector();
+    e.preventDefault();
+  }
+});
+
+/* ---------- Projekt speichern/laden ---------- */
+function imgToDataURL(img){
+  if (!img) return null;
+  const c = document.createElement("canvas");
+  const max = 512, s = Math.min(1, max / Math.max(img.width, img.height));
+  c.width = img.width * s; c.height = img.height * s;
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.85);
+}
+const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyle","pinScale","tipScale",
+  "labelSize","pinFont","lineColor","lineWidth","lineStyle","travelMode","legDur","pauseDur","constSpeed",
+  "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
+  "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur"];
+
+document.getElementById("projSave").addEventListener("click", () => {
+  const proj = {
+    version: 5,
+    settings: Object.fromEntries(SETTING_IDS.map(id => {
+      const el = document.getElementById(id);
+      return [id, el.type === "checkbox" ? el.checked : el.value];
+    })),
+    routes: routes.map(rt => ({
+      name: rt.name, color: rt.color, tipLabel: rt.tipLabel, gpx: rt.gpx,
+      tipPhoto: imgToDataURL(rt.tipPhoto),
+      waypoints: rt.waypoints.map(wp => ({ name: wp.name, lat: wp.lat, lng: wp.lng, color: wp.color, photo: imgToDataURL(wp.photo) }))
+    })),
+    features: features.map(f => ({ name: f.name, geometry: f.geometry, color: f.color, appearT: f.appearT })),
+    pois,
+    customColors,
+    tracks
+  };
+  const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "kartenprojekt.json";
+  a.click();
+  setStatus(tr("Projekt gespeichert."));
+});
+
+document.getElementById("projLoad").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const proj = JSON.parse(reader.result);
+      for (const [id, v] of Object.entries(proj.settings || {})){
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.type === "checkbox") el.checked = v; else el.value = v;
+      }
+      tracks = proj.tracks || {};
+      ensureTrackKeys();
+      customColors = proj.customColors || null;
+      pois = proj.pois || [];
+      features = [];
+      featCounter = 0;
+      for (const ft of (proj.features || []))
+        features.push({ id: ++featCounter, name: ft.name, geometry: ft.geometry, color: ft.color, appearT: ft.appearT ?? null, op: 1 });
+      const loadImg = src => new Promise(res => {
+        if (!src) return res(null);
+        const img = new Image();
+        img.onload = () => res(img);
+        img.onerror = () => res(null);
+        img.src = src;
+      });
+      routes = [];
+      routeCounter = 0;
+      wpCounter = 0;
+      const srcRoutes = proj.routes ||
+        [{ name: "Route 1", color: PALETTE[0], tipLabel: "", gpx: proj.gpxTrack || null,
+           tipPhoto: proj.tipPhoto || null, waypoints: proj.waypoints || [] }];
+      for (const pr of srcRoutes){
+        const rt = newRoute(pr.name || "Route", pr.color || PALETTE[0]);
+        rt.tipLabel = pr.tipLabel || "";
+        rt.gpx = pr.gpx || null;
+        rt.tipPhoto = await loadImg(pr.tipPhoto);
+        for (const w of (pr.waypoints || [])){
+          const photo = await loadImg(w.photo);
+          rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, photo });
+        }
+        routes.push(rt);
+      }
+      activeRoute = 0;
+      prevStyle = val("mapStyle");
+      // Stil neu aufbauen und alles zeichnen
+      map.setStyle(buildBaseStyle(val("mapStyle")));
+      map.once("styledata", async () => {
+        addRuntimeLayers();
+        syncRouteInputs();
+        renderRoutes();
+        renderWpList();
+        renderFeatList();
+        refreshFeatures();
+        await drawStatic();
+        applyLang();
+        setStatus(tr("Projekt geladen."));
+      });
+    } catch (err){
+      setStatus("Projekt konnte nicht geladen werden: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+routes.push(newRoute("Route 1", PALETTE[0]));
+renderPalettes();
+renderRoutes();
+syncRouteInputs();
+applyLang();
+setStatus(tr("Karte lädt …"));
+
