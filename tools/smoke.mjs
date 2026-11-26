@@ -180,6 +180,15 @@ try {
     await MA_TEMPLATES.applyTemplate(MA_TEMPLATES.list[0]);
     return out.join(", ");
   }));
+  await step("Höhenprofil + Mini-Karte", () => page.evaluate(async () => {
+    await MA.load({ name: "alpen", w: 1080, h: 1920, route: { stops: [{ name: "Innsbruck", c: [11.39, 47.27] }, { name: "Brenner", c: [11.51, 47.0], mode: "bike" }] } });
+    document.getElementById("profOn").checked = true; document.getElementById("mmOn").checked = true; document.getElementById("mmAuto").checked = false;
+    await OVL.ready(); setPlayhead(timelineTotal() * 0.6, true); await waitIdle();
+    const p = OVL.profile(); if (!p || !p.ok) throw new Error("kein Profil");
+    if (p.max < 1000) throw new Error("Brenner zu niedrig: " + Math.round(p.max));
+    document.getElementById("profOn").checked = false; document.getElementById("mmOn").checked = false;
+    return Math.round(p.min) + "–" + Math.round(p.max) + " m, ↗ " + Math.round(p.up) + " Hm";
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     document.getElementById("whipDir").value = "right";

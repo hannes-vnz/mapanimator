@@ -374,6 +374,26 @@
           <div class="hint">Zählt mit der Linienspitze hoch (Summe aller Routen). Tag wird linear über die Strecke verteilt; leer lassen = keine Tag-Zeile.</div>
         </div>
 
+        <div class="card">
+          <h2>Höhenprofil</h2>
+          <div class="setting"><label>Profil anzeigen</label><input type="checkbox" id="profOn"></div>
+          <div class="setting"><label>Position</label><select id="profPos"><option value="bottom" selected>unten</option><option value="top">oben</option></select></div>
+          <div class="setting"><label>Stil</label><select id="profStyle"><option value="dunkel" selected>dunkle Karte</option><option value="hell">helle Karte</option><option value="ohne">ohne Hintergrund</option></select></div>
+          <div class="setting"><label>Größe</label><input type="range" id="profSize" min="0.6" max="1.6" step="0.05" value="1"></div>
+          <div class="hint">Höhen der Route 1 aus dem Geländemodell (Mapzen/AWS). Füllt sich mit der Linienspitze, zeigt aktuelle Höhe, km, Höhenmeter bergauf und den höchsten Punkt.</div>
+        </div>
+
+        <div class="card">
+          <h2>Mini-Karte</h2>
+          <div class="setting"><label>Mini-Karte anzeigen</label><input type="checkbox" id="mmOn"></div>
+          <div class="setting"><label>Form</label><select id="mmStyle"><option value="globus" selected>Globus</option><option value="welt">Weltkarte</option></select></div>
+          <div class="setting"><label>Ecke</label><select id="mmPos"><option value="tr" selected>oben rechts</option><option value="tl">oben links</option><option value="br">unten rechts</option><option value="bl">unten links</option></select></div>
+          <div class="setting"><label>Farben</label><select id="mmTheme"><option value="dunkel" selected>dunkel</option><option value="hell">hell</option></select></div>
+          <div class="setting"><label>Größe</label><input type="range" id="mmSize" min="0.6" max="1.8" step="0.05" value="1"></div>
+          <div class="setting"><label>Ausblenden, wenn weit raus gezoomt</label><input type="checkbox" id="mmAuto" checked></div>
+          <div class="hint">Zeigt, wo auf der Welt die Etappe liegt: Route, aktuelle Position (pulsiert) und den Ausschnitt der großen Karte.</div>
+        </div>
+
       </section>
 
       <!-- ===== EXPORT ===== -->
@@ -451,6 +471,7 @@
 <script src="labels.js"></script>
 <script src="signs.js"></script>
 <script src="regions.js"></script>
+<script src="overlays.js"></script>
 <script src="scenes.js"></script>
 <script src="api.js"></script>
 <script src="ui.js"></script>
