@@ -49,8 +49,8 @@
   <nav id="tabs" role="tablist">
     <button data-tab="route" class="active" role="tab" title="Schritt 1 (Taste 1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 17.5c5-1 2-6.5 6.5-8.8"/></svg><span class="num">1</span><span class="i18n">Route</span></button>
     <button data-tab="style" role="tab" title="Schritt 2 (Taste 2)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.7 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span class="num">2</span><span class="i18n">Look</span></button>
-    <button data-tab="layers" role="tab" title="Schritt 3 (Taste 3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="num">3</span><span class="i18n">Ebenen</span></button>
-    <button data-tab="camera" role="tab" title="Schritt 4 (Taste 4)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="m16 11 5-3v9l-5-3z"/></svg><span class="num">4</span><span class="i18n">Kamera</span></button>
+    <button data-tab="camera" role="tab" title="Schritt 3 (Taste 3)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="m16 11 5-3v9l-5-3z"/></svg><span class="num">3</span><span class="i18n">Kamera</span></button>
+    <button data-tab="layers" role="tab" title="Schritt 4 (Taste 4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="num">4</span><span class="i18n">Ebenen</span></button>
     <button data-tab="export" role="tab" title="Schritt 5 (Taste 5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span class="num">5</span><span class="i18n">Export</span></button>
   </nav>
 
@@ -76,13 +76,6 @@
           <div class="hint" id="gpxInfo"></div>
         </div>
 
-        <div class="card">
-          <h2>Tempo</h2>
-          <div class="tempo-row"><span class="i18n">Länge</span><div id="tempoLen" class="seg wide"></div></div>
-          <div class="tempo-row"><span class="i18n">Gefühl</span><div id="tempoFeel" class="seg wide"></div></div>
-          <input type="hidden" id="tplLen" value="0"><input type="hidden" id="tplFeel" value="normal">
-          <div class="hint">Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.</div>
-        </div>
         <div class="card">
           <h2>Linie &amp; Tempo</h2>
           <div class="setting"><label>Standard-Fortbewegung</label>
@@ -138,9 +131,9 @@
       <!-- ===== STIL ===== -->
       <section class="pane" data-pane="style">
         <div class="card">
-          <h2>Vorlagen</h2>
+          <h2>Looks</h2>
           <div id="tplGrid" class="tplgrid"></div>
-          <div class="hint">Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.</div>
+          <div class="hint">Ein Look setzt nur das Aussehen: Kartenstil, Linie, Spitze, Pins. Kamera und Tempo stellst du im Tab Kamera ein.</div>
           <input type="hidden" id="tplId" value="">
         </div>
         <div class="card">
@@ -153,11 +146,17 @@
               <option value="atlas">Atlas (Vlog-Weltkarte)</option>
               <option value="dunkel">Race Dunkel</option>
               <option value="satellit">Satellit</option>
+              <option value="vintage">Abenteuer (Vintage)</option>
               <option value="minimal">Minimal Flach</option>
             </select>
           </div>
         </div>
 
+        <div class="card">
+          <h2>3D-Terrain</h2>
+          <div class="setting"><label>3D-Terrain</label><input type="checkbox" id="terrain3d"></div>
+          <div class="setting"><label>Terrain-Überhöhung</label><input type="range" id="terrainEx" min="1" max="20" step="0.5" value="1.5"></div>
+        </div>
         <div class="card">
           <h2>Pins &amp; Spitze</h2>
           <div class="setting"><label>Pin-Stil</label>
@@ -228,10 +227,27 @@
         </details>
       </section>
 
-      <!-- ===== KAMERA ===== -->
+      <!-- ===== KAMERA & TEMPO ===== -->
       <section class="pane" data-pane="camera">
         <div class="card">
           <h2>Kamera-Presets</h2>
+          <div id="camGrid" class="camgrid"></div>
+          <input type="hidden" id="camPresetId" value="">
+        </div>
+        <div class="card">
+          <h2>Tempo</h2>
+          <div class="tempo-row"><span class="i18n">Länge</span><div id="tempoLen" class="seg wide"></div></div>
+          <div class="tempo-row"><span class="i18n">Gefühl</span><div id="tempoFeel" class="seg wide"></div></div>
+          <input type="hidden" id="tplLen" value="0"><input type="hidden" id="tplFeel" value="normal">
+          <div class="hint">Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.</div>
+        </div>
+        <div class="card">
+          <h2>Kamera-Abschnitte</h2>
+          <div id="shotEditor"></div>
+          <div class="hint">Jeder Abschnitt gilt bis zum nächsten; Übergänge werden weich überblendet. Blöcke in der Timeline anklicken oder an der Kante ziehen.</div>
+        </div>
+        <details class="card adv">
+          <summary><h2>Keyframe-Kamera (Profi)</h2></summary>
           <div class="setting"><label>Vorschlag</label>
             <select id="camPreset">
               <option value="" selected>– wählen –</option>
@@ -242,10 +258,6 @@
               <option value="snap70">70-SW: Snap-Zooms + Drift</option>
             </select>
           </div>
-          <div class="hint">Presets erzeugen Keyframes in der Timeline unten – dort frei anpassbar. Ohne Keyframes gelten die Regler unten.</div>
-        </div>
-        <div class="card">
-          <h2>Kamera</h2>
           <div class="setting"><label>Kamera</label>
             <select id="camMode">
               <option value="follow" selected>Folgt der Linie</option>
@@ -253,17 +265,12 @@
             </select>
           </div>
           <div class="setting"><label>Kamera-Zoom</label><input type="range" id="zoom" min="3" max="13" step="0.1" value="5.6"></div>
-          <div class="setting adv"><label>Zoom-In an Stopps</label><input type="checkbox" id="stopZoom"></div>
           <div class="setting"><label>Neigung (Pitch)</label><input type="range" id="pitch" min="0" max="60" step="1" value="0"></div>
-          <div class="setting adv"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
-          <div class="setting adv"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
-          <div class="setting"><label>Übersicht am Ende</label><input type="checkbox" id="endOverview" checked></div>
-        </div>
-        <div class="card">
-          <h2>3D-Terrain</h2>
-          <div class="setting"><label>3D-Terrain</label><input type="checkbox" id="terrain3d"></div>
-          <div class="setting"><label>Terrain-Überhöhung</label><input type="range" id="terrainEx" min="1" max="20" step="0.5" value="1.5"></div>
-        </div>
+          <div class="setting"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
+          <div class="setting"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
+          <div class="hint">Keyframes auf Position/Zoom/Rotation/Neigung haben Vorrang vor den Kamera-Abschnitten. Zoom und Neigung hier sind auch die Standardwerte der Abschnitte.</div>
+          <input type="checkbox" id="stopZoom" hidden><input type="checkbox" id="endOverview" hidden>
+        </details>
       </section>
 
       <!-- ===== EBENEN ===== -->
@@ -369,6 +376,7 @@
 <script src="models3d.js"></script>
 <script src="app.js"></script>
 <script src="templates.js"></script>
+<script src="camera.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

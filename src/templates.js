@@ -5,63 +5,36 @@
    die Orte bleiben erhalten.
    ========================================================= */
 const TEMPLATES = [
-  { id: "kamel", name: "Vlog-Recap", sub: "Kamelfamilie-Look · 9:16", icon: "🐪", bg: ["#e7b9a3", "#5b78c2"],
+  { id: "vlog", name: "Vlog-Atlas", sub: "Kamelfamilie: Länder-Töne, rote Linie", icon: "🐪", bg: ["#e7b9a3", "#5b78c2"],
     set: { mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
-           tipStyle: "stop", pinStyle: "dot", popStyle: "pop", camMode: "follow", zoom: 4.6, pitch: 0, rotSpeed: 0,
-           ovOn: true, ovPrefix: "TAG #", ovPos: "top", endOverview: true, resolution: "1080x1920", travelMode: "car" },
-    tempo: { len: 30, feel: "rasant" } },
-  { id: "sw70", name: "3D-Relief-Erklärer", sub: "70-Sekunden-Wiki-Look · Snap-Zooms", icon: "⛰️", bg: ["#97a3b9", "#121d38"],
+           tipStyle: "stop", pinStyle: "dot", popStyle: "pop", pinFont: "display" } },
+  { id: "relief", name: "3D-Relief", sub: "70 Sekunden Wiki: Berge, Snap-Look", icon: "⛰️", bg: ["#97a3b9", "#121d38"],
     set: { mapStyle: "relief", lineColor: "#dc2828", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: false,
-           tipStyle: "dot", pinStyle: "dot", pinFont: "display", labelSize: 18, terrain3d: true, terrainEx: 12,
-           resolution: "1080x1920", travelMode: "fly" },
-    cam: "snap70", tempo: { len: 15, feel: "normal" } },
-  { id: "roadtrip", name: "Roadtrip 3D", sub: "Folgekamera, geneigt · 16:9", icon: "🚗", bg: ["#f7f4ee", "#d6e4ee"],
-    set: { mapStyle: "minimal", lineColor: "#e4472f", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
-           tipStyle: "model3d", tipScale: 1, pinStyle: "photo", camMode: "follow", zoom: 8, pitch: 40, smooth: 0.7,
-           endOverview: true, resolution: "1920x1080", travelMode: "car" },
-    tempo: { len: 0, feel: "normal" } },
-  { id: "world", name: "Weltreise", sub: "Flüge im Bogen · Atlas", icon: "✈️", bg: ["#f3d2bf", "#5b78c2"],
-    set: { mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: false,
-           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 5.4, pitch: 25, smooth: 0.75,
-           endOverview: true, resolution: "1920x1080", travelMode: "fly" },
-    tempo: { len: 30, feel: "normal" } },
-  { id: "hike", name: "Bergtour", sub: "Wandern · 3D-Berge · Drohne", icon: "🥾", bg: ["#8e9bb3", "#46557a"],
-    set: { mapStyle: "relief", lineColor: "#ff5a3c", lineWidth: 6.5, lineStyle: "solid", lineCasing: true,
-           tipStyle: "model3d", pinStyle: "photo", camMode: "follow", zoom: 12, pitch: 55, terrain3d: true, terrainEx: 1.8,
-           resolution: "1080x1920", travelMode: "foot" },
-    cam: "drone", tempo: { len: 30, feel: "gemuetlich" } },
-  { id: "bike", name: "Radreise", sub: "Fahrrad · weiße Kontur", icon: "🚲", bg: ["#e5e8da", "#d6e4ee"],
-    set: { mapStyle: "minimal", lineColor: "#2b7de9", lineWidth: 6, lineStyle: "solid", lineCasing: true,
-           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 9.5, pitch: 30,
-           resolution: "1920x1080", travelMode: "bike" },
-    tempo: { len: 0, feel: "gemuetlich" } },
-  { id: "rail", name: "Interrail", sub: "Zug durch Europa", icon: "🚆", bg: ["#f3eee5", "#c6dbe8"],
-    set: { mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 6, lineStyle: "solid", lineCasing: false,
-           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 6.4, pitch: 20,
-           resolution: "1080x1920", travelMode: "train" },
-    tempo: { len: 30, feel: "normal" } },
-  { id: "island", name: "Inselhopping", sub: "Fähre & Boot", icon: "⛴️", bg: ["#f3eee5", "#7fb2d6"],
-    set: { mapStyle: "hell", lineColor: "#1f6fb2", lineWidth: 6, lineStyle: "solid", lineCasing: true,
-           tipStyle: "model3d", pinStyle: "photo", camMode: "follow", zoom: 8, pitch: 35,
-           resolution: "1080x1920", travelMode: "ferry" },
-    tempo: { len: 30, feel: "gemuetlich" } },
-  { id: "race", name: "Race Night", sub: "Dunkel, Glow, schnell", icon: "🏁", bg: ["#1d1e22", "#303a46"],
-    set: { mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
-           tipStyle: "dot", pinStyle: "dot", legEase: "linear", resolution: "1920x1080", travelMode: "car" },
-    cam: "cine", tempo: { len: 15, feel: "rasant" } },
-  { id: "drone", name: "Satellit-Drohne", sub: "Luftbild, Kamerafahrt", icon: "🛰️", bg: ["#3f5530", "#1d3550"],
+           tipStyle: "dot", pinStyle: "dot", pinFont: "display", labelSize: 18 } },
+  { id: "adventure", name: "Abenteuer-Karte", sub: "Indiana-Jones-Stil: Pergament, rote Linie", icon: "🧭", bg: ["#e9dcbc", "#a9c3c1"],
+    set: { mapStyle: "vintage", lineColor: "#c1272d", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: false,
+           tipStyle: "model3d", pinStyle: "dot", pinFont: "serif", labelSize: 16 } },
+  { id: "gmaps", name: "Navi-Look", sub: "Google-Maps-Stil: blau mit Kontur", icon: "📍", bg: ["#f7f4ee", "#aecbfa"],
+    set: { mapStyle: "minimal", lineColor: "#1a73e8", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
+           tipStyle: "pin", pinStyle: "badge", pinFont: "system" } },
+  { id: "earth", name: "Satellit", sub: "Google-Earth-Stil: Luftbild, gelbe Linie", icon: "🛰️", bg: ["#3f5530", "#1d3550"],
     set: { mapStyle: "satellit", lineColor: "#ffd23f", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: true,
-           tipStyle: "model3d", pinStyle: "photo", resolution: "1920x1080" },
-    cam: "drone", tempo: { len: 0, feel: "gemuetlich" } },
-  { id: "explain", name: "Länder-Erklärer", sub: "Übersicht, Länder leuchten · 9:16", icon: "🗺️", bg: ["#d9a390", "#5b78c2"],
-    set: { mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "dashed", lineCasing: true,
-           tipStyle: "mode", pinStyle: "dot", camMode: "overview", pitch: 0, hlLine: true, hlOp: 0.7,
-           resolution: "1080x1920" },
-    tempo: { len: 15, feel: "normal" } },
-  { id: "clean", name: "Clean & Minimal", sub: "Ruhig, gestrichelt · 1:1", icon: "◻️", bg: ["#f7f4ee", "#d6e4ee"],
+           tipStyle: "model3d", pinStyle: "photo" } },
+  { id: "sport", name: "Sport-Track", sub: "Strava-Stil: hell, orange", icon: "🏃", bg: ["#f7f4ee", "#e0e7d4"],
+    set: { mapStyle: "minimal", lineColor: "#fc4c02", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
+           tipStyle: "model3d", pinStyle: "badge", pinFont: "display" } },
+  { id: "cream", name: "Vlog Hell", sub: "Creme, Weinrot, Foto-Badges", icon: "📸", bg: ["#f3eee5", "#c6dbe8"],
+    set: { mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: false,
+           tipStyle: "stop", pinStyle: "badge", pinFont: "rounded" } },
+  { id: "night", name: "Neon Nacht", sub: "Dunkel, Glow, Race-Look", icon: "🏁", bg: ["#1d1e22", "#303a46"],
+    set: { mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
+           tipStyle: "dot", pinStyle: "dot", pinFont: "display" } },
+  { id: "explain", name: "Erklär-Atlas", sub: "Länder leuchten, gestrichelt", icon: "🗺️", bg: ["#d9a390", "#5b78c2"],
+    set: { mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 6, lineStyle: "dashed", lineCasing: false, glow: false,
+           tipStyle: "mode", pinStyle: "dot", hlLine: true, hlOp: 0.7 } },
+  { id: "clean", name: "Clean & Minimal", sub: "Ruhig, dünn, blau", icon: "◻️", bg: ["#f7f4ee", "#d6e4ee"],
     set: { mapStyle: "minimal", lineColor: "#3a6fb0", lineWidth: 4.5, lineStyle: "dashed", lineCasing: false, glow: false,
-           tipStyle: "dot", pinStyle: "badge", camMode: "overview", pitch: 0, resolution: "1080x1080" },
-    tempo: { len: 0, feel: "gemuetlich" } }
+           tipStyle: "dot", pinStyle: "badge", pinFont: "system" } }
 ];
 
 /* Tempo: Gefühl = Pausen/Kurven/Kamera, Länge = Zieldauer in Sekunden (0 = aus Etappen) */
@@ -99,7 +72,10 @@ const LENGTHS = [0, 8, 15, 30, 60];
   let chain = Promise.resolve(), queued = null;
   window.drawStatic = drawStatic = function (){
     if (queued) return queued;
-    const job = chain.then(async () => { queued = null; await baseDraw(); await fit(); });
+    const job = chain.then(async () => {
+      queued = null; await baseDraw(); await fit();
+      if (anim && !playing && !mp4Busy && playheadT > 0.01) renderAt(playheadT, false);   // Vorschau bleibt am Playhead
+    });
     queued = job;
     chain = job.catch(() => {});
     return job;
@@ -130,17 +106,14 @@ const LENGTHS = [0, 8, 15, 30, 60];
       $("mapStyle").dispatchEvent(new Event("change"));
       await styleBusy;
     }
-    tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
     for (const [k, v] of Object.entries(s)) if (k !== "mapStyle") setv(k, v);
-    $("resolution").dispatchEvent(new Event("change"));
-    $("travelMode").dispatchEvent(new Event("change"));
     applyTerrain();
-    if (tpl.tempo) await applyTempo(tpl.tempo.len, tpl.tempo.feel); else await drawStatic();
-    if (tpl.cam && anim){ setv("camPreset", tpl.cam); $("camPreset").dispatchEvent(new Event("change")); }
+    await drawStatic();
+    if (anim) renderAt(playheadT, false);
     renderTimeline(); changed();
     document.querySelectorAll(".tpl").forEach(b => b.classList.toggle("active", b.dataset.id === tpl.id));
     setv("tplId", tpl.id);
-    setStatus(tr("Vorlage") + " „" + tpl.name + "“ " + (anim ? "" : "– " + tr("jetzt Orte hinzufügen")));
+    setStatus("Look „" + tpl.name + "“" + (anim ? "" : " – " + tr("jetzt Orte hinzufügen")));
   }
 
   /* ---------- UI ---------- */

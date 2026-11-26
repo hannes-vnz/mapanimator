@@ -12,7 +12,8 @@ Sprache im Tool und in der Kommunikation: Deutsch.
 - Quellcode in `src/`:
   - `src/index.html` (Markup), `src/style.css`, `src/app.js` (die App, `/* ---------- `-Abschnitte).
   - `src/models3d.js`: 3D-Modelle an der Spitze (`M3D`, eigene WebGL-Custom-Layer `tip-3d`, prozedurale Low-Poly-Meshes je Verkehrsmittel, Schatten, Flugzeug steigt/landet).
-  - `src/templates.js`: Vorlagen (`TEMPLATES`, komplette Looks) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
+  - `src/camera.js`: Kamera-Abschnitte (`CAM`, Modi follow/still/overview/tripod/orbit, Norden/Fahrtrichtung oben, Vorausschau, Auto-Rauszoomen, Überblendung) + Kamera-Presets. Kamera ist reine Funktion der Zeit (`CAM.at(t)`); Keyframes auf pos/zoom/bearing/pitch haben Vorrang.
+  - `src/templates.js`: Looks (`TEMPLATES`, nur Aussehen) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
   - `src/ui.js`: Oberfläche (Einfach/Profi-Modus über `body.pro`, `.adv` = nur Profi), (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
   - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
   - `src/vendor/`: MapLibre GL JS 5.24.1 (+CSS), mp4-muxer 5.2.1.
@@ -65,7 +66,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
 2. **Verkehrsmittel pro Etappe** (Kamelfamilie) – erledigt (11 Verkehrsmittel mit pace/zoom, Chips + ½×/2× am Stopp): `MODES`, `wp.mode` („Anreise per“), `legFeatures()`, Layer route-casing/route-line/route-dash:
    - Auto/Rad/Zu Fuß geroutet; Fähre und Flug als Bogen.
    - Linienstil je Etappe: durchgezogen rot mit weißer Kontur, Fähre weiß gestrichelt, Bus orange gestrichelt.
-3. **Kamera wie Baldinger:**
+3. **Kamera wie Baldinger:** – erledigt (`camera.js`, Tab 3 „Kamera“ mit Presets + Tempo, Blöcke in der Timeline). Offen: „alle Routen folgen“.
    - Modi „Folgen“ (mit Vorausschau und automatischem Rauszoomen bei langen Etappen), „Still“, „Stativ“, „Orbit“.
    - „Norden oben“ / „Fahrtrichtung oben“.
    - Kamera-Segmente als Blöcke in der Timeline.

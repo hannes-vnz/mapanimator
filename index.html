@@ -2230,6 +2230,41 @@ body.safe #safezone{display:block;}
 .tpl-tx b{font-size:12.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .tpl-tx small{font-size:10.5px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
+/* ---------- Kamera-Presets ---------- */
+.camgrid{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
+.campre{display:flex; align-items:center; gap:9px; text-align:left; border:1px solid var(--line-2); border-radius:11px; background:var(--field); padding:8px 9px; min-width:0; transition:border-color .12s;}
+.campre:hover{border-color:var(--muted);}
+.campre.active{border-color:var(--accent); background:var(--accent-soft);}
+.campre em{font-style:normal; font-size:20px; flex:none;}
+.campre span{display:flex; flex-direction:column; min-width:0;}
+.campre b{font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.campre small{font-size:10.5px; color:var(--faint); line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+
+/* ---------- Kamera-Abschnitte ---------- */
+.shothead{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+.shothead b{font-size:13px;}
+.shothead span{color:var(--muted); font-variant-numeric:tabular-nums; font-size:12px;}
+.shothead .del{margin-left:auto; background:none; border:0; color:var(--faint); font-size:15px; padding:4px 8px; border-radius:6px;}
+.shothead .del:hover{color:var(--danger);}
+.modes{display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin-bottom:10px;}
+.modes button{display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 2px; border:1px solid var(--line); border-radius:9px; background:var(--field); color:var(--muted); font-size:10.5px; font-weight:650;}
+.modes button em{font-style:normal; font-size:17px;}
+.modes button.active{border-color:var(--accent); color:var(--text); background:var(--accent-soft);}
+#tlShots{display:flex; height:28px; border-bottom:1px solid var(--line); flex:none;}
+#tlShots .shlabel{width:104px; min-width:104px; display:flex; align-items:center; gap:4px; padding-left:12px; font-size:11px; font-weight:650; color:var(--muted); border-right:1px solid var(--line); background:var(--panel);}
+#tlShots .shlane{flex:1; position:relative; background:#121317;}
+.shot{position:absolute; top:3px; bottom:3px; border-radius:6px; background:#2a3550; border:1px solid #3c4b70; color:#dfe5f5; font-size:10.5px; font-weight:650; display:flex; align-items:center; padding:0 7px; overflow:hidden; white-space:nowrap; cursor:pointer;}
+.shot span{overflow:hidden; text-overflow:ellipsis;}
+.shot.sh-overview, .shot.sh-still{background:#2f3a2c; border-color:#4b5d45;}
+.shot.sh-tripod{background:#3a2f45; border-color:#5a4870;}
+.shot.sh-orbit{background:#45342a; border-color:#6e5240;}
+.shot.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent);}
+.shot .edge{position:absolute; left:-1px; top:0; bottom:0; width:8px; cursor:ew-resize; background:linear-gradient(90deg, rgba(255,255,255,.35), transparent);}
+body:not(.pro) #tlShots .shlabel{display:none;}
+body:not(.pro) #tlShots{margin:6px 12px 0;}
+body:not(.pro) #tlShots .shlane{border-radius:7px;}
+body:not(.pro) #tlBody{height:auto;}
+
 /* ---------- Tempo ---------- */
 .tempo-row{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
 .tempo-row > span{width:52px; flex:none; color:#c9cad1;}
@@ -2245,7 +2280,7 @@ body.safe #safezone{display:block;}
 body:not(.pro) .adv, body:not(.pro) .wp .coords{display:none !important;}
 body:not(.pro) #tlTracks, body:not(.pro) #tlInspector, body:not(.pro) #tlAddCam, body:not(.pro) #tlLineKF, body:not(.pro) #tlHead .hint, body:not(.pro) #tlToggle{display:none !important;}
 body:not(.pro) #timeline{height:auto;}
-body:not(.pro) #tlBody{flex:none; height:30px;}
+body:not(.pro) #tlBody{flex:none;}
 body:not(.pro) #tlRuler{height:30px; margin-left:12px; margin-right:12px; border-radius:7px; border:1px solid var(--line);}
 body:not(.pro) #tlPlayhead{margin-left:12px;}
 
@@ -2289,6 +2324,8 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
   .tlRow{height:34px;}
   .tlRow .tlabel{width:78px; min-width:78px; padding-left:8px; font-size:10.5px;}
   .tlval{display:none;}
+  #tlShots .shlabel{width:78px; min-width:78px; padding-left:8px;}
+  .modes button{font-size:9.5px;}
   .kfdia{width:14px; height:14px; margin:-7px 0 0 -7px;}
   #status{bottom:8px; left:8px; font-size:11.5px;}
 }
@@ -2333,8 +2370,8 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
   <nav id="tabs" role="tablist">
     <button data-tab="route" class="active" role="tab" title="Schritt 1 (Taste 1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 17.5c5-1 2-6.5 6.5-8.8"/></svg><span class="num">1</span><span class="i18n">Route</span></button>
     <button data-tab="style" role="tab" title="Schritt 2 (Taste 2)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.7 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span class="num">2</span><span class="i18n">Look</span></button>
-    <button data-tab="layers" role="tab" title="Schritt 3 (Taste 3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="num">3</span><span class="i18n">Ebenen</span></button>
-    <button data-tab="camera" role="tab" title="Schritt 4 (Taste 4)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="m16 11 5-3v9l-5-3z"/></svg><span class="num">4</span><span class="i18n">Kamera</span></button>
+    <button data-tab="camera" role="tab" title="Schritt 3 (Taste 3)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="m16 11 5-3v9l-5-3z"/></svg><span class="num">3</span><span class="i18n">Kamera</span></button>
+    <button data-tab="layers" role="tab" title="Schritt 4 (Taste 4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="num">4</span><span class="i18n">Ebenen</span></button>
     <button data-tab="export" role="tab" title="Schritt 5 (Taste 5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span class="num">5</span><span class="i18n">Export</span></button>
   </nav>
 
@@ -2360,13 +2397,6 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
           <div class="hint" id="gpxInfo"></div>
         </div>
 
-        <div class="card">
-          <h2>Tempo</h2>
-          <div class="tempo-row"><span class="i18n">Länge</span><div id="tempoLen" class="seg wide"></div></div>
-          <div class="tempo-row"><span class="i18n">Gefühl</span><div id="tempoFeel" class="seg wide"></div></div>
-          <input type="hidden" id="tplLen" value="0"><input type="hidden" id="tplFeel" value="normal">
-          <div class="hint">Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.</div>
-        </div>
         <div class="card">
           <h2>Linie &amp; Tempo</h2>
           <div class="setting"><label>Standard-Fortbewegung</label>
@@ -2422,9 +2452,9 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
       <!-- ===== STIL ===== -->
       <section class="pane" data-pane="style">
         <div class="card">
-          <h2>Vorlagen</h2>
+          <h2>Looks</h2>
           <div id="tplGrid" class="tplgrid"></div>
-          <div class="hint">Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.</div>
+          <div class="hint">Ein Look setzt nur das Aussehen: Kartenstil, Linie, Spitze, Pins. Kamera und Tempo stellst du im Tab Kamera ein.</div>
           <input type="hidden" id="tplId" value="">
         </div>
         <div class="card">
@@ -2437,11 +2467,17 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
               <option value="atlas">Atlas (Vlog-Weltkarte)</option>
               <option value="dunkel">Race Dunkel</option>
               <option value="satellit">Satellit</option>
+              <option value="vintage">Abenteuer (Vintage)</option>
               <option value="minimal">Minimal Flach</option>
             </select>
           </div>
         </div>
 
+        <div class="card">
+          <h2>3D-Terrain</h2>
+          <div class="setting"><label>3D-Terrain</label><input type="checkbox" id="terrain3d"></div>
+          <div class="setting"><label>Terrain-Überhöhung</label><input type="range" id="terrainEx" min="1" max="20" step="0.5" value="1.5"></div>
+        </div>
         <div class="card">
           <h2>Pins &amp; Spitze</h2>
           <div class="setting"><label>Pin-Stil</label>
@@ -2512,10 +2548,27 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
         </details>
       </section>
 
-      <!-- ===== KAMERA ===== -->
+      <!-- ===== KAMERA & TEMPO ===== -->
       <section class="pane" data-pane="camera">
         <div class="card">
           <h2>Kamera-Presets</h2>
+          <div id="camGrid" class="camgrid"></div>
+          <input type="hidden" id="camPresetId" value="">
+        </div>
+        <div class="card">
+          <h2>Tempo</h2>
+          <div class="tempo-row"><span class="i18n">Länge</span><div id="tempoLen" class="seg wide"></div></div>
+          <div class="tempo-row"><span class="i18n">Gefühl</span><div id="tempoFeel" class="seg wide"></div></div>
+          <input type="hidden" id="tplLen" value="0"><input type="hidden" id="tplFeel" value="normal">
+          <div class="hint">Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.</div>
+        </div>
+        <div class="card">
+          <h2>Kamera-Abschnitte</h2>
+          <div id="shotEditor"></div>
+          <div class="hint">Jeder Abschnitt gilt bis zum nächsten; Übergänge werden weich überblendet. Blöcke in der Timeline anklicken oder an der Kante ziehen.</div>
+        </div>
+        <details class="card adv">
+          <summary><h2>Keyframe-Kamera (Profi)</h2></summary>
           <div class="setting"><label>Vorschlag</label>
             <select id="camPreset">
               <option value="" selected>– wählen –</option>
@@ -2526,10 +2579,6 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
               <option value="snap70">70-SW: Snap-Zooms + Drift</option>
             </select>
           </div>
-          <div class="hint">Presets erzeugen Keyframes in der Timeline unten – dort frei anpassbar. Ohne Keyframes gelten die Regler unten.</div>
-        </div>
-        <div class="card">
-          <h2>Kamera</h2>
           <div class="setting"><label>Kamera</label>
             <select id="camMode">
               <option value="follow" selected>Folgt der Linie</option>
@@ -2537,17 +2586,12 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
             </select>
           </div>
           <div class="setting"><label>Kamera-Zoom</label><input type="range" id="zoom" min="3" max="13" step="0.1" value="5.6"></div>
-          <div class="setting adv"><label>Zoom-In an Stopps</label><input type="checkbox" id="stopZoom"></div>
           <div class="setting"><label>Neigung (Pitch)</label><input type="range" id="pitch" min="0" max="60" step="1" value="0"></div>
-          <div class="setting adv"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
-          <div class="setting adv"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
-          <div class="setting"><label>Übersicht am Ende</label><input type="checkbox" id="endOverview" checked></div>
-        </div>
-        <div class="card">
-          <h2>3D-Terrain</h2>
-          <div class="setting"><label>3D-Terrain</label><input type="checkbox" id="terrain3d"></div>
-          <div class="setting"><label>Terrain-Überhöhung</label><input type="range" id="terrainEx" min="1" max="20" step="0.5" value="1.5"></div>
-        </div>
+          <div class="setting"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
+          <div class="setting"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
+          <div class="hint">Keyframes auf Position/Zoom/Rotation/Neigung haben Vorrang vor den Kamera-Abschnitten. Zoom und Neigung hier sind auch die Standardwerte der Abschnitte.</div>
+          <input type="checkbox" id="stopZoom" hidden><input type="checkbox" id="endOverview" hidden>
+        </details>
       </section>
 
       <!-- ===== EBENEN ===== -->
@@ -2942,7 +2986,9 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Größe Spitze / 3D-Modell":"Tip / 3D model size","Look":"Look","Gefühl":"Feel","Profi":"Pro",
+  "Kamera-Presets":"Camera presets","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
+  "Ein Look setzt nur das Aussehen: Kartenstil, Linie, Spitze, Pins. Kamera und Tempo stellst du im Tab Kamera ein.":"A look only sets the appearance: map style, line, tip, pins. Set camera and pace in the Camera tab.",
+  "Jeder Abschnitt gilt bis zum nächsten; Übergänge werden weich überblendet. Blöcke in der Timeline anklicken oder an der Kante ziehen.":"Each shot lasts until the next; transitions blend smoothly. Click blocks in the timeline or drag their edge.","Größe Spitze / 3D-Modell":"Tip / 3D model size","Look":"Look","Gefühl":"Feel","Profi":"Pro",
   "Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.":"A template sets map style, line, tip, camera, pace and format. Your places stay. Adjust anything afterwards.",
   "Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.":"Length adjusts the pace automatically, even when you add places. Per leg: transport and ½×/2× right at the stop.","Projekt":"Project","Export":"Export",
   "Reise-Animationen im Vlog-Stil · rendert lokal im Browser":"Vlog-style travel animations · renders locally in your browser",
@@ -3101,6 +3147,15 @@ const THEMES = {
     detail: { states: "#ffffff", road: "#ffffff", rail: "#dddddd", wood: "#ffffff", urban: "#ffffff", park: "#ffffff" },
     defaultLine: "#ffd23f", glowDefault: true
   },
+  vintage: {
+    bg: "#e9dcbc", water: "#a9c3c1", ice: "#f3ecd8", iceOp: 0.8,
+    hills: { shadow: "#9c8a6a", highlight: "#fff8e6", accent: "#d8c8a2", ex: 0.45 },
+    boundary: { color: "#8a6a4a", width: 1.2, dash: [3, 2] },
+    country: { color: "#4a3524", halo: "#e9dcbc", upper: true, spacing: 0.3 },
+    city: { color: "#5b4330", halo: "#e9dcbc" },
+    detail: { states: "#b39d78", road: "#d6c49c", rail: "#a8936f", wood: "#d9cfa6", urban: "#dccca6", park: "#d6d0a4" },
+    defaultLine: "#c1272d", glowDefault: false
+  },
   minimal: {
     bg: "#f7f4ee", water: "#d6e4ee", ice: null,
     hills: null,
@@ -3244,7 +3299,7 @@ function buildBaseStyle(name){
 const map = new maplibregl.Map({
   container: "map",
   style: buildBaseStyle("hell"),
-  center: [10.5, 51.2], zoom: 5,
+  center: [10.5, 51.2], zoom: 5, maxPitch: 85,
   attributionControl: false,
   canvasContextAttributes: { preserveDrawingBuffer: true, antialias: true },
   fadeDuration: 0
@@ -4529,7 +4584,13 @@ function renderAt(t, live){
   });
   if (fDirty) refreshFeatures();
 
-  // Kamera (folgt der aktiven Route)
+  // Kamera: ohne Keyframes → Kamera-Abschnitte (camera.js), sonst Keyframe-Kamera
+  if (!tracks.pos.length && !tracks.zoom.length && !tracks.bearing.length && !tracks.pitch.length && typeof CAM !== "undefined"){
+    const c = CAM.at(t);
+    camPos = { lng: c.c[0], lat: c.c[1], zoom: c.z };
+    map.jumpTo({ center: c.c, zoom: c.z, bearing: c.b, pitch: Math.min(Math.max(c.p, 0), 85) });
+    return;
+  }
   const hasPos = tracks.pos.length > 0;
   let zoomV = sampleNum(tracks.zoom, t, num("zoom") + (activeLeg && !tracks.zoom.length ? ((MODES[activeLeg.mode] || {}).zoom || 0) : 0));
   let bearV = tracks.bearing.length ? sampleNum(tracks.bearing, t, 0) : (num("rotSpeed") || 0) * t;
@@ -5152,7 +5213,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId"];
 
 document.getElementById("projSave").addEventListener("click", () => {
   const proj = {
@@ -5169,7 +5230,8 @@ document.getElementById("projSave").addEventListener("click", () => {
     features: features.map(f => ({ name: f.name, geometry: f.geometry, color: f.color, appearT: f.appearT })),
     pois,
     customColors,
-    tracks
+    tracks,
+    cam: typeof CAM !== "undefined" ? CAM.get() : null
   };
   const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
   const a = document.createElement("a");
@@ -5193,6 +5255,7 @@ document.getElementById("projLoad").addEventListener("change", e => {
       }
       tracks = proj.tracks || {};
       ensureTrackKeys();
+      if (typeof CAM !== "undefined") CAM.set(proj.cam);
       customColors = proj.customColors || null;
       pois = proj.pois || [];
       features = [];
@@ -5260,63 +5323,36 @@ setStatus(tr("Karte lädt …"));
    die Orte bleiben erhalten.
    ========================================================= */
 const TEMPLATES = [
-  { id: "kamel", name: "Vlog-Recap", sub: "Kamelfamilie-Look · 9:16", icon: "🐪", bg: ["#e7b9a3", "#5b78c2"],
+  { id: "vlog", name: "Vlog-Atlas", sub: "Kamelfamilie: Länder-Töne, rote Linie", icon: "🐪", bg: ["#e7b9a3", "#5b78c2"],
     set: { mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
-           tipStyle: "stop", pinStyle: "dot", popStyle: "pop", camMode: "follow", zoom: 4.6, pitch: 0, rotSpeed: 0,
-           ovOn: true, ovPrefix: "TAG #", ovPos: "top", endOverview: true, resolution: "1080x1920", travelMode: "car" },
-    tempo: { len: 30, feel: "rasant" } },
-  { id: "sw70", name: "3D-Relief-Erklärer", sub: "70-Sekunden-Wiki-Look · Snap-Zooms", icon: "⛰️", bg: ["#97a3b9", "#121d38"],
+           tipStyle: "stop", pinStyle: "dot", popStyle: "pop", pinFont: "display" } },
+  { id: "relief", name: "3D-Relief", sub: "70 Sekunden Wiki: Berge, Snap-Look", icon: "⛰️", bg: ["#97a3b9", "#121d38"],
     set: { mapStyle: "relief", lineColor: "#dc2828", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: false,
-           tipStyle: "dot", pinStyle: "dot", pinFont: "display", labelSize: 18, terrain3d: true, terrainEx: 12,
-           resolution: "1080x1920", travelMode: "fly" },
-    cam: "snap70", tempo: { len: 15, feel: "normal" } },
-  { id: "roadtrip", name: "Roadtrip 3D", sub: "Folgekamera, geneigt · 16:9", icon: "🚗", bg: ["#f7f4ee", "#d6e4ee"],
-    set: { mapStyle: "minimal", lineColor: "#e4472f", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
-           tipStyle: "model3d", tipScale: 1, pinStyle: "photo", camMode: "follow", zoom: 8, pitch: 40, smooth: 0.7,
-           endOverview: true, resolution: "1920x1080", travelMode: "car" },
-    tempo: { len: 0, feel: "normal" } },
-  { id: "world", name: "Weltreise", sub: "Flüge im Bogen · Atlas", icon: "✈️", bg: ["#f3d2bf", "#5b78c2"],
-    set: { mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: false,
-           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 5.4, pitch: 25, smooth: 0.75,
-           endOverview: true, resolution: "1920x1080", travelMode: "fly" },
-    tempo: { len: 30, feel: "normal" } },
-  { id: "hike", name: "Bergtour", sub: "Wandern · 3D-Berge · Drohne", icon: "🥾", bg: ["#8e9bb3", "#46557a"],
-    set: { mapStyle: "relief", lineColor: "#ff5a3c", lineWidth: 6.5, lineStyle: "solid", lineCasing: true,
-           tipStyle: "model3d", pinStyle: "photo", camMode: "follow", zoom: 12, pitch: 55, terrain3d: true, terrainEx: 1.8,
-           resolution: "1080x1920", travelMode: "foot" },
-    cam: "drone", tempo: { len: 30, feel: "gemuetlich" } },
-  { id: "bike", name: "Radreise", sub: "Fahrrad · weiße Kontur", icon: "🚲", bg: ["#e5e8da", "#d6e4ee"],
-    set: { mapStyle: "minimal", lineColor: "#2b7de9", lineWidth: 6, lineStyle: "solid", lineCasing: true,
-           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 9.5, pitch: 30,
-           resolution: "1920x1080", travelMode: "bike" },
-    tempo: { len: 0, feel: "gemuetlich" } },
-  { id: "rail", name: "Interrail", sub: "Zug durch Europa", icon: "🚆", bg: ["#f3eee5", "#c6dbe8"],
-    set: { mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 6, lineStyle: "solid", lineCasing: false,
-           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 6.4, pitch: 20,
-           resolution: "1080x1920", travelMode: "train" },
-    tempo: { len: 30, feel: "normal" } },
-  { id: "island", name: "Inselhopping", sub: "Fähre & Boot", icon: "⛴️", bg: ["#f3eee5", "#7fb2d6"],
-    set: { mapStyle: "hell", lineColor: "#1f6fb2", lineWidth: 6, lineStyle: "solid", lineCasing: true,
-           tipStyle: "model3d", pinStyle: "photo", camMode: "follow", zoom: 8, pitch: 35,
-           resolution: "1080x1920", travelMode: "ferry" },
-    tempo: { len: 30, feel: "gemuetlich" } },
-  { id: "race", name: "Race Night", sub: "Dunkel, Glow, schnell", icon: "🏁", bg: ["#1d1e22", "#303a46"],
-    set: { mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
-           tipStyle: "dot", pinStyle: "dot", legEase: "linear", resolution: "1920x1080", travelMode: "car" },
-    cam: "cine", tempo: { len: 15, feel: "rasant" } },
-  { id: "drone", name: "Satellit-Drohne", sub: "Luftbild, Kamerafahrt", icon: "🛰️", bg: ["#3f5530", "#1d3550"],
+           tipStyle: "dot", pinStyle: "dot", pinFont: "display", labelSize: 18 } },
+  { id: "adventure", name: "Abenteuer-Karte", sub: "Indiana-Jones-Stil: Pergament, rote Linie", icon: "🧭", bg: ["#e9dcbc", "#a9c3c1"],
+    set: { mapStyle: "vintage", lineColor: "#c1272d", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: false,
+           tipStyle: "model3d", pinStyle: "dot", pinFont: "serif", labelSize: 16 } },
+  { id: "gmaps", name: "Navi-Look", sub: "Google-Maps-Stil: blau mit Kontur", icon: "📍", bg: ["#f7f4ee", "#aecbfa"],
+    set: { mapStyle: "minimal", lineColor: "#1a73e8", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
+           tipStyle: "pin", pinStyle: "badge", pinFont: "system" } },
+  { id: "earth", name: "Satellit", sub: "Google-Earth-Stil: Luftbild, gelbe Linie", icon: "🛰️", bg: ["#3f5530", "#1d3550"],
     set: { mapStyle: "satellit", lineColor: "#ffd23f", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: true,
-           tipStyle: "model3d", pinStyle: "photo", resolution: "1920x1080" },
-    cam: "drone", tempo: { len: 0, feel: "gemuetlich" } },
-  { id: "explain", name: "Länder-Erklärer", sub: "Übersicht, Länder leuchten · 9:16", icon: "🗺️", bg: ["#d9a390", "#5b78c2"],
-    set: { mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "dashed", lineCasing: true,
-           tipStyle: "mode", pinStyle: "dot", camMode: "overview", pitch: 0, hlLine: true, hlOp: 0.7,
-           resolution: "1080x1920" },
-    tempo: { len: 15, feel: "normal" } },
-  { id: "clean", name: "Clean & Minimal", sub: "Ruhig, gestrichelt · 1:1", icon: "◻️", bg: ["#f7f4ee", "#d6e4ee"],
+           tipStyle: "model3d", pinStyle: "photo" } },
+  { id: "sport", name: "Sport-Track", sub: "Strava-Stil: hell, orange", icon: "🏃", bg: ["#f7f4ee", "#e0e7d4"],
+    set: { mapStyle: "minimal", lineColor: "#fc4c02", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
+           tipStyle: "model3d", pinStyle: "badge", pinFont: "display" } },
+  { id: "cream", name: "Vlog Hell", sub: "Creme, Weinrot, Foto-Badges", icon: "📸", bg: ["#f3eee5", "#c6dbe8"],
+    set: { mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: false,
+           tipStyle: "stop", pinStyle: "badge", pinFont: "rounded" } },
+  { id: "night", name: "Neon Nacht", sub: "Dunkel, Glow, Race-Look", icon: "🏁", bg: ["#1d1e22", "#303a46"],
+    set: { mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
+           tipStyle: "dot", pinStyle: "dot", pinFont: "display" } },
+  { id: "explain", name: "Erklär-Atlas", sub: "Länder leuchten, gestrichelt", icon: "🗺️", bg: ["#d9a390", "#5b78c2"],
+    set: { mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 6, lineStyle: "dashed", lineCasing: false, glow: false,
+           tipStyle: "mode", pinStyle: "dot", hlLine: true, hlOp: 0.7 } },
+  { id: "clean", name: "Clean & Minimal", sub: "Ruhig, dünn, blau", icon: "◻️", bg: ["#f7f4ee", "#d6e4ee"],
     set: { mapStyle: "minimal", lineColor: "#3a6fb0", lineWidth: 4.5, lineStyle: "dashed", lineCasing: false, glow: false,
-           tipStyle: "dot", pinStyle: "badge", camMode: "overview", pitch: 0, resolution: "1080x1080" },
-    tempo: { len: 0, feel: "gemuetlich" } }
+           tipStyle: "dot", pinStyle: "badge", pinFont: "system" } }
 ];
 
 /* Tempo: Gefühl = Pausen/Kurven/Kamera, Länge = Zieldauer in Sekunden (0 = aus Etappen) */
@@ -5354,7 +5390,10 @@ const LENGTHS = [0, 8, 15, 30, 60];
   let chain = Promise.resolve(), queued = null;
   window.drawStatic = drawStatic = function (){
     if (queued) return queued;
-    const job = chain.then(async () => { queued = null; await baseDraw(); await fit(); });
+    const job = chain.then(async () => {
+      queued = null; await baseDraw(); await fit();
+      if (anim && !playing && !mp4Busy && playheadT > 0.01) renderAt(playheadT, false);   // Vorschau bleibt am Playhead
+    });
     queued = job;
     chain = job.catch(() => {});
     return job;
@@ -5385,17 +5424,14 @@ const LENGTHS = [0, 8, 15, 30, 60];
       $("mapStyle").dispatchEvent(new Event("change"));
       await styleBusy;
     }
-    tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
     for (const [k, v] of Object.entries(s)) if (k !== "mapStyle") setv(k, v);
-    $("resolution").dispatchEvent(new Event("change"));
-    $("travelMode").dispatchEvent(new Event("change"));
     applyTerrain();
-    if (tpl.tempo) await applyTempo(tpl.tempo.len, tpl.tempo.feel); else await drawStatic();
-    if (tpl.cam && anim){ setv("camPreset", tpl.cam); $("camPreset").dispatchEvent(new Event("change")); }
+    await drawStatic();
+    if (anim) renderAt(playheadT, false);
     renderTimeline(); changed();
     document.querySelectorAll(".tpl").forEach(b => b.classList.toggle("active", b.dataset.id === tpl.id));
     setv("tplId", tpl.id);
-    setStatus(tr("Vorlage") + " „" + tpl.name + "“ " + (anim ? "" : "– " + tr("jetzt Orte hinzufügen")));
+    setStatus("Look „" + tpl.name + "“" + (anim ? "" : " – " + tr("jetzt Orte hinzufügen")));
   }
 
   /* ---------- UI ---------- */
@@ -5438,6 +5474,273 @@ const LENGTHS = [0, 8, 15, 30, 60];
   }, 400));
 
   window.MA_TEMPLATES = { applyTemplate, applyTempo, list: TEMPLATES };
+})();
+</script>
+<script>
+"use strict";
+/* =========================================================
+   Kamera-Abschnitte (wie Baldinger) + Kamera-Presets
+   Ein Abschnitt (shot) gilt ab seiner Startzeit bis zum nächsten;
+   der Übergang wird über CAM_BLEND Sekunden weich überblendet.
+   Modi: follow (Folgen), still (feste Ansicht), overview (ganze Route),
+         tripod (Stativ: steht, dreht sich zur Spitze), orbit (kreist um die Spitze)
+   Die Kamera ist eine reine Funktion der Zeit → Vorschau, Scrubben und
+   Export sind identisch. Keyframes (Profi) haben Vorrang.
+   ========================================================= */
+const CAM_MODES = {
+  follow:   { icon: "🎯", label: "Folgen" },
+  still:    { icon: "🖼️", label: "Still" },
+  overview: { icon: "🗺️", label: "Übersicht" },
+  tripod:   { icon: "📷", label: "Stativ" },
+  orbit:    { icon: "🔄", label: "Orbit" }
+};
+const CAM_BLEND = 1.2;
+
+const CAM = (() => {
+  const $ = id => document.getElementById(id);
+  let shots = [{ t: 0, mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0.8, auto: true }];
+  let sel = 0;
+  const fitCache = new Map();
+
+  const sorted = () => shots.slice().sort((a, b) => a.t - b.t);
+  const ease = f => f < 0.5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2;
+  const wrap = a => ((a % 360) + 540) % 360 - 180;
+  const merc = ll => maplibregl.MercatorCoordinate.fromLngLat(ll);
+  const unmerc = (x, y) => { const c = new maplibregl.MercatorCoordinate(x, y, 0).toLngLat(); return [c.lng, c.lat]; };
+
+  function activePer(){ return anim && (anim.per.find(p => p.ri === activeRoute) || anim.per[0]); }
+  function tipAt(p, t){
+    const T = timelineTotal();
+    const idx = tipIndexFor(p, Math.min(Math.max(t, 0), T));
+    const i0 = Math.floor(idx), f = idx - i0, a = p.coords[i0], b = p.coords[Math.min(i0 + 1, p.coords.length - 1)];
+    return { ll: [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f], idx };
+  }
+  // geglättete Spitze: gewichtetes Mittel über ein Zeitfenster (+ Vorausschau)
+  function smoothTip(p, t, look, win){
+    let sx = 0, sy = 0, sw = 0, hx = 0, hy = 0, zo = 0;
+    const N = 6;
+    for (let k = -N; k <= N; k++){
+      const w = Math.exp(-(k * k) / (N * N * 0.5));
+      const tt = t + look + (k / N) * win;
+      const tp = tipAt(p, tt), m = merc(tp.ll);
+      sx += m.x * w; sy += m.y * w; sw += w;
+      const lg = legAt(p, tp.idx);
+      zo += ((MODES[lg.mode] || {}).zoom || 0) * w;
+      const h = headingAt(p, tp.idx); hx += Math.cos(h) * w; hy += Math.sin(h) * w;
+    }
+    return { ll: unmerc(sx / sw, sy / sw), modeZoom: zo / sw, heading: Math.atan2(hy, hx) };
+  }
+  function legFitZoom(p, lg){
+    const key = p.ri + ":" + lg.from + ":" + lg.to + ":" + map.getCanvas().width + "x" + map.getCanvas().height;
+    if (fitCache.has(key)) return fitCache.get(key);
+    const c = map.cameraForBounds(boundsOf(p.coords.slice(lg.from, lg.to + 1)), { padding: 80 });
+    const z = c ? c.zoom : 20;
+    fitCache.set(key, z);
+    return z;
+  }
+  function autoZoom(p, t){       // über ±1,5 s gemittelt, damit Etappenwechsel nicht ruckeln
+    let s = 0, n = 0;
+    for (let k = -4; k <= 4; k++){ const tp = tipAt(p, t + k * 0.375); s += legFitZoom(p, legAt(p, tp.idx)); n++; }
+    return s / n;
+  }
+  function headingToBearing(h){ return Math.atan2(Math.cos(h), -Math.sin(h)) * 180 / Math.PI; }   // Mercator-Winkel → Kompass
+  function bearingBetween(a, b){
+    const A = merc(a), B = merc(b);
+    return Math.atan2(B.x - A.x, -(B.y - A.y)) * 180 / Math.PI;
+  }
+  function overviewCam(){ const o = anim.ovCam; const c = o.center; return { c: c.lng !== undefined ? [c.lng, c.lat] : c, z: o.zoom }; }
+
+  function evalShot(s, t, tEnd){
+    const p = activePer();
+    const pitch = s.pitch == null ? num("pitch") : s.pitch;
+    const zoom = s.zoom == null ? num("zoom") : s.zoom;
+    if (s.mode === "overview" || !p){ const o = overviewCam(); return { c: o.c, z: o.z + (s.zoomAdj || 0), b: s.bearing || 0, p: pitch }; }
+    if (s.mode === "still"){
+      if (!s.center){ const o = overviewCam(); return { c: o.c, z: o.z, b: s.bearing || 0, p: pitch }; }
+      return { c: s.center, z: zoom, b: s.bearing || 0, p: pitch };
+    }
+    const look = s.mode === "follow" ? (s.look || 0) : 0;
+    const st = smoothTip(p, t, look, 0.9);
+    let z = zoom + st.modeZoom;
+    if (s.auto !== false) z = Math.min(z, autoZoom(p, t) + 0.35);
+    if (s.mode === "follow"){
+      const b = s.up === "travel" ? headingToBearing(st.heading) + (s.bearing || 0) : (s.bearing || 0);
+      return { c: st.ll, z, b, p: pitch };
+    }
+    if (s.mode === "orbit"){
+      const dur = Math.max(tEnd - s.t, 1);
+      return { c: st.ll, z, b: (s.bearing || 0) + (s.dir || 1) * 360 * (t - s.t) / dur * (s.turns || 0.5), p: pitch || 55 };
+    }
+    // Stativ: steht neben dem Weg auf halber Strecke des Abschnitts und dreht sich zur Spitze
+    const mid = tipAt(p, (s.t + tEnd) / 2), h = headingAt(p, mid.idx);
+    const m = merc(mid.ll), off = 140 / (512 * Math.pow(2, z));
+    const P = unmerc(m.x - Math.sin(h) * off, m.y + Math.cos(h) * off);
+    return { c: st.ll, z, b: bearingBetween(P, st.ll), p: pitch || 50 };
+  }
+
+  function at(t){
+    const S = sorted(), T = timelineTotal();
+    let i = 0;
+    for (let k = 0; k < S.length; k++) if (S[k].t <= t + 1e-9) i = k;
+    const end = k => (S[k + 1] ? S[k + 1].t : T);
+    let cam = evalShot(S[i], t, end(i));
+    if (i > 0 && t - S[i].t < CAM_BLEND){
+      const prev = evalShot(S[i - 1], t, end(i - 1));
+      const f = ease((t - S[i].t) / CAM_BLEND);
+      const A = merc(prev.c), B = merc(cam.c);
+      cam = { c: unmerc(A.x + (B.x - A.x) * f, A.y + (B.y - A.y) * f),
+              z: prev.z + (cam.z - prev.z) * f,
+              b: prev.b + wrap(cam.b - prev.b) * f,
+              p: prev.p + (cam.p - prev.p) * f };
+    }
+    return cam;
+  }
+
+  /* ---------- Timeline-Zeile ---------- */
+  const row = document.createElement("div");
+  row.id = "tlShots";
+  $("tlBody").insertBefore(row, $("tlTracks"));
+  function renderRow(){
+    row.innerHTML = '<div class="shlabel"><span class="i18n">Kamera</span><button class="kfadd" title="Abschnitt am Playhead">＋</button></div><div class="shlane"></div>';
+    row.querySelector(".kfadd").addEventListener("click", () => addShot());
+    const lane = row.querySelector(".shlane"), S = sorted(), T = timelineTotal();
+    S.forEach((s, k) => {
+      const t1 = S[k + 1] ? S[k + 1].t : T;
+      const b = document.createElement("div");
+      b.className = "shot sh-" + s.mode + (shots.indexOf(s) === sel ? " sel" : "");
+      b.style.left = t2x(s.t) + "px"; b.style.width = Math.max(t2x(t1) - t2x(s.t) - 2, 6) + "px";
+      b.innerHTML = `<span>${CAM_MODES[s.mode].icon} ${tr(CAM_MODES[s.mode].label)}${s.mode === "follow" && s.up === "travel" ? " ↑" : ""}</span>` + (k > 0 ? '<i class="edge"></i>' : "");
+      b.addEventListener("pointerdown", e => {
+        if (e.target.classList.contains("edge")) return;
+        sel = shots.indexOf(s); renderRow(); renderEditor();
+        setPlayhead(Math.min(s.t + 0.05, T));
+      });
+      const edge = b.querySelector(".edge");
+      if (edge) edge.addEventListener("pointerdown", e => {
+        e.stopPropagation(); e.preventDefault();
+        const rect = lane.getBoundingClientRect();
+        const lo = S[k - 1].t + 0.3, hi = (S[k + 1] ? S[k + 1].t : T) - 0.3;
+        const move = ev => { s.t = Math.round(Math.min(Math.max(x2t(ev.clientX - rect.left), lo), hi) * 10) / 10; renderRow(); setPlayhead(s.t); };
+        const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); renderEditor(); };
+        window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+      });
+      lane.appendChild(b);
+    });
+  }
+  const baseRT = renderTimeline;
+  window.renderTimeline = renderTimeline = function (){ baseRT(); renderRow(); };
+
+  /* ---------- Editor im Panel ---------- */
+  function addShot(mode){
+    const S = sorted(), t = Math.round(playheadT * 10) / 10;
+    if (S.some(s => Math.abs(s.t - t) < 0.3)){ setStatus(tr("Hier beginnt schon ein Abschnitt.")); return; }
+    let base = S[0]; for (const s of S) if (s.t <= t) base = s;
+    const ns = Object.assign({}, base, { t, mode: mode || (base.mode === "follow" ? "still" : "follow"), center: null });
+    if (ns.mode === "still") captureView(ns);
+    shots.push(ns); sel = shots.length - 1;
+    changed();
+  }
+  function captureView(s){ const c = map.getCenter(); s.center = [c.lng, c.lat]; s.zoom = Math.round(map.getZoom() * 100) / 100; s.bearing = Math.round(map.getBearing()); s.pitch = Math.round(map.getPitch()); }
+  function changed(){ renderRow(); renderEditor(); if (anim) renderAt(playheadT, false); }
+
+  function seg(opts, cur, onPick){
+    return `<div class="seg wide">${opts.map(([v, l]) => `<button type="button" data-v="${v}" class="${String(cur) === String(v) ? "active" : ""}">${l}</button>`).join("")}</div>`;
+  }
+  function renderEditor(){
+    const el = $("shotEditor"); if (!el) return;
+    const S = sorted(); if (!shots[sel]) sel = 0;
+    const s = shots[sel], idx = S.indexOf(s), T = timelineTotal(), t1 = S[idx + 1] ? S[idx + 1].t : T;
+    const rng = (k, label, min, max, step, v) => `<div class="setting"><label>${tr(label)}</label><span class="rangewrap"><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v}"><output>${v}</output></span></div>`;
+    el.innerHTML =
+      `<div class="shothead"><b>${tr("Abschnitt")} ${idx + 1}/${S.length}</b><span>${s.t.toFixed(1)}–${t1.toFixed(1)} s</span>` +
+      (S.length > 1 && idx > 0 ? `<button type="button" class="del" data-a="del" title="${tr("Abschnitt löschen")}">✕</button>` : "") + `</div>` +
+      `<div class="modes">${Object.entries(CAM_MODES).map(([k, m]) => `<button type="button" data-mode="${k}" class="${s.mode === k ? "active" : ""}"><em>${m.icon}</em>${tr(m.label)}</button>`).join("")}</div>` +
+      (s.mode === "follow" ? `<div class="tempo-row"><span>${tr("Oben")}</span>${seg([["north", tr("Norden")], ["travel", tr("Fahrtrichtung")]], s.up || "north")}</div>` : "") +
+      (s.mode === "still" ? `<button type="button" class="btn ghost full" data-a="cap">${tr("Aktuelle Kartenansicht übernehmen")}</button>` : "") +
+      (s.mode !== "overview" && s.mode !== "still" ? rng("zoom", "Zoom", 2, 16, 0.1, s.zoom == null ? num("zoom") : s.zoom) : "") +
+      rng("pitch", "Neigung", 0, 80, 1, s.pitch || 0) +
+      (s.mode !== "tripod" ? rng("bearing", s.mode === "orbit" ? "Startwinkel" : "Drehung", -180, 180, 1, s.bearing || 0) : "") +
+      (s.mode === "follow" ? rng("look", "Vorausschau (s)", 0, 3, 0.1, s.look || 0) : "") +
+      (s.mode === "orbit" ? rng("turns", "Umdrehungen", 0.1, 2, 0.05, s.turns || 0.5) : "") +
+      (["follow", "tripod", "orbit"].includes(s.mode) ? `<div class="setting"><label>${tr("Lange Etappen: rauszoomen")}</label><input type="checkbox" data-k="auto" ${s.auto !== false ? "checked" : ""}></div>` : "") +
+      `<button type="button" class="btn ghost full" data-a="add">＋ ${tr("Neuer Abschnitt am Playhead")}</button>`;
+    el.querySelectorAll(".modes button").forEach(b => b.addEventListener("click", () => {
+      s.mode = b.dataset.mode; if (s.mode === "still" && !s.center) captureView(s); changed(); }));
+    el.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { s.up = b.dataset.v; changed(); }));
+    el.querySelectorAll("input[type=range]").forEach(r => r.addEventListener("input", () => {
+      s[r.dataset.k] = parseFloat(r.value); r.nextElementSibling.textContent = r.value;
+      r.style.setProperty("--p", (r.value - r.min) / (r.max - r.min) * 100 + "%");
+      renderRow(); if (anim) renderAt(playheadT, false); }));
+    el.querySelectorAll("input[type=range]").forEach(r => r.style.setProperty("--p", (r.value - r.min) / (r.max - r.min) * 100 + "%"));
+    el.querySelectorAll("input[type=checkbox]").forEach(c => c.addEventListener("change", () => { s[c.dataset.k] = c.checked; changed(); }));
+    const act = a => el.querySelector(`[data-a="${a}"]`);
+    if (act("cap")) act("cap").addEventListener("click", () => { captureView(s); changed(); setStatus(tr("Ansicht übernommen.")); });
+    if (act("add")) act("add").addEventListener("click", () => addShot());
+    if (act("del")) act("del").addEventListener("click", () => { shots.splice(sel, 1); sel = Math.max(0, sel - 1); changed(); });
+  }
+
+  /* ---------- Presets (Kamera + Tempo) ---------- */
+  const F = (o) => Object.assign({ mode: "follow", zoom: 7, pitch: 0, bearing: 0, up: "north", look: 0.8, auto: true }, o);
+  const PRESETS = [
+    { id: "classic", name: "Folgen", sub: "Standard: Übersicht → folgen → Übersicht", icon: "🎯",
+      shots: T => [F({ t: 0, mode: "overview" }), F({ t: 1.4, zoom: 7 }), F({ t: Math.max(T - 2, 2), mode: "overview" })], tempo: { len: 0, feel: "normal" } },
+    { id: "navi", name: "Navi", sub: "Fahrtrichtung oben, geneigt", icon: "🧭",
+      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "travel", look: 1 })], tempo: { len: 0, feel: "normal" } },
+    { id: "flyover", name: "3D-Flyover", sub: "Relive-Stil: tief, schräg, Fahrtrichtung", icon: "🏔️",
+      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "travel", look: 1.5 }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
+      tempo: { len: 30, feel: "gemuetlich" }, terrain: true },
+    { id: "recap", name: "Vlog-Recap", sub: "Weit folgen, Übersicht am Ende · flott", icon: "🎬",
+      shots: T => [F({ t: 0, zoom: 4.6 }), F({ t: Math.max(T - 1.8, 2), mode: "overview" })], tempo: { len: 30, feel: "rasant" } },
+    { id: "static", name: "Feste Karte", sub: "Indiana-Jones-Stil: ganze Route, Linie wächst", icon: "🗺️",
+      shots: () => [F({ t: 0, mode: "overview" })], tempo: { len: 15, feel: "gemuetlich" } },
+    { id: "snap70", name: "Snap-Zooms", sub: "70-Sekunden-Wiki: Ruck + Drift", icon: "⚡", keyframes: "snap70", tempo: { len: 15, feel: "normal" } },
+    { id: "tripod", name: "Stativ", sub: "Kamera steht, schwenkt mit", icon: "📷",
+      shots: T => [0, 1, 2].map(k => F({ t: k * T / 3, mode: "tripod", zoom: 9, pitch: 55 })), tempo: { len: 0, feel: "gemuetlich" } },
+    { id: "orbitEnd", name: "Orbit am Ziel", sub: "Folgen, am Ende kreisen", icon: "🔄",
+      shots: T => [F({ t: 0, zoom: 8, pitch: 35 }), F({ t: Math.max(T * 0.72, 1.5), mode: "orbit", zoom: 9, pitch: 55, turns: 0.6 })], tempo: { len: 0, feel: "normal" } },
+    { id: "drone", name: "Drohnenflug", sub: "Steigen, sinken, schwenken", icon: "🚁", keyframes: "drone", tempo: { len: 0, feel: "gemuetlich" } },
+    { id: "cine", name: "Cinematic", sub: "Langsamer Schwenk", icon: "🎥", keyframes: "cine", tempo: { len: 0, feel: "gemuetlich" } }
+  ];
+  async function applyPreset(pr){
+    if (playing) pause();
+    tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
+    if (pr.tempo) await MA_TEMPLATES.applyTempo(pr.tempo.len, pr.tempo.feel);
+    if (pr.terrain && !$("terrain3d").checked){ $("terrain3d").checked = true; if (num("terrainEx") < 1.5) $("terrainEx").value = 1.5; applyTerrain(); }
+    await ensureAnim();
+    const T = timelineTotal();
+    if (pr.keyframes){
+      shots = [F({ t: 0 })];
+      $("camPreset").value = pr.keyframes; $("camPreset").dispatchEvent(new Event("change"));
+    } else shots = pr.shots(T);
+    sel = 0; $("camPresetId").value = pr.id;
+    document.querySelectorAll(".campre").forEach(b => b.classList.toggle("active", b.dataset.id === pr.id));
+    renderTimeline(); renderEditor();
+    if (anim) renderAt(playheadT, false);
+    setStatus(tr("Kamera") + ": " + pr.name);
+  }
+  const grid = $("camGrid");
+  PRESETS.forEach(pr => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "campre"; b.dataset.id = pr.id;
+    b.innerHTML = `<em>${pr.icon}</em><span><b></b><small></small></span>`;
+    b.querySelector("b").textContent = pr.name; b.querySelector("small").textContent = pr.sub;
+    b.addEventListener("click", () => applyPreset(pr));
+    grid.appendChild(b);
+  });
+
+  Object.assign(EN, { "Folgen": "Follow", "Still": "Still", "Übersicht": "Overview", "Stativ": "Tripod", "Orbit": "Orbit",
+    "Kamera": "Camera", "Abschnitt": "Shot", "Oben": "Up", "Norden": "North", "Fahrtrichtung": "Direction of travel",
+    "Aktuelle Kartenansicht übernehmen": "Use current map view", "Neigung": "Tilt", "Drehung": "Rotation", "Startwinkel": "Start angle",
+    "Vorausschau (s)": "Look-ahead (s)", "Umdrehungen": "Turns", "Lange Etappen: rauszoomen": "Long legs: zoom out",
+    "Neuer Abschnitt am Playhead": "New shot at playhead", "Abschnitt löschen": "Delete shot", "Ansicht übernommen.": "View captured.",
+    "Hier beginnt schon ein Abschnitt.": "A shot already starts here." });
+
+  return {
+    at, renderRow, renderEditor, applyPreset, presets: PRESETS,
+    get: () => JSON.parse(JSON.stringify(shots)),
+    set(v){ if (Array.isArray(v) && v.length) shots = v; sel = 0; renderTimeline(); renderEditor();
+            document.querySelectorAll(".campre").forEach(b => b.classList.toggle("active", b.dataset.id === $("camPresetId").value)); },
+    clearCache(){ fitCache.clear(); }
+  };
 })();
 </script>
 <script>
@@ -5558,7 +5861,7 @@ const LENGTHS = [0, 8, 15, 30, 60];
   const styleSel = $("mapStyle"), grid = $("themeGrid");
   const preview = {
     hell: ["#f3eee5", "#c6dbe8"], relief: ["#97a3b9", "#e6ebf3"], atlas: ["#e7b9a3", "#5b78c2"],
-    dunkel: ["#1d1e22", "#303a46"], satellit: ["#4d5a3a", "#1d3550"], minimal: ["#f7f4ee", "#d6e4ee"]
+    dunkel: ["#1d1e22", "#303a46"], satellit: ["#4d5a3a", "#1d3550"], vintage: ["#e9dcbc", "#a9c3c1"], minimal: ["#f7f4ee", "#d6e4ee"]
   };
   [...styleSel.options].forEach(o => {
     const t = THEMES[o.value] || {}, [land, water] = preview[o.value] || [t.bg || "#888", t.water || "#567"];
@@ -5587,6 +5890,7 @@ const LENGTHS = [0, 8, 15, 30, 60];
   const applyPro = () => { body.classList.toggle("pro", pro.checked); try { localStorage.setItem("ma.pro", pro.checked ? "1" : "0"); } catch {} renderTimeline(); };
   pro.addEventListener("change", applyPro); applyPro();
   document.addEventListener("ma:settings", () => { syncFormat(); syncRanges(); syncThemes(); });
+  $("projLoad").addEventListener("change", () => setTimeout(() => CAM.set(null), 600));
 
   /* ---------- Tastenkürzel ---------- */
   const order = tabs.map(b => b.dataset.tab);

@@ -67,15 +67,27 @@ try {
     document.getElementById("tipStyle").value = "model3d";
     return "ok";
   }));
-  await step("Vorlagen + Länge", () => page.evaluate(async () => {
-    const out = [];
+  await step("Looks", () => page.evaluate(async () => {
     for (const t of MA_TEMPLATES.list){
       await MA_TEMPLATES.applyTemplate(t);
       if (!anim) throw new Error(t.id + ": keine Animation");
-      if (t.tempo && t.tempo.len && Math.abs(timelineTotal() - t.tempo.len) > 0.6) throw new Error(t.id + ": Länge " + timelineTotal().toFixed(1));
-      out.push(t.id);
+      if (val("mapStyle") !== t.set.mapStyle) throw new Error(t.id + ": Stil " + val("mapStyle"));
     }
-    return out.length + " Vorlagen";
+    return MA_TEMPLATES.list.length + " Looks";
+  }));
+  await step("Kamera-Presets + Tempo", () => page.evaluate(async () => {
+    for (const pr of CAM.presets){
+      await CAM.applyPreset(pr);
+      const T = timelineTotal();
+      if (pr.tempo.len && Math.abs(T - pr.tempo.len) > 0.6) throw new Error(pr.id + ": Länge " + T.toFixed(1));
+      setPlayhead(T * 0.5, true);
+      if (!pr.keyframes){
+        const c = CAM.at(T * 0.5);
+        if (Math.abs(map.getZoom() - c.z) > 0.05 || Math.abs(map.getPitch() - Math.min(c.p, 85)) > 0.5) throw new Error(pr.id + ": Kamera nicht angewendet");
+      }
+    }
+    await CAM.applyPreset(CAM.presets[0]);
+    return CAM.presets.length + " Presets";
   }));
   const themes = await page.evaluate(() => [...document.getElementById("mapStyle").options].map(o => o.value));
   for (const th of themes){

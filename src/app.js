@@ -32,7 +32,9 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Größe Spitze / 3D-Modell":"Tip / 3D model size","Look":"Look","Gefühl":"Feel","Profi":"Pro",
+  "Kamera-Presets":"Camera presets","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
+  "Ein Look setzt nur das Aussehen: Kartenstil, Linie, Spitze, Pins. Kamera und Tempo stellst du im Tab Kamera ein.":"A look only sets the appearance: map style, line, tip, pins. Set camera and pace in the Camera tab.",
+  "Jeder Abschnitt gilt bis zum nächsten; Übergänge werden weich überblendet. Blöcke in der Timeline anklicken oder an der Kante ziehen.":"Each shot lasts until the next; transitions blend smoothly. Click blocks in the timeline or drag their edge.","Größe Spitze / 3D-Modell":"Tip / 3D model size","Look":"Look","Gefühl":"Feel","Profi":"Pro",
   "Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.":"A template sets map style, line, tip, camera, pace and format. Your places stay. Adjust anything afterwards.",
   "Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.":"Length adjusts the pace automatically, even when you add places. Per leg: transport and ½×/2× right at the stop.","Projekt":"Project","Export":"Export",
   "Reise-Animationen im Vlog-Stil · rendert lokal im Browser":"Vlog-style travel animations · renders locally in your browser",
@@ -191,6 +193,15 @@ const THEMES = {
     detail: { states: "#ffffff", road: "#ffffff", rail: "#dddddd", wood: "#ffffff", urban: "#ffffff", park: "#ffffff" },
     defaultLine: "#ffd23f", glowDefault: true
   },
+  vintage: {
+    bg: "#e9dcbc", water: "#a9c3c1", ice: "#f3ecd8", iceOp: 0.8,
+    hills: { shadow: "#9c8a6a", highlight: "#fff8e6", accent: "#d8c8a2", ex: 0.45 },
+    boundary: { color: "#8a6a4a", width: 1.2, dash: [3, 2] },
+    country: { color: "#4a3524", halo: "#e9dcbc", upper: true, spacing: 0.3 },
+    city: { color: "#5b4330", halo: "#e9dcbc" },
+    detail: { states: "#b39d78", road: "#d6c49c", rail: "#a8936f", wood: "#d9cfa6", urban: "#dccca6", park: "#d6d0a4" },
+    defaultLine: "#c1272d", glowDefault: false
+  },
   minimal: {
     bg: "#f7f4ee", water: "#d6e4ee", ice: null,
     hills: null,
@@ -334,7 +345,7 @@ function buildBaseStyle(name){
 const map = new maplibregl.Map({
   container: "map",
   style: buildBaseStyle("hell"),
-  center: [10.5, 51.2], zoom: 5,
+  center: [10.5, 51.2], zoom: 5, maxPitch: 85,
   attributionControl: false,
   canvasContextAttributes: { preserveDrawingBuffer: true, antialias: true },
   fadeDuration: 0
@@ -1619,7 +1630,13 @@ function renderAt(t, live){
   });
   if (fDirty) refreshFeatures();
 
-  // Kamera (folgt der aktiven Route)
+  // Kamera: ohne Keyframes → Kamera-Abschnitte (camera.js), sonst Keyframe-Kamera
+  if (!tracks.pos.length && !tracks.zoom.length && !tracks.bearing.length && !tracks.pitch.length && typeof CAM !== "undefined"){
+    const c = CAM.at(t);
+    camPos = { lng: c.c[0], lat: c.c[1], zoom: c.z };
+    map.jumpTo({ center: c.c, zoom: c.z, bearing: c.b, pitch: Math.min(Math.max(c.p, 0), 85) });
+    return;
+  }
   const hasPos = tracks.pos.length > 0;
   let zoomV = sampleNum(tracks.zoom, t, num("zoom") + (activeLeg && !tracks.zoom.length ? ((MODES[activeLeg.mode] || {}).zoom || 0) : 0));
   let bearV = tracks.bearing.length ? sampleNum(tracks.bearing, t, 0) : (num("rotSpeed") || 0) * t;
@@ -2242,7 +2259,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId"];
 
 document.getElementById("projSave").addEventListener("click", () => {
   const proj = {
@@ -2259,7 +2276,8 @@ document.getElementById("projSave").addEventListener("click", () => {
     features: features.map(f => ({ name: f.name, geometry: f.geometry, color: f.color, appearT: f.appearT })),
     pois,
     customColors,
-    tracks
+    tracks,
+    cam: typeof CAM !== "undefined" ? CAM.get() : null
   };
   const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
   const a = document.createElement("a");
@@ -2283,6 +2301,7 @@ document.getElementById("projLoad").addEventListener("change", e => {
       }
       tracks = proj.tracks || {};
       ensureTrackKeys();
+      if (typeof CAM !== "undefined") CAM.set(proj.cam);
       customColors = proj.customColors || null;
       pois = proj.pois || [];
       features = [];

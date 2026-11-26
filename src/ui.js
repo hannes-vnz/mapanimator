@@ -115,7 +115,7 @@
   const styleSel = $("mapStyle"), grid = $("themeGrid");
   const preview = {
     hell: ["#f3eee5", "#c6dbe8"], relief: ["#97a3b9", "#e6ebf3"], atlas: ["#e7b9a3", "#5b78c2"],
-    dunkel: ["#1d1e22", "#303a46"], satellit: ["#4d5a3a", "#1d3550"], minimal: ["#f7f4ee", "#d6e4ee"]
+    dunkel: ["#1d1e22", "#303a46"], satellit: ["#4d5a3a", "#1d3550"], vintage: ["#e9dcbc", "#a9c3c1"], minimal: ["#f7f4ee", "#d6e4ee"]
   };
   [...styleSel.options].forEach(o => {
     const t = THEMES[o.value] || {}, [land, water] = preview[o.value] || [t.bg || "#888", t.water || "#567"];
@@ -144,6 +144,7 @@
   const applyPro = () => { body.classList.toggle("pro", pro.checked); try { localStorage.setItem("ma.pro", pro.checked ? "1" : "0"); } catch {} renderTimeline(); };
   pro.addEventListener("change", applyPro); applyPro();
   document.addEventListener("ma:settings", () => { syncFormat(); syncRanges(); syncThemes(); });
+  $("projLoad").addEventListener("change", () => setTimeout(() => CAM.set(null), 600));
 
   /* ---------- Tastenkürzel ---------- */
   const order = tabs.map(b => b.dataset.tab);
