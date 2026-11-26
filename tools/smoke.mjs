@@ -53,8 +53,29 @@ try {
     renderWpList(); await drawStatic();
     const p = anim.per[0], modes = p.legs.map(l => l.mode).join(",");
     if (p.legs.length !== 4 || !/bus,ferry,fly$/.test(modes)) throw new Error("Etappen falsch: " + modes);
-    if (document.querySelectorAll(".legsel select").length !== 4) throw new Error("Anreise-Auswahl fehlt");
+    if (document.querySelectorAll(".legsel").length !== 4) throw new Error("Anreise-Auswahl fehlt");
     return modes;
+  }));
+  await step("3D-Modell + Symbol-Spitze", () => page.evaluate(async () => {
+    const leg = anim.per[0].segs.filter(s => s.type === "leg")[3];
+    for (const ts of ["model3d", "mode"]){
+      document.getElementById("tipStyle").value = ts; await drawStatic();
+      setPlayhead((leg.t0 + leg.t1) / 2, true); await waitIdle(15000);
+    }
+    if (!map.getLayer("tip-3d")) throw new Error("3D-Ebene fehlt");
+    if (!map.hasImage("tipmode-fly-" + routes[0].id)) throw new Error("Symbol fehlt");
+    document.getElementById("tipStyle").value = "model3d";
+    return "ok";
+  }));
+  await step("Vorlagen + Länge", () => page.evaluate(async () => {
+    const out = [];
+    for (const t of MA_TEMPLATES.list){
+      await MA_TEMPLATES.applyTemplate(t);
+      if (!anim) throw new Error(t.id + ": keine Animation");
+      if (t.tempo && t.tempo.len && Math.abs(timelineTotal() - t.tempo.len) > 0.6) throw new Error(t.id + ": Länge " + timelineTotal().toFixed(1));
+      out.push(t.id);
+    }
+    return out.length + " Vorlagen";
   }));
   const themes = await page.evaluate(() => [...document.getElementById("mapStyle").options].map(o => o.value));
   for (const th of themes){

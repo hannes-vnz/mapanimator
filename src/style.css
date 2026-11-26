@@ -155,8 +155,15 @@ button.btn:disabled{opacity:.45; cursor:default;}
 .photo-label input{display:none;}
 .wp .del, #tlInspector .del{background:none; border:0; color:var(--faint); font-size:15px; padding:4px 8px; border-radius:6px;}
 .wp .del:hover, #tlInspector .del:hover{color:var(--danger); background:rgba(255,93,108,.1);}
-.legsel{display:flex; align-items:center; gap:8px; margin:-2px 0 8px; font-size:11.5px; color:var(--muted);}
-.legsel select{flex:1; height:28px; border:1px solid var(--line); border-radius:7px; background:var(--field); color:var(--text); padding:0 8px; font-size:12px;}
+.legsel{display:flex; align-items:center; gap:6px; margin:-2px 0 8px;}
+.mchips{flex:1; display:flex; gap:3px; overflow-x:auto; scrollbar-width:none; padding:2px 0;}
+.mchips::-webkit-scrollbar{display:none;}
+.mchip{flex:none; width:30px; height:30px; border-radius:8px; border:1px solid var(--line); background:var(--field); font-size:16px; line-height:1; display:grid; place-items:center; filter:grayscale(.85); opacity:.6; transition:all .12s;}
+.mchip:hover{opacity:1; filter:none;}
+.mchip.def{opacity:.95; filter:none; border-style:dashed; border-color:var(--line-2);}
+.mchip.on{opacity:1; filter:none; border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 0 1px var(--accent);}
+.lspeed{flex:none; height:30px; min-width:38px; border-radius:8px; border:1px solid var(--line-2); background:var(--field); color:var(--text); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;}
+.lspeed:hover{border-color:var(--accent);}
 .wp .idx{position:absolute; top:12px; left:-9px; width:20px; height:20px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-size:10.5px; display:grid; place-items:center; font-weight:800; box-shadow:0 0 0 3px var(--card);}
 
 /* Theme-Kacheln */
@@ -228,6 +235,37 @@ body.safe #safezone{display:block;}
 #tlInspector label{display:flex; align-items:center; gap:5px; color:var(--muted);}
 #tlInspector input, #tlInspector select{border:1px solid var(--line); border-radius:7px; height:28px; padding:0 7px; font-size:12px; background:var(--field); color:var(--text); width:76px;}
 
+/* ---------- Vorlagen ---------- */
+.tplgrid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+.tpl{display:flex; flex-direction:column; text-align:left; border:1px solid var(--line-2); border-radius:12px; background:var(--field); padding:0; overflow:hidden; transition:border-color .12s, transform .12s;}
+.tpl:hover{border-color:var(--muted); transform:translateY(-1px);}
+.tpl.active{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
+.tpl-sw{position:relative; height:58px; display:block;}
+.tpl-sw i{position:absolute; left:10%; right:30%; top:62%; height:4px; border-radius:2px; background:var(--lc); transform:rotate(-14deg); box-shadow:0 0 0 1.5px rgba(255,255,255,.7);}
+.tpl-sw em{position:absolute; right:8px; top:6px; font-style:normal; font-size:22px; filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}
+.tpl-tx{padding:7px 9px 9px; display:flex; flex-direction:column; gap:2px; min-width:0;}
+.tpl-tx b{font-size:12.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.tpl-tx small{font-size:10.5px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+/* ---------- Tempo ---------- */
+.tempo-row{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+.tempo-row > span{width:52px; flex:none; color:#c9cad1;}
+.seg.wide{flex:1;}
+.seg.wide button{flex:1; padding:7px 4px;}
+
+/* ---------- Einfach / Profi ---------- */
+.protoggle{display:flex; align-items:center; gap:7px; font-size:12px; font-weight:650; color:var(--muted); cursor:pointer; user-select:none;}
+.protoggle input{appearance:none; -webkit-appearance:none; width:32px; height:18px; border-radius:9px; background:var(--line-2); position:relative; cursor:pointer; transition:background .15s;}
+.protoggle input::after{content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .15s;}
+.protoggle input:checked{background:var(--accent);}
+.protoggle input:checked::after{transform:translateX(14px);}
+body:not(.pro) .adv, body:not(.pro) .wp .coords{display:none !important;}
+body:not(.pro) #tlTracks, body:not(.pro) #tlInspector, body:not(.pro) #tlAddCam, body:not(.pro) #tlLineKF, body:not(.pro) #tlHead .hint, body:not(.pro) #tlToggle{display:none !important;}
+body:not(.pro) #timeline{height:auto;}
+body:not(.pro) #tlBody{flex:none; height:30px;}
+body:not(.pro) #tlRuler{height:30px; margin-left:12px; margin-right:12px; border-radius:7px; border:1px solid var(--line);}
+body:not(.pro) #tlPlayhead{margin-left:12px;}
+
 /* ---------- Laptop, schmal ---------- */
 @media (max-width:1180px){
   :root{--side-w:316px;}
@@ -260,6 +298,7 @@ body.safe #safezone{display:block;}
   .wp input[type=text], .wp input[type=number]{height:38px; font-size:16px;}
   button.btn, label.btn{min-height:42px;}
   .themegrid{grid-template-columns:repeat(3,1fr);}
+  .protoggle span{display:none;}
   #tlHead{padding:6px 8px; gap:6px;}
   #tlHead .hint, #tlHead label.dur, #resetBtn{display:none;}
   #tlRuler{margin-left:78px; height:26px;}

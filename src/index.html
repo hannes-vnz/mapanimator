@@ -32,6 +32,7 @@
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 16.5h7M15.5 8v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
   </button>
   <div class="spacer"></div>
+  <label class="protoggle" title="Profi-Modus: alle Einstellungen und Keyframe-Timeline"><input type="checkbox" id="proMode"><span class="i18n">Profi</span></label>
   <div class="topactions">
     <button class="tbtn i18n" id="projSaveTop" title="Projekt als JSON speichern">Speichern</button>
     <label class="tbtn i18n" title="Projekt-JSON laden">Laden<input type="file" id="projLoadTop" accept=".json" hidden></label>
@@ -47,7 +48,7 @@
 <div id="app">
   <nav id="tabs" role="tablist">
     <button data-tab="route" class="active" role="tab" title="Schritt 1 (Taste 1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 17.5c5-1 2-6.5 6.5-8.8"/></svg><span class="num">1</span><span class="i18n">Route</span></button>
-    <button data-tab="style" role="tab" title="Schritt 2 (Taste 2)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.7 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span class="num">2</span><span class="i18n">Karte</span></button>
+    <button data-tab="style" role="tab" title="Schritt 2 (Taste 2)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.7 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span class="num">2</span><span class="i18n">Look</span></button>
     <button data-tab="layers" role="tab" title="Schritt 3 (Taste 3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="num">3</span><span class="i18n">Ebenen</span></button>
     <button data-tab="camera" role="tab" title="Schritt 4 (Taste 4)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="m16 11 5-3v9l-5-3z"/></svg><span class="num">4</span><span class="i18n">Kamera</span></button>
     <button data-tab="export" role="tab" title="Schritt 5 (Taste 5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span class="num">5</span><span class="i18n">Export</span></button>
@@ -76,6 +77,13 @@
         </div>
 
         <div class="card">
+          <h2>Tempo</h2>
+          <div class="tempo-row"><span class="i18n">Länge</span><div id="tempoLen" class="seg wide"></div></div>
+          <div class="tempo-row"><span class="i18n">Gefühl</span><div id="tempoFeel" class="seg wide"></div></div>
+          <input type="hidden" id="tplLen" value="0"><input type="hidden" id="tplFeel" value="normal">
+          <div class="hint">Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.</div>
+        </div>
+        <div class="card">
           <h2>Linie &amp; Tempo</h2>
           <div class="setting"><label>Standard-Fortbewegung</label>
             <select id="travelMode">
@@ -96,11 +104,11 @@
             </select>
           </div>
           <div class="setting"><label>Weiße Kontur</label><input type="checkbox" id="lineCasing"></div>
-          <div class="setting"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
-          <div class="setting"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
-          <div class="setting"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>
-          <div class="setting"><label>Konstante Geschwindigkeit</label><input type="checkbox" id="constSpeed" checked></div>
-          <div class="setting"><label>Linien-Beschleunigung</label>
+          <div class="setting adv"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
+          <div class="setting adv"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
+          <div class="setting adv"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>
+          <div class="setting adv"><label>Konstante Geschwindigkeit</label><input type="checkbox" id="constSpeed" checked></div>
+          <div class="setting adv"><label>Linien-Beschleunigung</label>
             <select id="legEase">
               <option value="linear">Linear (konstant)</option>
               <option value="quadInOut">Quadratisch (weich)</option>
@@ -109,10 +117,10 @@
               <option value="easeIn">Langsam anlaufen → schnell</option>
             </select>
           </div>
-          <div class="setting"><label>Tempo ×</label><input type="number" id="speedMult" value="1" step="0.1" min="0.1" max="5"></div>
+          <div class="setting adv"><label>Tempo ×</label><input type="number" id="speedMult" value="1" step="0.1" min="0.1" max="5"></div>
         </div>
 
-        <details class="card">
+        <details class="card adv">
           <summary><h2>POIs entlang der Route</h2></summary>
           <div class="setting"><label>Gipfel</label><input type="checkbox" id="poiPeak" checked></div>
           <div class="setting"><label>Burgen &amp; Schlösser</label><input type="checkbox" id="poiCastle" checked></div>
@@ -129,6 +137,12 @@
 
       <!-- ===== STIL ===== -->
       <section class="pane" data-pane="style">
+        <div class="card">
+          <h2>Vorlagen</h2>
+          <div id="tplGrid" class="tplgrid"></div>
+          <div class="hint">Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.</div>
+          <input type="hidden" id="tplId" value="">
+        </div>
         <div class="card">
           <h2>Karten-Stil</h2>
           <div id="themeGrid" class="themegrid"></div>
@@ -155,27 +169,29 @@
           </div>
           <div class="setting"><label>Linienspitze</label>
             <select id="tipStyle">
-              <option value="stop" selected>Wie Stopp-Pins (Foto/Badge)</option>
+              <option value="model3d" selected>3D-Modell (Verkehrsmittel)</option>
+              <option value="mode">Symbol (Verkehrsmittel)</option>
+              <option value="stop">Wie Stopp-Pins (Foto/Badge)</option>
               <option value="pin">Pin + Punkt (wie Google Maps)</option>
               <option value="dot">Nur Punkt</option>
               <option value="none">Aus</option>
             </select>
           </div>
-          <div class="setting"><label>Foto/Logo Spitze</label>
+          <div class="setting adv"><label>Foto/Logo Spitze</label>
             <label class="photo-label" id="tipPhotoLbl">Wählen<input type="file" id="tipPhoto" accept="image/*" hidden></label>
           </div>
-          <div class="setting"><label>Name Spitze</label><input type="text" id="tipLabel" placeholder="z.B. HANNES"></div>
-          <div class="setting"><label>Pin-Einblendung</label>
+          <div class="setting adv"><label>Name Spitze</label><input type="text" id="tipLabel" placeholder="z.B. HANNES"></div>
+          <div class="setting adv"><label>Pin-Einblendung</label>
             <select id="popStyle">
               <option value="pop" selected>Pop (Overshoot)</option>
               <option value="soft">Sanft</option>
               <option value="instant">Sofort</option>
             </select>
           </div>
-          <div class="setting"><label>Pin-Größe</label><input type="range" id="pinScale" min="0.3" max="2" step="0.05" value="1"></div>
-          <div class="setting"><label>Spitzen-Pin-Größe</label><input type="range" id="tipScale" min="0.3" max="2" step="0.05" value="1"></div>
-          <div class="setting"><label>Label-Größe (px)</label><input type="number" id="labelSize" value="14" min="8" max="48"></div>
-          <div class="setting"><label>Schrift (Pins)</label>
+          <div class="setting adv"><label>Pin-Größe</label><input type="range" id="pinScale" min="0.3" max="2" step="0.05" value="1"></div>
+          <div class="setting"><label>Größe Spitze / 3D-Modell</label><input type="range" id="tipScale" min="0.3" max="2" step="0.05" value="1"></div>
+          <div class="setting adv"><label>Label-Größe (px)</label><input type="number" id="labelSize" value="14" min="8" max="48"></div>
+          <div class="setting adv"><label>Schrift (Pins)</label>
             <select id="pinFont">
               <option value="system" selected>System Sans</option>
               <option value="rounded">Rounded</option>
@@ -186,7 +202,7 @@
           </div>
         </div>
 
-        <details class="card">
+        <details class="card adv">
           <summary><h2>Farben (Style-Editor)</h2></summary>
           <div class="colorrow">
             <label><input type="color" id="ccLand" value="#f3eee5"><span>Land</span></label>
@@ -199,7 +215,7 @@
           <div class="hint">Paletten anklicken oder Farben einzeln setzen – wirkt auf jeden Karten-Stil.</div>
         </details>
 
-        <details class="card">
+        <details class="card adv">
           <summary><h2>Kartendetails</h2></summary>
           <div class="setting"><label>Bundesländer-Grenzen</label><input type="checkbox" id="dtStates"></div>
           <div class="setting"><label>Hauptstraßen</label><input type="checkbox" id="dtRoads"></div>
@@ -237,10 +253,10 @@
             </select>
           </div>
           <div class="setting"><label>Kamera-Zoom</label><input type="range" id="zoom" min="3" max="13" step="0.1" value="5.6"></div>
-          <div class="setting"><label>Zoom-In an Stopps</label><input type="checkbox" id="stopZoom"></div>
+          <div class="setting adv"><label>Zoom-In an Stopps</label><input type="checkbox" id="stopZoom"></div>
           <div class="setting"><label>Neigung (Pitch)</label><input type="range" id="pitch" min="0" max="60" step="1" value="0"></div>
-          <div class="setting"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
-          <div class="setting"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
+          <div class="setting adv"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
+          <div class="setting adv"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
           <div class="setting"><label>Übersicht am Ende</label><input type="checkbox" id="endOverview" checked></div>
         </div>
         <div class="card">
@@ -273,7 +289,7 @@
           <div class="hint">Zählt mit der Linienspitze hoch (Summe aller Routen). Tag wird linear über die Strecke verteilt; leer lassen = keine Tag-Zeile.</div>
         </div>
 
-        <details class="card">
+        <details class="card adv">
           <summary><h2>Features (Regionen &amp; GeoJSON)</h2></summary>
           <div class="search-row">
             <input id="featInput" type="search" enterkeyhint="search" autocomplete="off" placeholder="Land/Region suchen (z.B. Bayern) …">
@@ -304,11 +320,11 @@
             <select id="expFps"><option value="30" selected>30 fps</option><option value="25">25 fps</option><option value="60">60 fps</option></select>
           </div>
           <div class="setting"><label>Bewegungsunschärfe</label><input type="checkbox" id="expBlur"></div>
-          <div class="setting"><label>Stopp-Positionen (JSON)</label><input type="checkbox" id="expPos"></div>
+          <div class="setting adv"><label>Stopp-Positionen (JSON)</label><input type="checkbox" id="expPos"></div>
           <button class="btn full big" id="mp4Btn">■ MP4 framegenau rendern</button>
           <div class="hint">Rendert Bild für Bild und wartet jedes Mal, bis alle Kacheln geladen sind: scharf, ohne Ruckler, auch in 4K. Dauert länger als Echtzeit.</div>
-          <button class="btn full ghost" id="recordBtn">● Echtzeit-Aufnahme (WebM)</button>
-          <div class="hint">Export als WebM. Für DaVinci Resolve ggf. umwandeln:<br>
+          <button class="btn full ghost adv" id="recordBtn">● Echtzeit-Aufnahme (WebM)</button>
+          <div class="hint adv">Export als WebM. Für DaVinci Resolve ggf. umwandeln:<br>
           <code>ffmpeg -i map.webm -c:v prores_ks -profile:v 3 map.mov</code></div>
         </div>
         <div class="card">
@@ -350,7 +366,9 @@
   </div>
 </div>
 
+<script src="models3d.js"></script>
 <script src="app.js"></script>
+<script src="templates.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

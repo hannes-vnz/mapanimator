@@ -69,7 +69,8 @@
   }));
   resSel.addEventListener("change", () => { syncFormat(); if (!stageLock) sizeStage(null); });
   syncFormat();
-  new ResizeObserver(() => { if (!stageLock) sizeStage(null); renderTimeline(); }).observe($("stage"));
+  let roRaf = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(roRaf); roRaf = requestAnimationFrame(() => { if (!stageLock) sizeStage(null); renderTimeline(); }); }).observe($("stage"));
 
   $("safeBtn").addEventListener("click", () => {
     const on = body.classList.toggle("safe");
@@ -136,6 +137,13 @@
   function syncThemes(){ grid.querySelectorAll(".theme").forEach(b => b.classList.toggle("active", b.dataset.v === styleSel.value)); }
   styleSel.addEventListener("change", () => setTimeout(() => { syncThemes(); syncRanges(); }, 0));
   syncThemes();
+
+  /* ---------- Einfach / Profi ---------- */
+  const pro = $("proMode");
+  try { pro.checked = localStorage.getItem("ma.pro") === "1"; } catch {}
+  const applyPro = () => { body.classList.toggle("pro", pro.checked); try { localStorage.setItem("ma.pro", pro.checked ? "1" : "0"); } catch {} renderTimeline(); };
+  pro.addEventListener("change", applyPro); applyPro();
+  document.addEventListener("ma:settings", () => { syncFormat(); syncRanges(); syncThemes(); });
 
   /* ---------- Tastenkürzel ---------- */
   const order = tabs.map(b => b.dataset.tab);

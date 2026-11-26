@@ -2138,8 +2138,15 @@ button.btn:disabled{opacity:.45; cursor:default;}
 .photo-label input{display:none;}
 .wp .del, #tlInspector .del{background:none; border:0; color:var(--faint); font-size:15px; padding:4px 8px; border-radius:6px;}
 .wp .del:hover, #tlInspector .del:hover{color:var(--danger); background:rgba(255,93,108,.1);}
-.legsel{display:flex; align-items:center; gap:8px; margin:-2px 0 8px; font-size:11.5px; color:var(--muted);}
-.legsel select{flex:1; height:28px; border:1px solid var(--line); border-radius:7px; background:var(--field); color:var(--text); padding:0 8px; font-size:12px;}
+.legsel{display:flex; align-items:center; gap:6px; margin:-2px 0 8px;}
+.mchips{flex:1; display:flex; gap:3px; overflow-x:auto; scrollbar-width:none; padding:2px 0;}
+.mchips::-webkit-scrollbar{display:none;}
+.mchip{flex:none; width:30px; height:30px; border-radius:8px; border:1px solid var(--line); background:var(--field); font-size:16px; line-height:1; display:grid; place-items:center; filter:grayscale(.85); opacity:.6; transition:all .12s;}
+.mchip:hover{opacity:1; filter:none;}
+.mchip.def{opacity:.95; filter:none; border-style:dashed; border-color:var(--line-2);}
+.mchip.on{opacity:1; filter:none; border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 0 1px var(--accent);}
+.lspeed{flex:none; height:30px; min-width:38px; border-radius:8px; border:1px solid var(--line-2); background:var(--field); color:var(--text); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;}
+.lspeed:hover{border-color:var(--accent);}
 .wp .idx{position:absolute; top:12px; left:-9px; width:20px; height:20px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-size:10.5px; display:grid; place-items:center; font-weight:800; box-shadow:0 0 0 3px var(--card);}
 
 /* Theme-Kacheln */
@@ -2211,6 +2218,37 @@ body.safe #safezone{display:block;}
 #tlInspector label{display:flex; align-items:center; gap:5px; color:var(--muted);}
 #tlInspector input, #tlInspector select{border:1px solid var(--line); border-radius:7px; height:28px; padding:0 7px; font-size:12px; background:var(--field); color:var(--text); width:76px;}
 
+/* ---------- Vorlagen ---------- */
+.tplgrid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+.tpl{display:flex; flex-direction:column; text-align:left; border:1px solid var(--line-2); border-radius:12px; background:var(--field); padding:0; overflow:hidden; transition:border-color .12s, transform .12s;}
+.tpl:hover{border-color:var(--muted); transform:translateY(-1px);}
+.tpl.active{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
+.tpl-sw{position:relative; height:58px; display:block;}
+.tpl-sw i{position:absolute; left:10%; right:30%; top:62%; height:4px; border-radius:2px; background:var(--lc); transform:rotate(-14deg); box-shadow:0 0 0 1.5px rgba(255,255,255,.7);}
+.tpl-sw em{position:absolute; right:8px; top:6px; font-style:normal; font-size:22px; filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));}
+.tpl-tx{padding:7px 9px 9px; display:flex; flex-direction:column; gap:2px; min-width:0;}
+.tpl-tx b{font-size:12.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.tpl-tx small{font-size:10.5px; color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+/* ---------- Tempo ---------- */
+.tempo-row{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+.tempo-row > span{width:52px; flex:none; color:#c9cad1;}
+.seg.wide{flex:1;}
+.seg.wide button{flex:1; padding:7px 4px;}
+
+/* ---------- Einfach / Profi ---------- */
+.protoggle{display:flex; align-items:center; gap:7px; font-size:12px; font-weight:650; color:var(--muted); cursor:pointer; user-select:none;}
+.protoggle input{appearance:none; -webkit-appearance:none; width:32px; height:18px; border-radius:9px; background:var(--line-2); position:relative; cursor:pointer; transition:background .15s;}
+.protoggle input::after{content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:transform .15s;}
+.protoggle input:checked{background:var(--accent);}
+.protoggle input:checked::after{transform:translateX(14px);}
+body:not(.pro) .adv, body:not(.pro) .wp .coords{display:none !important;}
+body:not(.pro) #tlTracks, body:not(.pro) #tlInspector, body:not(.pro) #tlAddCam, body:not(.pro) #tlLineKF, body:not(.pro) #tlHead .hint, body:not(.pro) #tlToggle{display:none !important;}
+body:not(.pro) #timeline{height:auto;}
+body:not(.pro) #tlBody{flex:none; height:30px;}
+body:not(.pro) #tlRuler{height:30px; margin-left:12px; margin-right:12px; border-radius:7px; border:1px solid var(--line);}
+body:not(.pro) #tlPlayhead{margin-left:12px;}
+
 /* ---------- Laptop, schmal ---------- */
 @media (max-width:1180px){
   :root{--side-w:316px;}
@@ -2243,6 +2281,7 @@ body.safe #safezone{display:block;}
   .wp input[type=text], .wp input[type=number]{height:38px; font-size:16px;}
   button.btn, label.btn{min-height:42px;}
   .themegrid{grid-template-columns:repeat(3,1fr);}
+  .protoggle span{display:none;}
   #tlHead{padding:6px 8px; gap:6px;}
   #tlHead .hint, #tlHead label.dur, #resetBtn{display:none;}
   #tlRuler{margin-left:78px; height:26px;}
@@ -2277,6 +2316,7 @@ body.safe #safezone{display:block;}
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 16.5h7M15.5 8v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
   </button>
   <div class="spacer"></div>
+  <label class="protoggle" title="Profi-Modus: alle Einstellungen und Keyframe-Timeline"><input type="checkbox" id="proMode"><span class="i18n">Profi</span></label>
   <div class="topactions">
     <button class="tbtn i18n" id="projSaveTop" title="Projekt als JSON speichern">Speichern</button>
     <label class="tbtn i18n" title="Projekt-JSON laden">Laden<input type="file" id="projLoadTop" accept=".json" hidden></label>
@@ -2292,7 +2332,7 @@ body.safe #safezone{display:block;}
 <div id="app">
   <nav id="tabs" role="tablist">
     <button data-tab="route" class="active" role="tab" title="Schritt 1 (Taste 1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 17.5c5-1 2-6.5 6.5-8.8"/></svg><span class="num">1</span><span class="i18n">Route</span></button>
-    <button data-tab="style" role="tab" title="Schritt 2 (Taste 2)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.7 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span class="num">2</span><span class="i18n">Karte</span></button>
+    <button data-tab="style" role="tab" title="Schritt 2 (Taste 2)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.7 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span class="num">2</span><span class="i18n">Look</span></button>
     <button data-tab="layers" role="tab" title="Schritt 3 (Taste 3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="num">3</span><span class="i18n">Ebenen</span></button>
     <button data-tab="camera" role="tab" title="Schritt 4 (Taste 4)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="m16 11 5-3v9l-5-3z"/></svg><span class="num">4</span><span class="i18n">Kamera</span></button>
     <button data-tab="export" role="tab" title="Schritt 5 (Taste 5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span class="num">5</span><span class="i18n">Export</span></button>
@@ -2321,6 +2361,13 @@ body.safe #safezone{display:block;}
         </div>
 
         <div class="card">
+          <h2>Tempo</h2>
+          <div class="tempo-row"><span class="i18n">Länge</span><div id="tempoLen" class="seg wide"></div></div>
+          <div class="tempo-row"><span class="i18n">Gefühl</span><div id="tempoFeel" class="seg wide"></div></div>
+          <input type="hidden" id="tplLen" value="0"><input type="hidden" id="tplFeel" value="normal">
+          <div class="hint">Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.</div>
+        </div>
+        <div class="card">
           <h2>Linie &amp; Tempo</h2>
           <div class="setting"><label>Standard-Fortbewegung</label>
             <select id="travelMode">
@@ -2341,11 +2388,11 @@ body.safe #safezone{display:block;}
             </select>
           </div>
           <div class="setting"><label>Weiße Kontur</label><input type="checkbox" id="lineCasing"></div>
-          <div class="setting"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
-          <div class="setting"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
-          <div class="setting"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>
-          <div class="setting"><label>Konstante Geschwindigkeit</label><input type="checkbox" id="constSpeed" checked></div>
-          <div class="setting"><label>Linien-Beschleunigung</label>
+          <div class="setting adv"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
+          <div class="setting adv"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
+          <div class="setting adv"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>
+          <div class="setting adv"><label>Konstante Geschwindigkeit</label><input type="checkbox" id="constSpeed" checked></div>
+          <div class="setting adv"><label>Linien-Beschleunigung</label>
             <select id="legEase">
               <option value="linear">Linear (konstant)</option>
               <option value="quadInOut">Quadratisch (weich)</option>
@@ -2354,10 +2401,10 @@ body.safe #safezone{display:block;}
               <option value="easeIn">Langsam anlaufen → schnell</option>
             </select>
           </div>
-          <div class="setting"><label>Tempo ×</label><input type="number" id="speedMult" value="1" step="0.1" min="0.1" max="5"></div>
+          <div class="setting adv"><label>Tempo ×</label><input type="number" id="speedMult" value="1" step="0.1" min="0.1" max="5"></div>
         </div>
 
-        <details class="card">
+        <details class="card adv">
           <summary><h2>POIs entlang der Route</h2></summary>
           <div class="setting"><label>Gipfel</label><input type="checkbox" id="poiPeak" checked></div>
           <div class="setting"><label>Burgen &amp; Schlösser</label><input type="checkbox" id="poiCastle" checked></div>
@@ -2374,6 +2421,12 @@ body.safe #safezone{display:block;}
 
       <!-- ===== STIL ===== -->
       <section class="pane" data-pane="style">
+        <div class="card">
+          <h2>Vorlagen</h2>
+          <div id="tplGrid" class="tplgrid"></div>
+          <div class="hint">Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.</div>
+          <input type="hidden" id="tplId" value="">
+        </div>
         <div class="card">
           <h2>Karten-Stil</h2>
           <div id="themeGrid" class="themegrid"></div>
@@ -2400,27 +2453,29 @@ body.safe #safezone{display:block;}
           </div>
           <div class="setting"><label>Linienspitze</label>
             <select id="tipStyle">
-              <option value="stop" selected>Wie Stopp-Pins (Foto/Badge)</option>
+              <option value="model3d" selected>3D-Modell (Verkehrsmittel)</option>
+              <option value="mode">Symbol (Verkehrsmittel)</option>
+              <option value="stop">Wie Stopp-Pins (Foto/Badge)</option>
               <option value="pin">Pin + Punkt (wie Google Maps)</option>
               <option value="dot">Nur Punkt</option>
               <option value="none">Aus</option>
             </select>
           </div>
-          <div class="setting"><label>Foto/Logo Spitze</label>
+          <div class="setting adv"><label>Foto/Logo Spitze</label>
             <label class="photo-label" id="tipPhotoLbl">Wählen<input type="file" id="tipPhoto" accept="image/*" hidden></label>
           </div>
-          <div class="setting"><label>Name Spitze</label><input type="text" id="tipLabel" placeholder="z.B. HANNES"></div>
-          <div class="setting"><label>Pin-Einblendung</label>
+          <div class="setting adv"><label>Name Spitze</label><input type="text" id="tipLabel" placeholder="z.B. HANNES"></div>
+          <div class="setting adv"><label>Pin-Einblendung</label>
             <select id="popStyle">
               <option value="pop" selected>Pop (Overshoot)</option>
               <option value="soft">Sanft</option>
               <option value="instant">Sofort</option>
             </select>
           </div>
-          <div class="setting"><label>Pin-Größe</label><input type="range" id="pinScale" min="0.3" max="2" step="0.05" value="1"></div>
-          <div class="setting"><label>Spitzen-Pin-Größe</label><input type="range" id="tipScale" min="0.3" max="2" step="0.05" value="1"></div>
-          <div class="setting"><label>Label-Größe (px)</label><input type="number" id="labelSize" value="14" min="8" max="48"></div>
-          <div class="setting"><label>Schrift (Pins)</label>
+          <div class="setting adv"><label>Pin-Größe</label><input type="range" id="pinScale" min="0.3" max="2" step="0.05" value="1"></div>
+          <div class="setting"><label>Größe Spitze / 3D-Modell</label><input type="range" id="tipScale" min="0.3" max="2" step="0.05" value="1"></div>
+          <div class="setting adv"><label>Label-Größe (px)</label><input type="number" id="labelSize" value="14" min="8" max="48"></div>
+          <div class="setting adv"><label>Schrift (Pins)</label>
             <select id="pinFont">
               <option value="system" selected>System Sans</option>
               <option value="rounded">Rounded</option>
@@ -2431,7 +2486,7 @@ body.safe #safezone{display:block;}
           </div>
         </div>
 
-        <details class="card">
+        <details class="card adv">
           <summary><h2>Farben (Style-Editor)</h2></summary>
           <div class="colorrow">
             <label><input type="color" id="ccLand" value="#f3eee5"><span>Land</span></label>
@@ -2444,7 +2499,7 @@ body.safe #safezone{display:block;}
           <div class="hint">Paletten anklicken oder Farben einzeln setzen – wirkt auf jeden Karten-Stil.</div>
         </details>
 
-        <details class="card">
+        <details class="card adv">
           <summary><h2>Kartendetails</h2></summary>
           <div class="setting"><label>Bundesländer-Grenzen</label><input type="checkbox" id="dtStates"></div>
           <div class="setting"><label>Hauptstraßen</label><input type="checkbox" id="dtRoads"></div>
@@ -2482,10 +2537,10 @@ body.safe #safezone{display:block;}
             </select>
           </div>
           <div class="setting"><label>Kamera-Zoom</label><input type="range" id="zoom" min="3" max="13" step="0.1" value="5.6"></div>
-          <div class="setting"><label>Zoom-In an Stopps</label><input type="checkbox" id="stopZoom"></div>
+          <div class="setting adv"><label>Zoom-In an Stopps</label><input type="checkbox" id="stopZoom"></div>
           <div class="setting"><label>Neigung (Pitch)</label><input type="range" id="pitch" min="0" max="60" step="1" value="0"></div>
-          <div class="setting"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
-          <div class="setting"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
+          <div class="setting adv"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
+          <div class="setting adv"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
           <div class="setting"><label>Übersicht am Ende</label><input type="checkbox" id="endOverview" checked></div>
         </div>
         <div class="card">
@@ -2518,7 +2573,7 @@ body.safe #safezone{display:block;}
           <div class="hint">Zählt mit der Linienspitze hoch (Summe aller Routen). Tag wird linear über die Strecke verteilt; leer lassen = keine Tag-Zeile.</div>
         </div>
 
-        <details class="card">
+        <details class="card adv">
           <summary><h2>Features (Regionen &amp; GeoJSON)</h2></summary>
           <div class="search-row">
             <input id="featInput" type="search" enterkeyhint="search" autocomplete="off" placeholder="Land/Region suchen (z.B. Bayern) …">
@@ -2549,11 +2604,11 @@ body.safe #safezone{display:block;}
             <select id="expFps"><option value="30" selected>30 fps</option><option value="25">25 fps</option><option value="60">60 fps</option></select>
           </div>
           <div class="setting"><label>Bewegungsunschärfe</label><input type="checkbox" id="expBlur"></div>
-          <div class="setting"><label>Stopp-Positionen (JSON)</label><input type="checkbox" id="expPos"></div>
+          <div class="setting adv"><label>Stopp-Positionen (JSON)</label><input type="checkbox" id="expPos"></div>
           <button class="btn full big" id="mp4Btn">■ MP4 framegenau rendern</button>
           <div class="hint">Rendert Bild für Bild und wartet jedes Mal, bis alle Kacheln geladen sind: scharf, ohne Ruckler, auch in 4K. Dauert länger als Echtzeit.</div>
-          <button class="btn full ghost" id="recordBtn">● Echtzeit-Aufnahme (WebM)</button>
-          <div class="hint">Export als WebM. Für DaVinci Resolve ggf. umwandeln:<br>
+          <button class="btn full ghost adv" id="recordBtn">● Echtzeit-Aufnahme (WebM)</button>
+          <div class="hint adv">Export als WebM. Für DaVinci Resolve ggf. umwandeln:<br>
           <code>ffmpeg -i map.webm -c:v prores_ks -profile:v 3 map.mov</code></div>
         </div>
         <div class="card">
@@ -2598,6 +2653,263 @@ body.safe #safezone{display:block;}
 <script>
 "use strict";
 /* =========================================================
+   3D-Modelle an der Linienspitze
+   Eigene MapLibre-Custom-Layer (WebGL), ohne externe Bibliothek.
+   Modelle sind prozedurale Low-Poly-Meshes: Länge ≈ 1, +x = vorne, z = oben.
+   API: model3dAddLayer(), model3dUpdate(items, t)
+     items: [{ lngLat:[lng,lat], heading:rad (Mercator, 0 = Osten), mode, color, prog }]
+   ========================================================= */
+const M3D = (() => {
+  /* ---------- Mesh-Bausteine ---------- */
+  const hex = c => { c = (c || "#888").replace("#", ""); if (c.length === 3) c = c.replace(/./g, x => x + x);
+    return [parseInt(c.slice(0, 2), 16) / 255, parseInt(c.slice(2, 4), 16) / 255, parseInt(c.slice(4, 6), 16) / 255]; };
+  const mix = (a, b, f) => a.map((v, i) => v + (b[i] - v) * f);
+
+  function Mesh(){ this.p = []; this.n = []; this.c = []; this.tag = []; }
+  Mesh.prototype.tri = function (a, b, c, col, tag){
+    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    const l = Math.hypot(...n) || 1; n = n.map(x => x / l);
+    for (const p of [a, b, c]){ this.p.push(...p); this.n.push(...n); this.c.push(...col); this.tag.push(tag || 0); }
+  };
+  Mesh.prototype.quad = function (a, b, c, d, col, tag){ this.tri(a, b, c, col, tag); this.tri(a, c, d, col, tag); };
+  // achsparalleler Quader: Mittelpunkt + Größe; taper verkleinert die Oberseite (0..1)
+  Mesh.prototype.box = function (cx, cy, cz, sx, sy, sz, col, opt = {}){
+    const x0 = cx - sx / 2, x1 = cx + sx / 2, y0 = cy - sy / 2, y1 = cy + sy / 2, z0 = cz - sz / 2, z1 = cz + sz / 2;
+    const tx = (opt.taperX || 0) * sx / 2, ty = (opt.taperY || 0) * sy / 2, sh = opt.shiftX || 0;
+    const B = [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]];
+    const T = [[x0 + tx + sh, y0 + ty, z1], [x1 - tx + sh, y0 + ty, z1], [x1 - tx + sh, y1 - ty, z1], [x0 + tx + sh, y1 - ty, z1]];
+    const top = opt.top || col, tag = opt.tag || 0;
+    this.quad(B[3], B[2], B[1], B[0], mix(col, [0, 0, 0], 0.3), tag);
+    this.quad(T[0], T[1], T[2], T[3], top, tag);
+    for (let i = 0; i < 4; i++){ const j = (i + 1) % 4; this.quad(B[i], B[j], T[j], T[i], col, tag); }
+    return this;
+  };
+  // Zylinder entlang Achse ('x' | 'y' | 'z')
+  Mesh.prototype.cyl = function (cx, cy, cz, r, len, axis, col, seg = 12, tag = 0, r2){
+    r2 = r2 == null ? r : r2;
+    const P = (a, d, rr) => { const s = Math.sin(a) * rr, c = Math.cos(a) * rr;
+      return axis === "x" ? [cx + d, cy + s, cz + c] : axis === "y" ? [cx + s, cy + d, cz + c] : [cx + s, cy + c, cz + d]; };
+    const h = len / 2, capA = axis === "y" ? [cx, cy - h, cz] : axis === "x" ? [cx - h, cy, cz] : [cx, cy, cz - h];
+    const capB = axis === "y" ? [cx, cy + h, cz] : axis === "x" ? [cx + h, cy, cz] : [cx, cy, cz + h];
+    for (let i = 0; i < seg; i++){
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+      this.quad(P(a0, -h, r), P(a1, -h, r), P(a1, h, r2), P(a0, h, r2), col, tag);
+      this.tri(capA, P(a1, -h, r), P(a0, -h, r), mix(col, [0, 0, 0], 0.15), tag);
+      if (r2 > 0) this.tri(capB, P(a0, h, r2), P(a1, h, r2), mix(col, [1, 1, 1], 0.1), tag);
+    }
+    return this;
+  };
+  Mesh.prototype.wheel = function (x, y, r, w){ return this.cyl(x, y, r, r, w || 0.07, "y", hex("#1c1d20"), 10, 2).cyl(x, y, r, r * 0.5, (w || 0.07) + 0.01, "y", hex("#9aa0a8"), 8, 2); };
+
+  const DARK = hex("#232a33"), GLASS = hex("#3b5068"), WHITE = hex("#f4f4f2"), SKIN = hex("#e9b48f"), GREY = hex("#8b9098"), BLACK = hex("#18191c");
+
+  /* ---------- Modelle (Farbe C = Routenfarbe) ---------- */
+  const BUILD = {
+    car(C){ const m = new Mesh(), L = mix(C, [1, 1, 1], 0.12);
+      m.box(0, 0, 0.16, 1, 0.46, 0.18, C, { top: L });
+      m.box(-0.06, 0, 0.32, 0.52, 0.42, 0.15, GLASS, { taperX: 0.25 });
+      m.box(-0.07, 0, 0.405, 0.38, 0.38, 0.025, C, { top: L });
+      m.box(0.505, 0.15, 0.17, 0.02, 0.09, 0.05, hex("#fff3c4")).box(0.505, -0.15, 0.17, 0.02, 0.09, 0.05, hex("#fff3c4"));
+      m.box(-0.505, 0.16, 0.18, 0.02, 0.08, 0.04, hex("#d22")).box(-0.505, -0.16, 0.18, 0.02, 0.08, 0.04, hex("#d22"));
+      [[0.31, 0.22], [0.31, -0.22], [-0.31, 0.22], [-0.31, -0.22]].forEach(([x, y]) => m.wheel(x, y, 0.1));
+      return { m, size: 1 }; },
+    camper(C){ const m = new Mesh();
+      m.box(0, 0, 0.32, 1.2, 0.48, 0.48, WHITE);
+      m.box(0, 0, 0.28, 1.21, 0.49, 0.07, C);
+      m.box(0.5, 0, 0.42, 0.18, 0.44, 0.16, GLASS, { taperX: 0.3 });
+      m.box(-0.1, 0.245, 0.42, 0.5, 0.01, 0.1, GLASS).box(-0.1, -0.245, 0.42, 0.5, 0.01, 0.1, GLASS);
+      [[0.38, 0.22], [0.38, -0.22], [-0.38, 0.22], [-0.38, -0.22]].forEach(([x, y]) => m.wheel(x, y, 0.1));
+      return { m, size: 1.15 }; },
+    bus(C){ const m = new Mesh(), L = mix(C, [1, 1, 1], 0.15);
+      m.box(0, 0, 0.33, 1.5, 0.44, 0.5, C, { top: L });
+      m.box(0, 0, 0.43, 1.51, 0.45, 0.15, GLASS);
+      m.box(0.752, 0, 0.36, 0.01, 0.4, 0.26, GLASS);
+      [[0.5, 0.21], [0.5, -0.21], [-0.45, 0.21], [-0.45, -0.21]].forEach(([x, y]) => m.wheel(x, y, 0.1));
+      return { m, size: 1.25 }; },
+    moto(C){ const m = new Mesh();
+      m.wheel(0.32, 0, 0.12, 0.06); m.wheel(-0.32, 0, 0.12, 0.06);
+      m.box(0, 0, 0.24, 0.5, 0.14, 0.14, C, { taperX: 0.2 });
+      m.box(0.24, 0, 0.36, 0.08, 0.3, 0.03, GREY);
+      m.box(-0.06, 0, 0.42, 0.18, 0.2, 0.24, DARK);        // Fahrer
+      m.box(-0.02, 0, 0.6, 0.13, 0.13, 0.13, C);           // Helm
+      return { m, size: 0.8 }; },
+    bike(C){ const m = new Mesh();
+      m.cyl(0.3, 0, 0.16, 0.16, 0.03, "y", BLACK, 14, 2).cyl(-0.3, 0, 0.16, 0.16, 0.03, "y", BLACK, 14, 2);
+      m.box(0, 0, 0.26, 0.6, 0.03, 0.03, GREY).box(0.02, 0, 0.3, 0.03, 0.03, 0.2, GREY);
+      m.box(-0.04, 0, 0.5, 0.2, 0.18, 0.26, C, { shiftX: 0.06 });   // Oberkörper
+      m.box(0.06, 0, 0.7, 0.12, 0.12, 0.12, SKIN);                   // Kopf
+      m.box(0.07, 0, 0.775, 0.14, 0.13, 0.04, hex("#f5f5f5"));      // Helm
+      m.box(-0.04, 0.06, 0.32, 0.08, 0.05, 0.22, DARK, { tag: 3 }).box(-0.04, -0.06, 0.32, 0.08, 0.05, 0.22, DARK, { tag: 4 });
+      return { m, size: 0.8 }; },
+    foot(C){ const m = new Mesh();
+      m.box(0, 0.07, 0.2, 0.09, 0.08, 0.4, DARK, { tag: 3 }).box(0, -0.07, 0.2, 0.09, 0.08, 0.4, DARK, { tag: 4 });
+      m.box(0, 0, 0.56, 0.16, 0.26, 0.34, C);                         // Jacke
+      m.box(-0.13, 0, 0.58, 0.12, 0.22, 0.3, hex("#6b4a2c"));         // Rucksack
+      m.box(0, 0, 0.82, 0.14, 0.14, 0.15, SKIN);
+      m.box(0, 0, 0.91, 0.16, 0.16, 0.04, C);
+      return { m, size: 0.75 }; },
+    train(C){ const m = new Mesh(), L = mix(C, [1, 1, 1], 0.2);
+      m.box(0.1, 0, 0.3, 1.5, 0.4, 0.44, WHITE, { top: hex("#d9dbde") });
+      m.box(0.1, 0, 0.22, 1.51, 0.41, 0.08, C);
+      m.box(0.1, 0, 0.4, 1.51, 0.41, 0.1, GLASS);
+      m.box(0.95, 0, 0.27, 0.22, 0.4, 0.38, C, { taperX: 0.7, top: L });   // Nase
+      m.box(0.1, 0, 0.04, 1.3, 0.3, 0.08, BLACK);
+      return { m, size: 1.4 }; },
+    ferry(C){ const m = new Mesh();
+      m.box(0, 0, 0.1, 1.3, 0.5, 0.2, WHITE, { taperY: 0.05 });
+      m.box(0.72, 0, 0.1, 0.16, 0.5, 0.2, WHITE, { taperY: 0.9 });
+      m.box(0, 0, 0.06, 1.31, 0.51, 0.06, C);
+      m.box(-0.1, 0, 0.27, 0.8, 0.4, 0.14, WHITE).box(-0.15, 0, 0.38, 0.55, 0.34, 0.1, WHITE);
+      m.box(-0.1, 0, 0.3, 0.81, 0.41, 0.04, GLASS).box(-0.15, 0, 0.4, 0.56, 0.35, 0.03, GLASS);
+      m.cyl(-0.3, 0, 0.5, 0.07, 0.16, "z", C, 10);
+      return { m, size: 1.3, water: true }; },
+    boat(C){ const m = new Mesh();
+      m.box(0, 0, 0.07, 0.9, 0.3, 0.14, WHITE, { taperY: 0.2 });
+      m.box(0.5, 0, 0.07, 0.12, 0.3, 0.14, WHITE, { taperY: 0.95 });
+      m.box(0, 0, 0.04, 0.91, 0.31, 0.03, C);
+      m.box(0.05, 0, 0.5, 0.03, 0.03, 0.8, GREY);
+      m.tri([0.06, 0, 0.14], [0.06, 0, 0.88], [-0.42, 0, 0.16], WHITE);
+      m.tri([0.04, 0, 0.14], [-0.42, 0, 0.16], [0.04, 0, 0.88], hex("#e8e8e4"));
+      m.tri([0.08, 0, 0.82], [0.45, 0, 0.12], [0.08, 0, 0.14], C);
+      m.tri([0.08, 0, 0.82], [0.08, 0, 0.14], [0.45, 0, 0.12], C);
+      return { m, size: 1.1, water: true }; },
+    fly(C){ const m = new Mesh();
+      m.cyl(0, 0, 0.2, 0.09, 1.0, "x", WHITE, 12);
+      m.cyl(0.58, 0, 0.2, 0.09, 0.16, "x", WHITE, 12, 0, 0.01);
+      m.cyl(-0.6, 0, 0.22, 0.09, 0.2, "x", WHITE, 12, 0, 0.03);
+      m.box(0.52, 0, 0.24, 0.06, 0.12, 0.04, GLASS);
+      m.box(0.02, 0, 0.17, 0.26, 1.1, 0.025, WHITE, { taperX: 0.3 });
+      m.cyl(0.08, 0.26, 0.12, 0.045, 0.2, "x", C, 10).cyl(0.08, -0.26, 0.12, 0.045, 0.2, "x", C, 10);
+      m.box(-0.62, 0, 0.23, 0.14, 0.38, 0.02, WHITE);
+      m.box(-0.6, 0, 0.36, 0.2, 0.02, 0.26, C, { taperX: 0.5, shiftX: -0.05 });
+      m.box(0, 0, 0.2, 1.01, 0.181, 0.03, C);
+      return { m, size: 1.45, air: true }; },
+    heli(C){ const m = new Mesh(), L = mix(C, [1, 1, 1], 0.2);
+      m.box(0.1, 0, 0.26, 0.5, 0.32, 0.3, C, { top: L, taperX: 0.25 });
+      m.box(0.3, 0, 0.27, 0.12, 0.3, 0.22, GLASS, { taperX: 0.4 });
+      m.box(-0.38, 0, 0.3, 0.6, 0.06, 0.06, C);
+      m.box(-0.66, 0, 0.38, 0.1, 0.02, 0.16, C);
+      m.box(0.1, 0.14, 0.06, 0.6, 0.03, 0.03, GREY).box(0.1, -0.14, 0.06, 0.6, 0.03, 0.03, GREY);
+      m.box(0.1, 0, 0.44, 0.05, 0.05, 0.06, GREY);
+      m.box(0.1, 0, 0.48, 1.3, 0.06, 0.012, DARK, { tag: 1 }).box(0.1, 0, 0.48, 0.06, 1.3, 0.012, DARK, { tag: 1 });
+      return { m, size: 1.05, air: true }; }
+  };
+  const ALIAS = { car: "car", camper: "camper", bus: "bus", moto: "moto", bike: "bike", foot: "foot",
+                  train: "train", ferry: "ferry", boat: "boat", fly: "fly", heli: "heli" };
+
+  /* ---------- WebGL ---------- */
+  const VS = `
+    attribute vec3 a_pos; attribute vec3 a_nor; attribute vec3 a_col; attribute float a_tag;
+    uniform mat4 u_matrix; uniform mat3 u_rot; uniform float u_scale; uniform float u_alt;
+    uniform float u_shadow; uniform float u_spin; uniform float u_step; uniform vec2 u_sun;
+    varying vec3 v_col; varying float v_light;
+    void main(){
+      vec3 p = a_pos;
+      if (a_tag == 1.0){ float c = cos(u_spin), s = sin(u_spin); vec2 q = p.xy - vec2(0.1, 0.0); p.xy = vec2(c*q.x - s*q.y, s*q.x + c*q.y) + vec2(0.1, 0.0); }
+      if (a_tag == 3.0) p.x += u_step * (1.0 - p.z * 2.0) * 0.12;
+      if (a_tag == 4.0) p.x -= u_step * (1.0 - p.z * 2.0) * 0.12;
+      vec3 w = u_rot * p * u_scale;
+      vec3 n = normalize(u_rot * a_nor);
+      if (u_shadow > 0.5){
+        float h = w.z + u_alt;
+        w = vec3(w.x + h * u_sun.x, w.y + h * u_sun.y, 0.0);
+        v_col = vec3(0.0); v_light = 1.0;
+      } else {
+        w.z += u_alt;
+        vec3 L = normalize(vec3(-0.45, -0.55, 0.75));
+        v_light = 0.58 + 0.42 * max(dot(n, L), 0.0) + 0.12 * max(n.z, 0.0);
+        v_col = a_col;
+      }
+      gl_Position = u_matrix * vec4(w, 1.0);
+    }`;
+  const FS = `precision mediump float; varying vec3 v_col; varying float v_light; uniform float u_alpha;
+    void main(){ gl_FragColor = vec4(v_col * v_light, u_alpha); }`;
+
+  let gl = null, prog = null, loc = {}, cache = new Map(), items = [], time = 0, mapRef = null;
+
+  function compile(g){
+    const sh = (type, src) => { const s = g.createShader(type); g.shaderSource(s, src); g.compileShader(s);
+      if (!g.getShaderParameter(s, g.COMPILE_STATUS)) throw new Error("3D-Shader: " + g.getShaderInfoLog(s)); return s; };
+    const p = g.createProgram();
+    g.attachShader(p, sh(g.VERTEX_SHADER, VS)); g.attachShader(p, sh(g.FRAGMENT_SHADER, FS)); g.linkProgram(p);
+    ["a_pos", "a_nor", "a_col", "a_tag"].forEach(k => loc[k] = g.getAttribLocation(p, k));
+    ["u_matrix", "u_rot", "u_scale", "u_alt", "u_shadow", "u_alpha", "u_spin", "u_step", "u_sun"].forEach(k => loc[k] = g.getUniformLocation(p, k));
+    return p;
+  }
+  function meshFor(mode, color){
+    const key = mode + color;
+    if (cache.has(key)) return cache.get(key);
+    const b = (BUILD[ALIAS[mode]] || BUILD.car)(hex(color));
+    const mk = arr => { const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); return buf; };
+    const o = { pos: mk(b.m.p), nor: mk(b.m.n), col: mk(b.m.c), tag: mk(b.m.tag), count: b.m.p.length / 3, size: b.size, air: b.air, water: b.water };
+    cache.set(key, o);
+    return o;
+  }
+  function bind(buf, a, n){ gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, n, gl.FLOAT, false, 0, 0); }
+  function mul(a, b){ // 4x4, Spaltenmajor
+    const o = new Float64Array(16);
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++){
+      let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; }
+    return o;
+  }
+
+  const layer = {
+    id: "tip-3d", type: "custom", renderingMode: "3d",
+    onAdd(map, g){ mapRef = map; gl = g; prog = compile(g); cache = new Map(); },
+    onRemove(){ cache = new Map(); prog = null; },
+    render(g, args){
+      if (!items.length || !prog) return;
+      const main = (args && args.defaultProjectionData && args.defaultProjectionData.mainMatrix) || (args && args.modelViewProjectionMatrix) || args;
+      const zoom = mapRef.getZoom();
+      const mercPerPx = 1 / (512 * Math.pow(2, zoom));
+      g.useProgram(prog);
+      g.disable(g.CULL_FACE);
+      for (const it of items){
+        const mesh = meshFor(it.mode, it.color);
+        const mc = maplibregl.MercatorCoordinate.fromLngLat(it.lngLat, 0);
+        let ground = 0;
+        try { if (mapRef.getTerrain && mapRef.getTerrain()) ground = (mapRef.queryTerrainElevation(it.lngLat) || 0) * mc.meterInMercatorCoordinateUnits(); } catch {}
+        const T = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, mc.x, mc.y, ground, 1];
+        g.uniformMatrix4fv(loc.u_matrix, false, new Float32Array(mul(main, T)));
+        const h = it.heading || 0, c = Math.cos(h), s = Math.sin(h);
+        const roll = mesh.water ? Math.sin(time * 2.2) * 0.06 : 0, cr = Math.cos(roll), sr = Math.sin(roll);
+        // Spalten = Bilder der Modellachsen: x → Fahrtrichtung, y → links davon (Mercator-y zeigt nach Süden), z → oben; plus Rollen um x
+        g.uniformMatrix3fv(loc.u_rot, false, new Float32Array([c, s, 0, s * cr, -c * cr, sr, -s * sr, c * sr, cr]));
+        const scale = (it.px || 54) * mesh.size * mercPerPx;
+        let alt = 0;
+        if (mesh.air){ const k = Math.sin(Math.PI * Math.min(Math.max(it.prog || 0, 0), 1)); alt = (mesh.size * 0.4 * Math.pow(k, 0.6)) * scale / mesh.size; }
+        g.uniform1f(loc.u_scale, scale);
+        g.uniform1f(loc.u_alt, alt);
+        g.uniform1f(loc.u_spin, time * 28);
+        g.uniform1f(loc.u_step, Math.sin(time * 9));
+        g.uniform2f(loc.u_sun, 0.45, 0.35);
+        bind(mesh.pos, loc.a_pos, 3); bind(mesh.nor, loc.a_nor, 3); bind(mesh.col, loc.a_col, 3); bind(mesh.tag, loc.a_tag, 1);
+        // Schatten
+        g.enable(g.BLEND); g.blendFunc(g.SRC_ALPHA, g.ONE_MINUS_SRC_ALPHA);
+        g.disable(g.DEPTH_TEST);
+        g.uniform1f(loc.u_shadow, 1); g.uniform1f(loc.u_alpha, mesh.air && alt > 0 ? 0.16 : 0.28);
+        g.drawArrays(g.TRIANGLES, 0, mesh.count);
+        // Modell
+        g.enable(g.DEPTH_TEST); g.depthFunc(g.LEQUAL); g.depthMask(true);
+        g.disable(g.BLEND);
+        g.uniform1f(loc.u_shadow, 0); g.uniform1f(loc.u_alpha, 1);
+        g.drawArrays(g.TRIANGLES, 0, mesh.count);
+      }
+      g.disable(g.DEPTH_TEST);
+    }
+  };
+
+  return {
+    addLayer(map){ if (!map.getLayer("tip-3d")) map.addLayer(layer); },
+    update(list, t){ items = list || []; time = t || 0; if (mapRef) mapRef.triggerRepaint(); },
+    modes: Object.keys(BUILD)
+  };
+})();
+</script>
+<script>
+"use strict";
+/* =========================================================
    Kartenanimator v4
    AE-Timeline · Linien-Speed-Keyframes · Scrubbing · 3D-Terrain
    ========================================================= */
@@ -2630,7 +2942,9 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Projekt":"Project","Export":"Export",
+  "Kamera-Presets":"Camera presets","Größe Spitze / 3D-Modell":"Tip / 3D model size","Look":"Look","Gefühl":"Feel","Profi":"Pro",
+  "Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.":"A template sets map style, line, tip, camera, pace and format. Your places stay. Adjust anything afterwards.",
+  "Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.":"Length adjusts the pace automatically, even when you add places. Per leg: transport and ½×/2× right at the stop.","Projekt":"Project","Export":"Export",
   "Reise-Animationen im Vlog-Stil · rendert lokal im Browser":"Vlog-style travel animations · renders locally in your browser",
   // Buttons
   "Suchen":"Search","+ Stopp manuell (Koordinaten)":"+ Add stop manually (coordinates)",
@@ -2643,7 +2957,8 @@ const EN = {
   "Fit":"Fit","✕ löschen":"✕ delete",
   // Labels
   "Linienfarbe":"Line color","Weiße Kontur":"White outline","Anreise per":"Arrive by","Standard":"Default",
-  "Auto":"Car","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
+  "Auto":"Car","Camper":"Camper van","Motorrad":"Motorbike","Segelboot":"Sailboat","Heli":"Helicopter","Tempo dieser Etappe":"Speed of this leg",
+  "3D-Modell (Verkehrsmittel)":"3D model (transport)","Symbol (Verkehrsmittel)":"Icon (transport)","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
   "Standard-Fortbewegung":"Default travel mode","Linienbreite":"Line width","Linienstil":"Line style","Fortbewegung":"Travel mode",
   "Sekunden pro Etappe":"Seconds per leg","Pause am Stopp (s)":"Pause at stop (s)",
   "Konstante Geschwindigkeit":"Constant speed","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
@@ -3142,6 +3457,7 @@ function addRuntimeLayers(){
     },
     paint: { "text-color": "#6d2e38", "text-halo-color": "#ffffff", "text-halo-width": 1.3 }
   }, "stops-icons");
+  M3D.addLayer(map);
   buildPoiIcons();
   refreshPois();
   applyStyleSettings();
@@ -3166,13 +3482,7 @@ document.getElementById("mapStyle").addEventListener("change", () => {
   if (t.relief){ document.getElementById("terrain3d").checked = true; document.getElementById("terrainEx").value = 12; }
   else if (THEMES[prevStyle] && THEMES[prevStyle].relief){ document.getElementById("terrain3d").checked = false; document.getElementById("terrainEx").value = 1.5; }
   prevStyle = name;
-  map.setStyle(buildBaseStyle(name));
-  map.once("styledata", () => {
-    addRuntimeLayers();
-    refreshFeatures();
-    drawStatic();
-    setStatus("Stil „" + document.getElementById("mapStyle").selectedOptions[0].text + "“ aktiv.");
-  });
+  swapStyle(() => setStatus("Stil „" + document.getElementById("mapStyle").selectedOptions[0].text + "“ aktiv."));
 });
 
 /* 3D-Terrain */
@@ -3304,6 +3614,22 @@ async function makeTipPinFor(rt){
   map.addImage(name, bmp, { pixelRatio: 2 });
   return name;
 }
+async function makeModeIcon(rt, mode){
+  const name = "tipmode-" + mode + "-" + rt.id;
+  const c = document.createElement("canvas"); c.width = c.height = 84;
+  const g = c.getContext("2d");
+  g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 6; g.shadowOffsetY = 2;
+  g.fillStyle = "#ffffff"; g.beginPath(); g.arc(42, 42, 34, 0, Math.PI * 2); g.fill();
+  g.shadowColor = "transparent";
+  g.lineWidth = 6; g.strokeStyle = rt.color; g.beginPath(); g.arc(42, 42, 31, 0, Math.PI * 2); g.stroke();
+  g.font = "38px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.save(); if (mode !== "fly") { g.translate(84, 0); g.scale(-1, 1); }   // Emojis schauen nach links → spiegeln
+  g.fillText(MODES[mode].icon, 42, 45); g.restore();
+  const bmp = await createImageBitmap(c);
+  if (map.hasImage(name)) map.removeImage(name);
+  map.addImage(name, bmp, { pixelRatio: 2 });
+}
 async function updateTipPin(){
   if (!map.getLayer("tip-pin")) return;
   const ts = val("tipStyle");
@@ -3317,7 +3643,9 @@ async function updateTipPin(){
       rt._tipIcon = await makeTipPinFor(rt);
     }
   }
-  map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" ? [0, 0] : [0, -6]);
+  if (ts === "mode") for (const rt of routes) for (const k of Object.keys(MODES)) await makeModeIcon(rt, k);
+  map.setLayoutProperty("tip-pin", "icon-anchor", ts === "mode" ? "center" : "bottom");
+  map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" || ts === "mode" ? [0, 0] : [0, -6]);
   map.setLayoutProperty("tip-pin", "icon-size", num("tipScale"));
 }
 document.getElementById("tipPhoto").addEventListener("change", e => {
@@ -3396,9 +3724,11 @@ function renderWpList(){
   R().waypoints.forEach((wp, i) => {
     const div = document.createElement("div");
     div.className = "wp";
-    const modeOpts = ['<option value="">' + tr("Standard") + "</option>"]
-      .concat(Object.entries(MODES).map(([k, m]) => `<option value="${k}" ${wp.mode === k ? "selected" : ""}>${tr(m.label)}</option>`)).join("");
-    div.innerHTML = (i > 0 ? `<div class="legsel"><span>${tr("Anreise per")}</span><select data-f="mode">${modeOpts}</select></div>` : "") + `
+    const cur = wp.mode || "";
+    const chips = Object.entries(MODES).map(([k, m]) =>
+      `<button type="button" class="mchip${cur === k ? " on" : ""}${!cur && val("travelMode") === k ? " def" : ""}" data-mode="${k}" title="${tr(m.label)}">${m.icon}</button>`).join("");
+    div.innerHTML = (i > 0 ? `<div class="legsel"><div class="mchips">${chips}</div>` +
+      `<button type="button" class="lspeed" title="${tr("Tempo dieser Etappe")}">${(wp.speed || 1) < 1 ? (wp.speed === 0.5 ? "½" : "¼") : (wp.speed || 1)}×</button></div>` : "") + `
       <div class="idx">${i + 1}</div>
       <div class="row">
         <input type="text" data-f="name" placeholder="${tr("Name")}" value="${escapeHtml(wp.name)}">
@@ -3418,6 +3748,15 @@ function renderWpList(){
         wp[f] = (f === "name" || f === "color" || f === "mode") ? inp.value : parseFloat(inp.value);
         drawStatic();
       });
+    });
+    div.querySelectorAll(".mchip").forEach(b => b.addEventListener("click", () => {
+      wp.mode = wp.mode === b.dataset.mode ? "" : b.dataset.mode;
+      renderWpList(); drawStatic();
+    }));
+    const sp = div.querySelector(".lspeed");
+    if (sp) sp.addEventListener("click", () => {
+      wp.speed = LEG_SPEEDS[(LEG_SPEEDS.indexOf(wp.speed || 1) + 1) % LEG_SPEEDS.length];
+      renderWpList(); drawStatic();
     });
     div.querySelector(".del").addEventListener("click", () => {
       R().waypoints = R().waypoints.filter(w => w !== wp);
@@ -3760,14 +4099,25 @@ document.getElementById("ccReset").addEventListener("click", () => { customColor
 document.getElementById("mtKey").addEventListener("change", rebuildStyle);
 ["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns"].forEach(id =>
   document.getElementById(id).addEventListener("change", rebuildStyle));
+/* Stil wechseln: Terrain vorher aus (sonst rendert MapLibre Terrain ohne DEM-Quelle),
+   Laufzeit-Ebenen neu anlegen, neu zeichnen. styleBusy = Promise bis alles fertig ist. */
+let styleBusy = Promise.resolve();
+function swapStyle(after){
+  try { map.setTerrain(null); } catch {}
+  map.setStyle(buildBaseStyle(val("mapStyle")), { diff: false });
+  styleBusy = new Promise(res => map.once("style.load", async () => {
+    try {
+      addRuntimeLayers();
+      refreshFeatures();
+      if (after) await after();
+      await drawStatic();
+    } finally { res(); }
+  }));
+  return styleBusy;
+}
 function rebuildStyle(){
   if (playing) return;
-  map.setStyle(buildBaseStyle(val("mapStyle")));
-  map.once("styledata", async () => {
-    addRuntimeLayers();
-    refreshFeatures();
-    await drawStatic();
-  });
+  swapStyle();
 }
 
 /* ---------- Geometrie ---------- */
@@ -3807,16 +4157,23 @@ function arcLeg(a, b, n, bend){
   });
 }
 
-/* Verkehrsmittel pro Etappe */
+/* Verkehrsmittel pro Etappe
+   route: Routing-Profil (sonst Luftlinie/Bogen mit arc), pace: Dauer-Faktor (Gehen ≈ 2× Auto),
+   zoom: Zoom-Versatz der Folgekamera (Flug weiter draußen), color/dash: fester Linienstil */
 const MODES = {
-  car:   { route: "car",  label: "Auto" },
-  bike:  { route: "bike", label: "Fahrrad" },
-  foot:  { route: "foot", label: "Zu Fuß" },
-  bus:   { route: "car",  label: "Bus",   color: "#ff9a1f", dash: 1 },
-  train: { arc: 0,        label: "Zug",   dash: 1 },
-  ferry: { arc: 0.12,     label: "Fähre", color: "#ffffff", dash: 1 },
-  fly:   { arc: 0.18,     label: "Flug" }
+  foot:   { group: "Land",   icon: "🚶", label: "Zu Fuß",    route: "foot", pace: 2,    zoom: 1.2 },
+  bike:   { group: "Land",   icon: "🚲", label: "Fahrrad",   route: "bike", pace: 1.4,  zoom: 0.6 },
+  car:    { group: "Land",   icon: "🚗", label: "Auto",      route: "car",  pace: 1,    zoom: 0 },
+  camper: { group: "Land",   icon: "🚐", label: "Camper",    route: "car",  pace: 1.15, zoom: 0 },
+  moto:   { group: "Land",   icon: "🏍️", label: "Motorrad",  route: "car",  pace: 0.9,  zoom: 0.2 },
+  bus:    { group: "Land",   icon: "🚌", label: "Bus",       route: "car",  pace: 1.1,  zoom: 0, color: "#ff9a1f", dash: 1 },
+  train:  { group: "Land",   icon: "🚆", label: "Zug",       arc: 0,        pace: 0.7,  zoom: -0.6, dash: 1 },
+  ferry:  { group: "Wasser", icon: "⛴️", label: "Fähre",     arc: 0.12,     pace: 0.9,  zoom: -1,   color: "#ffffff", dash: 1 },
+  boat:   { group: "Wasser", icon: "⛵", label: "Segelboot", arc: 0.07,     pace: 1.3,  zoom: -0.6, color: "#ffffff", dash: 1 },
+  fly:    { group: "Luft",   icon: "✈️", label: "Flug",      arc: 0.18,     pace: 0.45, zoom: -2.2 },
+  heli:   { group: "Luft",   icon: "🚁", label: "Heli",      arc: 0.04,     pace: 0.8,  zoom: -0.8 }
 };
+const LEG_SPEEDS = [1, 0.5, 0.25, 2, 4];
 function legMode(wp){ return (wp && wp.mode) || val("travelMode"); }
 
 function boundsOf(coords){
@@ -3856,7 +4213,7 @@ async function buildRouteFor(rt){
   if (rt.gpx){
     const stops = rt.waypoints.map(wp => ({ wp, idx: nearestIndex(rt.gpx, [wp.lng, wp.lat]) }))
                               .sort((a, b) => a.idx - b.idx);
-    return { coords: rt.gpx, stops, legs: [{ from: 0, to: rt.gpx.length - 1, mode: "car" }] };
+    return { coords: rt.gpx, stops, legs: [{ from: 0, to: rt.gpx.length - 1, mode: legMode(null) }] };
   }
   if (rt.waypoints.length < 1) return null;
   const coords = [], stops = [], legs = [];
@@ -3879,7 +4236,7 @@ async function buildRouteFor(rt){
     }
     const from = coords.length - 1;
     coords.push(...leg.slice(1));
-    legs.push({ from, to: coords.length - 1, mode });
+    legs.push({ from, to: coords.length - 1, mode, speed: rt.waypoints[i].speed || 1 });
     stops.push({ wp: rt.waypoints[i], idx: coords.length - 1 });
   }
   return { coords, stops, legs };
@@ -3903,6 +4260,17 @@ function legFeatures(p, tipIdx){
                geometry: { type: "LineString", coordinates: line } });
   }
   return out;
+}
+function legAt(p, tipIdx){
+  for (const lg of p.legs) if (tipIdx <= lg.to + 1e-6) return lg;
+  return p.legs[p.legs.length - 1];
+}
+function headingAt(p, tipIdx){
+  const n = p.coords.length, k = Math.max(2, Math.round(n / 400));
+  const ia = Math.max(0, Math.floor(tipIdx) - k), ib = Math.min(n - 1, Math.ceil(tipIdx) + k);
+  const A = maplibregl.MercatorCoordinate.fromLngLat(p.coords[ia]), B = maplibregl.MercatorCoordinate.fromLngLat(p.coords[ib]);
+  if (A.x === B.x && A.y === B.y) return p._head || 0;
+  return (p._head = Math.atan2(B.y - A.y, B.x - A.x));
 }
 function setLineWidths(w){
   map.setPaintProperty("route-line", "line-width", w);
@@ -3939,6 +4307,8 @@ async function prepareAnim(){
         let dur = legDurBase;
         if (constSpeed && avgKm > 0)
           dur = Math.min(Math.max(legDurBase * (legKm[i] / avgKm), 1.2 / speed), legDurBase * 4);
+        const lg = r.legs && r.legs.length === stopIdxs.length - 1 ? r.legs[i] : null;
+        if (lg){ dur *= (MODES[lg.mode] || {}).pace || 1; dur /= lg.speed || 1; }
         segs.push({ type: "leg", from: stopIdxs[i], to: stopIdxs[i + 1], dur });
       }
     }
@@ -4077,7 +4447,8 @@ function renderAt(t, live){
   // Linien + Spitzen aller Routen
   const lineFeats = [], tipFeats = [];
   const activeP = anim.per.find(p => p.ri === activeRoute) || anim.per[0];
-  let activeTip = null;
+  let activeTip = null, activeLeg = null;
+  const models = [];
   for (const p of anim.per){
     const tipIdx = tipIndexFor(p, t);
     p._tipIdx = tipIdx;
@@ -4088,18 +4459,28 @@ function renderAt(t, live){
     if (p === activeP) activeTip = tip;
     lineFeats.push(...legFeatures(p, tipIdx));
     const done = tipIdx >= p.coords.length - 1 - 1e-6;
-    if (tipStyle !== "none" && t < total - 0.01 && !done)
-      tipFeats.push({ type: "Feature",
-        properties: { color: p.rt.color, icon: p.rt._tipIcon || "" },
-        geometry: { type: "Point", coordinates: tip } });
+    const lg = legAt(p, tipIdx);
+    if (p === activeP) activeLeg = lg;
+    if (tipStyle !== "none" && t < total - 0.01 && !done){
+      if (tipStyle === "model3d"){
+        const span = Math.max(lg.to - lg.from, 1e-6);
+        models.push({ lngLat: tip, heading: headingAt(p, tipIdx), mode: lg.mode, color: p.rt.color,
+                      prog: (tipIdx - lg.from) / span, px: 64 * sampleNum(tracks.tipScale, t, num("tipScale")) });
+      } else
+        tipFeats.push({ type: "Feature",
+          properties: { color: p.rt.color, icon: tipStyle === "mode" ? "tipmode-" + lg.mode + "-" + p.rt.id : (p.rt._tipIcon || "") },
+          geometry: { type: "Point", coordinates: tip } });
+    }
   }
   map.getSource("route").setData({ type: "FeatureCollection", features: lineFeats });
   map.getSource("tip").setData({ type: "FeatureCollection", features: tipFeats });
   const anyTip = tipFeats.length > 0;
-  map.setPaintProperty("tip-dot", "circle-opacity", anyTip ? 1 : 0);
-  map.setPaintProperty("tip-dot", "circle-stroke-opacity", anyTip ? 1 : 0);
+  const dotOn = anyTip && (tipStyle === "pin" || tipStyle === "dot" || tipStyle === "stop");
+  map.setPaintProperty("tip-dot", "circle-opacity", dotOn ? 1 : 0);
+  map.setPaintProperty("tip-dot", "circle-stroke-opacity", dotOn ? 1 : 0);
   if (map.getLayer("tip-pin"))
-    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop") && anyTip ? 1 : 0);
+    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop" || tipStyle === "mode") && anyTip ? 1 : 0);
+  M3D.update(models, t);
 
   // Stopps (pro Route, beim Überfahren)
   let dirty = false;
@@ -4150,7 +4531,7 @@ function renderAt(t, live){
 
   // Kamera (folgt der aktiven Route)
   const hasPos = tracks.pos.length > 0;
-  let zoomV = sampleNum(tracks.zoom, t, num("zoom"));
+  let zoomV = sampleNum(tracks.zoom, t, num("zoom") + (activeLeg && !tracks.zoom.length ? ((MODES[activeLeg.mode] || {}).zoom || 0) : 0));
   let bearV = tracks.bearing.length ? sampleNum(tracks.bearing, t, 0) : (num("rotSpeed") || 0) * t;
   const pitchV = sampleNum(tracks.pitch, t, num("pitch"));
   let center;
@@ -4177,11 +4558,12 @@ function renderAt(t, live){
 
 /* ---------- Statische Vorschau + Stil ---------- */
 async function drawStatic(){
-  if (!mapReady) return;
+  if (!mapReady || !map.getSource("tip") || !map.getSource("route")) return;
   invalidateAnim();
   applyStyleSettings();
   const a = await prepareAnim();
   if (/^Route „/.test(document.getElementById("status").textContent)) setStatus("");
+  M3D.update([]);
   map.getSource("tip").setData(emptyFC());
   if (map.getLayer("tip-pin")) map.setPaintProperty("tip-pin", "icon-opacity", 0);
   map.setPaintProperty("tip-dot", "circle-opacity", 0);
@@ -4770,7 +5152,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId"];
 
 document.getElementById("projSave").addEventListener("click", () => {
   const proj = {
@@ -4782,7 +5164,7 @@ document.getElementById("projSave").addEventListener("click", () => {
     routes: routes.map(rt => ({
       name: rt.name, color: rt.color, tipLabel: rt.tipLabel, gpx: rt.gpx,
       tipPhoto: imgToDataURL(rt.tipPhoto),
-      waypoints: rt.waypoints.map(wp => ({ name: wp.name, lat: wp.lat, lng: wp.lng, color: wp.color, mode: wp.mode || "", photo: imgToDataURL(wp.photo) }))
+      waypoints: rt.waypoints.map(wp => ({ name: wp.name, lat: wp.lat, lng: wp.lng, color: wp.color, mode: wp.mode || "", speed: wp.speed || 1, photo: imgToDataURL(wp.photo) }))
     })),
     features: features.map(f => ({ name: f.name, geometry: f.geometry, color: f.color, appearT: f.appearT })),
     pois,
@@ -4837,25 +5219,19 @@ document.getElementById("projLoad").addEventListener("change", e => {
         rt.tipPhoto = await loadImg(pr.tipPhoto);
         for (const w of (pr.waypoints || [])){
           const photo = await loadImg(w.photo);
-          rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, mode: w.mode || "", photo });
+          rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, mode: w.mode || "", speed: w.speed || 1, photo });
         }
         routes.push(rt);
       }
       activeRoute = 0;
       prevStyle = val("mapStyle");
       // Stil neu aufbauen und alles zeichnen
-      map.setStyle(buildBaseStyle(val("mapStyle")));
-      map.once("styledata", async () => {
-        addRuntimeLayers();
+      swapStyle(async () => {
         syncRouteInputs();
         renderRoutes();
         renderWpList();
         renderFeatList();
-        refreshFeatures();
-        await drawStatic();
-        applyLang();
-        setStatus(tr("Projekt geladen."));
-      });
+      }).then(() => { applyLang(); setStatus(tr("Projekt geladen.")); });
     } catch (err){
       setStatus("Projekt konnte nicht geladen werden: " + err.message);
     }
@@ -4863,12 +5239,206 @@ document.getElementById("projLoad").addEventListener("change", e => {
   reader.readAsText(file);
 });
 
+(() => {
+  const sel = document.getElementById("travelMode"), cur = sel.value;
+  sel.innerHTML = Object.entries(MODES).map(([k, m]) => `<option value="${k}">${m.icon} ${m.label}</option>`).join("");
+  sel.value = MODES[cur] ? cur : "car";
+  sel.addEventListener("change", () => renderWpList());
+})();
 routes.push(newRoute("Route 1", PALETTE[0]));
 renderPalettes();
 renderRoutes();
 syncRouteInputs();
 applyLang();
 setStatus(tr("Karte lädt …"));
+</script>
+<script>
+"use strict";
+/* =========================================================
+   Vorlagen (komplette Looks) + Tempo-Vorlagen (Länge & Gefühl)
+   Eine Vorlage setzt Stil, Linie, Spitze, Kamera, Tempo und Format –
+   die Orte bleiben erhalten.
+   ========================================================= */
+const TEMPLATES = [
+  { id: "kamel", name: "Vlog-Recap", sub: "Kamelfamilie-Look · 9:16", icon: "🐪", bg: ["#e7b9a3", "#5b78c2"],
+    set: { mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
+           tipStyle: "stop", pinStyle: "dot", popStyle: "pop", camMode: "follow", zoom: 4.6, pitch: 0, rotSpeed: 0,
+           ovOn: true, ovPrefix: "TAG #", ovPos: "top", endOverview: true, resolution: "1080x1920", travelMode: "car" },
+    tempo: { len: 30, feel: "rasant" } },
+  { id: "sw70", name: "3D-Relief-Erklärer", sub: "70-Sekunden-Wiki-Look · Snap-Zooms", icon: "⛰️", bg: ["#97a3b9", "#121d38"],
+    set: { mapStyle: "relief", lineColor: "#dc2828", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: false,
+           tipStyle: "dot", pinStyle: "dot", pinFont: "display", labelSize: 18, terrain3d: true, terrainEx: 12,
+           resolution: "1080x1920", travelMode: "fly" },
+    cam: "snap70", tempo: { len: 15, feel: "normal" } },
+  { id: "roadtrip", name: "Roadtrip 3D", sub: "Folgekamera, geneigt · 16:9", icon: "🚗", bg: ["#f7f4ee", "#d6e4ee"],
+    set: { mapStyle: "minimal", lineColor: "#e4472f", lineWidth: 6, lineStyle: "solid", lineCasing: true, glow: false,
+           tipStyle: "model3d", tipScale: 1, pinStyle: "photo", camMode: "follow", zoom: 8, pitch: 40, smooth: 0.7,
+           endOverview: true, resolution: "1920x1080", travelMode: "car" },
+    tempo: { len: 0, feel: "normal" } },
+  { id: "world", name: "Weltreise", sub: "Flüge im Bogen · Atlas", icon: "✈️", bg: ["#f3d2bf", "#5b78c2"],
+    set: { mapStyle: "atlas", lineColor: "#ffffff", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: false,
+           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 5.4, pitch: 25, smooth: 0.75,
+           endOverview: true, resolution: "1920x1080", travelMode: "fly" },
+    tempo: { len: 30, feel: "normal" } },
+  { id: "hike", name: "Bergtour", sub: "Wandern · 3D-Berge · Drohne", icon: "🥾", bg: ["#8e9bb3", "#46557a"],
+    set: { mapStyle: "relief", lineColor: "#ff5a3c", lineWidth: 6.5, lineStyle: "solid", lineCasing: true,
+           tipStyle: "model3d", pinStyle: "photo", camMode: "follow", zoom: 12, pitch: 55, terrain3d: true, terrainEx: 1.8,
+           resolution: "1080x1920", travelMode: "foot" },
+    cam: "drone", tempo: { len: 30, feel: "gemuetlich" } },
+  { id: "bike", name: "Radreise", sub: "Fahrrad · weiße Kontur", icon: "🚲", bg: ["#e5e8da", "#d6e4ee"],
+    set: { mapStyle: "minimal", lineColor: "#2b7de9", lineWidth: 6, lineStyle: "solid", lineCasing: true,
+           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 9.5, pitch: 30,
+           resolution: "1920x1080", travelMode: "bike" },
+    tempo: { len: 0, feel: "gemuetlich" } },
+  { id: "rail", name: "Interrail", sub: "Zug durch Europa", icon: "🚆", bg: ["#f3eee5", "#c6dbe8"],
+    set: { mapStyle: "hell", lineColor: "#6d2e38", lineWidth: 6, lineStyle: "solid", lineCasing: false,
+           tipStyle: "model3d", pinStyle: "badge", camMode: "follow", zoom: 6.4, pitch: 20,
+           resolution: "1080x1920", travelMode: "train" },
+    tempo: { len: 30, feel: "normal" } },
+  { id: "island", name: "Inselhopping", sub: "Fähre & Boot", icon: "⛴️", bg: ["#f3eee5", "#7fb2d6"],
+    set: { mapStyle: "hell", lineColor: "#1f6fb2", lineWidth: 6, lineStyle: "solid", lineCasing: true,
+           tipStyle: "model3d", pinStyle: "photo", camMode: "follow", zoom: 8, pitch: 35,
+           resolution: "1080x1920", travelMode: "ferry" },
+    tempo: { len: 30, feel: "gemuetlich" } },
+  { id: "race", name: "Race Night", sub: "Dunkel, Glow, schnell", icon: "🏁", bg: ["#1d1e22", "#303a46"],
+    set: { mapStyle: "dunkel", lineColor: "#f2506e", lineWidth: 5.5, lineStyle: "solid", lineCasing: false, glow: true,
+           tipStyle: "dot", pinStyle: "dot", legEase: "linear", resolution: "1920x1080", travelMode: "car" },
+    cam: "cine", tempo: { len: 15, feel: "rasant" } },
+  { id: "drone", name: "Satellit-Drohne", sub: "Luftbild, Kamerafahrt", icon: "🛰️", bg: ["#3f5530", "#1d3550"],
+    set: { mapStyle: "satellit", lineColor: "#ffd23f", lineWidth: 6, lineStyle: "solid", lineCasing: false, glow: true,
+           tipStyle: "model3d", pinStyle: "photo", resolution: "1920x1080" },
+    cam: "drone", tempo: { len: 0, feel: "gemuetlich" } },
+  { id: "explain", name: "Länder-Erklärer", sub: "Übersicht, Länder leuchten · 9:16", icon: "🗺️", bg: ["#d9a390", "#5b78c2"],
+    set: { mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "dashed", lineCasing: true,
+           tipStyle: "mode", pinStyle: "dot", camMode: "overview", pitch: 0, hlLine: true, hlOp: 0.7,
+           resolution: "1080x1920" },
+    tempo: { len: 15, feel: "normal" } },
+  { id: "clean", name: "Clean & Minimal", sub: "Ruhig, gestrichelt · 1:1", icon: "◻️", bg: ["#f7f4ee", "#d6e4ee"],
+    set: { mapStyle: "minimal", lineColor: "#3a6fb0", lineWidth: 4.5, lineStyle: "dashed", lineCasing: false, glow: false,
+           tipStyle: "dot", pinStyle: "badge", camMode: "overview", pitch: 0, resolution: "1080x1080" },
+    tempo: { len: 0, feel: "gemuetlich" } }
+];
+
+/* Tempo: Gefühl = Pausen/Kurven/Kamera, Länge = Zieldauer in Sekunden (0 = aus Etappen) */
+const FEELS = {
+  gemuetlich: { label: "Gemütlich", pauseDur: 2.2, legEase: "easeInOut", smooth: 0.75, legDur: 5,  popStyle: "soft" },
+  normal:     { label: "Normal",    pauseDur: 1.4, legEase: "easeInOut", smooth: 0.6,  legDur: 4,  popStyle: "pop" },
+  rasant:     { label: "Rasant",    pauseDur: 0.5, legEase: "quadInOut", smooth: 0.4,  legDur: 2.4, popStyle: "pop" }
+};
+const LENGTHS = [0, 8, 15, 30, 60];
+
+(() => {
+  const $ = id => document.getElementById(id);
+  const setv = (id, v) => { const el = $(id); if (!el) return; if (el.type === "checkbox") el.checked = !!v; else el.value = v; };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const changed = () => document.dispatchEvent(new Event("ma:settings"));
+
+  Object.assign(EN, {
+    "Vorlagen": "Templates", "Tempo": "Pace", "Länge": "Length", "Gemütlich": "Relaxed", "Normal": "Normal", "Rasant": "Fast",
+    "Auto": "Auto", "Vorlage": "Template"
+  });
+
+  /* ---------- Länge automatisch einpassen ----------
+     drawStatic wird serialisiert (parallele Aufrufe würden sich die Animation
+     gegenseitig wegnehmen) und passt danach speedMult an die Ziel-Länge an. */
+  const baseDraw = drawStatic;
+  async function fit(){
+    const target = parseFloat(val("tplLen")) || 0;
+    if (!target || !anim || tracks.line.length || num("totalDur")) return;
+    for (let k = 0; k < 3 && anim && Math.abs(anim.natural - target) > 0.2; k++){
+      const sp = Math.min(Math.max((num("speedMult") || 1) * anim.natural / target, 0.1), 8);
+      setv("speedMult", Math.round(sp * 1000) / 1000);
+      await baseDraw();
+    }
+  }
+  let chain = Promise.resolve(), queued = null;
+  window.drawStatic = drawStatic = function (){
+    if (queued) return queued;
+    const job = chain.then(async () => { queued = null; await baseDraw(); await fit(); });
+    queued = job;
+    chain = job.catch(() => {});
+    return job;
+  };
+
+  function applyFeel(name){
+    const f = FEELS[name] || FEELS.normal;
+    setv("tplFeel", name);
+    ["pauseDur", "legEase", "smooth", "legDur", "popStyle"].forEach(k => setv(k, f[k]));
+    setv("speedMult", 1);
+  }
+  async function applyTempo(len, feel){
+    if (feel) applyFeel(feel);
+    if (len != null){ setv("tplLen", len); setv("totalDur", ""); if (!len) setv("speedMult", 1); }
+    syncTempo();
+    await drawStatic();
+    renderTimeline(); changed();
+    const T = timelineTotal();
+    setStatus(tr("Tempo") + ": " + tr((FEELS[val("tplFeel")] || FEELS.normal).label) + " · " + T.toFixed(1) + " s");
+  }
+
+  /* ---------- Vorlage anwenden ---------- */
+  async function applyTemplate(tpl){
+    if (playing) pause();
+    const s = tpl.set;
+    if (s.mapStyle && s.mapStyle !== val("mapStyle")){
+      setv("mapStyle", s.mapStyle);
+      $("mapStyle").dispatchEvent(new Event("change"));
+      await styleBusy;
+    }
+    tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
+    for (const [k, v] of Object.entries(s)) if (k !== "mapStyle") setv(k, v);
+    $("resolution").dispatchEvent(new Event("change"));
+    $("travelMode").dispatchEvent(new Event("change"));
+    applyTerrain();
+    if (tpl.tempo) await applyTempo(tpl.tempo.len, tpl.tempo.feel); else await drawStatic();
+    if (tpl.cam && anim){ setv("camPreset", tpl.cam); $("camPreset").dispatchEvent(new Event("change")); }
+    renderTimeline(); changed();
+    document.querySelectorAll(".tpl").forEach(b => b.classList.toggle("active", b.dataset.id === tpl.id));
+    setv("tplId", tpl.id);
+    setStatus(tr("Vorlage") + " „" + tpl.name + "“ " + (anim ? "" : "– " + tr("jetzt Orte hinzufügen")));
+  }
+
+  /* ---------- UI ---------- */
+  const grid = $("tplGrid");
+  TEMPLATES.forEach(tpl => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "tpl"; b.dataset.id = tpl.id;
+    b.innerHTML = `<span class="tpl-sw" style="background:linear-gradient(135deg,${tpl.bg[0]} 0 58%,${tpl.bg[1]} 58%)"><i style="--lc:${tpl.set.lineColor}"></i><em>${tpl.icon}</em></span>` +
+      `<span class="tpl-tx"><b></b><small></small></span>`;
+    b.querySelector("b").textContent = tpl.name;
+    b.querySelector("small").textContent = tpl.sub;
+    b.addEventListener("click", () => applyTemplate(tpl));
+    grid.appendChild(b);
+  });
+  const cur = val("tplId"); if (cur) grid.querySelectorAll(".tpl").forEach(b => b.classList.toggle("active", b.dataset.id === cur));
+
+  const lenBox = $("tempoLen"), feelBox = $("tempoFeel");
+  LENGTHS.forEach(L => {
+    const b = document.createElement("button"); b.type = "button"; b.dataset.len = L;
+    b.textContent = L ? L + " s" : tr("Auto");
+    if (!L) b.className = "i18n";
+    b.addEventListener("click", () => applyTempo(L, null));
+    lenBox.appendChild(b);
+  });
+  Object.entries(FEELS).forEach(([k, f]) => {
+    const b = document.createElement("button"); b.type = "button"; b.dataset.feel = k; b.className = "i18n";
+    b.textContent = f.label;
+    b.addEventListener("click", () => applyTempo(null, k));
+    feelBox.appendChild(b);
+  });
+  function syncTempo(){
+    const L = String(parseFloat(val("tplLen")) || 0), F = val("tplFeel") || "normal";
+    lenBox.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.len === L));
+    feelBox.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.feel === F));
+  }
+  syncTempo();
+  $("projLoad").addEventListener("change", () => setTimeout(() => {
+    syncTempo();
+    const id = val("tplId"); grid.querySelectorAll(".tpl").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  }, 400));
+
+  window.MA_TEMPLATES = { applyTemplate, applyTempo, list: TEMPLATES };
+})();
 </script>
 <script>
 "use strict";
@@ -4942,7 +5512,8 @@ setStatus(tr("Karte lädt …"));
   }));
   resSel.addEventListener("change", () => { syncFormat(); if (!stageLock) sizeStage(null); });
   syncFormat();
-  new ResizeObserver(() => { if (!stageLock) sizeStage(null); renderTimeline(); }).observe($("stage"));
+  let roRaf = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(roRaf); roRaf = requestAnimationFrame(() => { if (!stageLock) sizeStage(null); renderTimeline(); }); }).observe($("stage"));
 
   $("safeBtn").addEventListener("click", () => {
     const on = body.classList.toggle("safe");
@@ -5009,6 +5580,13 @@ setStatus(tr("Karte lädt …"));
   function syncThemes(){ grid.querySelectorAll(".theme").forEach(b => b.classList.toggle("active", b.dataset.v === styleSel.value)); }
   styleSel.addEventListener("change", () => setTimeout(() => { syncThemes(); syncRanges(); }, 0));
   syncThemes();
+
+  /* ---------- Einfach / Profi ---------- */
+  const pro = $("proMode");
+  try { pro.checked = localStorage.getItem("ma.pro") === "1"; } catch {}
+  const applyPro = () => { body.classList.toggle("pro", pro.checked); try { localStorage.setItem("ma.pro", pro.checked ? "1" : "0"); } catch {} renderTimeline(); };
+  pro.addEventListener("change", applyPro); applyPro();
+  document.addEventListener("ma:settings", () => { syncFormat(); syncRanges(); syncThemes(); });
 
   /* ---------- Tastenkürzel ---------- */
   const order = tabs.map(b => b.dataset.tab);

@@ -32,7 +32,9 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Projekt":"Project","Export":"Export",
+  "Kamera-Presets":"Camera presets","Größe Spitze / 3D-Modell":"Tip / 3D model size","Look":"Look","Gefühl":"Feel","Profi":"Pro",
+  "Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.":"A template sets map style, line, tip, camera, pace and format. Your places stay. Adjust anything afterwards.",
+  "Länge passt das Tempo automatisch an, auch wenn du Orte ergänzt. Pro Etappe: Verkehrsmittel und ½×/2× direkt am Stopp.":"Length adjusts the pace automatically, even when you add places. Per leg: transport and ½×/2× right at the stop.","Projekt":"Project","Export":"Export",
   "Reise-Animationen im Vlog-Stil · rendert lokal im Browser":"Vlog-style travel animations · renders locally in your browser",
   // Buttons
   "Suchen":"Search","+ Stopp manuell (Koordinaten)":"+ Add stop manually (coordinates)",
@@ -45,7 +47,8 @@ const EN = {
   "Fit":"Fit","✕ löschen":"✕ delete",
   // Labels
   "Linienfarbe":"Line color","Weiße Kontur":"White outline","Anreise per":"Arrive by","Standard":"Default",
-  "Auto":"Car","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
+  "Auto":"Car","Camper":"Camper van","Motorrad":"Motorbike","Segelboot":"Sailboat","Heli":"Helicopter","Tempo dieser Etappe":"Speed of this leg",
+  "3D-Modell (Verkehrsmittel)":"3D model (transport)","Symbol (Verkehrsmittel)":"Icon (transport)","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
   "Standard-Fortbewegung":"Default travel mode","Linienbreite":"Line width","Linienstil":"Line style","Fortbewegung":"Travel mode",
   "Sekunden pro Etappe":"Seconds per leg","Pause am Stopp (s)":"Pause at stop (s)",
   "Konstante Geschwindigkeit":"Constant speed","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
@@ -544,6 +547,7 @@ function addRuntimeLayers(){
     },
     paint: { "text-color": "#6d2e38", "text-halo-color": "#ffffff", "text-halo-width": 1.3 }
   }, "stops-icons");
+  M3D.addLayer(map);
   buildPoiIcons();
   refreshPois();
   applyStyleSettings();
@@ -568,13 +572,7 @@ document.getElementById("mapStyle").addEventListener("change", () => {
   if (t.relief){ document.getElementById("terrain3d").checked = true; document.getElementById("terrainEx").value = 12; }
   else if (THEMES[prevStyle] && THEMES[prevStyle].relief){ document.getElementById("terrain3d").checked = false; document.getElementById("terrainEx").value = 1.5; }
   prevStyle = name;
-  map.setStyle(buildBaseStyle(name));
-  map.once("styledata", () => {
-    addRuntimeLayers();
-    refreshFeatures();
-    drawStatic();
-    setStatus("Stil „" + document.getElementById("mapStyle").selectedOptions[0].text + "“ aktiv.");
-  });
+  swapStyle(() => setStatus("Stil „" + document.getElementById("mapStyle").selectedOptions[0].text + "“ aktiv."));
 });
 
 /* 3D-Terrain */
@@ -706,6 +704,22 @@ async function makeTipPinFor(rt){
   map.addImage(name, bmp, { pixelRatio: 2 });
   return name;
 }
+async function makeModeIcon(rt, mode){
+  const name = "tipmode-" + mode + "-" + rt.id;
+  const c = document.createElement("canvas"); c.width = c.height = 84;
+  const g = c.getContext("2d");
+  g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 6; g.shadowOffsetY = 2;
+  g.fillStyle = "#ffffff"; g.beginPath(); g.arc(42, 42, 34, 0, Math.PI * 2); g.fill();
+  g.shadowColor = "transparent";
+  g.lineWidth = 6; g.strokeStyle = rt.color; g.beginPath(); g.arc(42, 42, 31, 0, Math.PI * 2); g.stroke();
+  g.font = "38px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.save(); if (mode !== "fly") { g.translate(84, 0); g.scale(-1, 1); }   // Emojis schauen nach links → spiegeln
+  g.fillText(MODES[mode].icon, 42, 45); g.restore();
+  const bmp = await createImageBitmap(c);
+  if (map.hasImage(name)) map.removeImage(name);
+  map.addImage(name, bmp, { pixelRatio: 2 });
+}
 async function updateTipPin(){
   if (!map.getLayer("tip-pin")) return;
   const ts = val("tipStyle");
@@ -719,7 +733,9 @@ async function updateTipPin(){
       rt._tipIcon = await makeTipPinFor(rt);
     }
   }
-  map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" ? [0, 0] : [0, -6]);
+  if (ts === "mode") for (const rt of routes) for (const k of Object.keys(MODES)) await makeModeIcon(rt, k);
+  map.setLayoutProperty("tip-pin", "icon-anchor", ts === "mode" ? "center" : "bottom");
+  map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" || ts === "mode" ? [0, 0] : [0, -6]);
   map.setLayoutProperty("tip-pin", "icon-size", num("tipScale"));
 }
 document.getElementById("tipPhoto").addEventListener("change", e => {
@@ -798,9 +814,11 @@ function renderWpList(){
   R().waypoints.forEach((wp, i) => {
     const div = document.createElement("div");
     div.className = "wp";
-    const modeOpts = ['<option value="">' + tr("Standard") + "</option>"]
-      .concat(Object.entries(MODES).map(([k, m]) => `<option value="${k}" ${wp.mode === k ? "selected" : ""}>${tr(m.label)}</option>`)).join("");
-    div.innerHTML = (i > 0 ? `<div class="legsel"><span>${tr("Anreise per")}</span><select data-f="mode">${modeOpts}</select></div>` : "") + `
+    const cur = wp.mode || "";
+    const chips = Object.entries(MODES).map(([k, m]) =>
+      `<button type="button" class="mchip${cur === k ? " on" : ""}${!cur && val("travelMode") === k ? " def" : ""}" data-mode="${k}" title="${tr(m.label)}">${m.icon}</button>`).join("");
+    div.innerHTML = (i > 0 ? `<div class="legsel"><div class="mchips">${chips}</div>` +
+      `<button type="button" class="lspeed" title="${tr("Tempo dieser Etappe")}">${(wp.speed || 1) < 1 ? (wp.speed === 0.5 ? "½" : "¼") : (wp.speed || 1)}×</button></div>` : "") + `
       <div class="idx">${i + 1}</div>
       <div class="row">
         <input type="text" data-f="name" placeholder="${tr("Name")}" value="${escapeHtml(wp.name)}">
@@ -820,6 +838,15 @@ function renderWpList(){
         wp[f] = (f === "name" || f === "color" || f === "mode") ? inp.value : parseFloat(inp.value);
         drawStatic();
       });
+    });
+    div.querySelectorAll(".mchip").forEach(b => b.addEventListener("click", () => {
+      wp.mode = wp.mode === b.dataset.mode ? "" : b.dataset.mode;
+      renderWpList(); drawStatic();
+    }));
+    const sp = div.querySelector(".lspeed");
+    if (sp) sp.addEventListener("click", () => {
+      wp.speed = LEG_SPEEDS[(LEG_SPEEDS.indexOf(wp.speed || 1) + 1) % LEG_SPEEDS.length];
+      renderWpList(); drawStatic();
     });
     div.querySelector(".del").addEventListener("click", () => {
       R().waypoints = R().waypoints.filter(w => w !== wp);
@@ -1162,14 +1189,25 @@ document.getElementById("ccReset").addEventListener("click", () => { customColor
 document.getElementById("mtKey").addEventListener("change", rebuildStyle);
 ["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns"].forEach(id =>
   document.getElementById(id).addEventListener("change", rebuildStyle));
+/* Stil wechseln: Terrain vorher aus (sonst rendert MapLibre Terrain ohne DEM-Quelle),
+   Laufzeit-Ebenen neu anlegen, neu zeichnen. styleBusy = Promise bis alles fertig ist. */
+let styleBusy = Promise.resolve();
+function swapStyle(after){
+  try { map.setTerrain(null); } catch {}
+  map.setStyle(buildBaseStyle(val("mapStyle")), { diff: false });
+  styleBusy = new Promise(res => map.once("style.load", async () => {
+    try {
+      addRuntimeLayers();
+      refreshFeatures();
+      if (after) await after();
+      await drawStatic();
+    } finally { res(); }
+  }));
+  return styleBusy;
+}
 function rebuildStyle(){
   if (playing) return;
-  map.setStyle(buildBaseStyle(val("mapStyle")));
-  map.once("styledata", async () => {
-    addRuntimeLayers();
-    refreshFeatures();
-    await drawStatic();
-  });
+  swapStyle();
 }
 
 /* ---------- Geometrie ---------- */
@@ -1209,16 +1247,23 @@ function arcLeg(a, b, n, bend){
   });
 }
 
-/* Verkehrsmittel pro Etappe */
+/* Verkehrsmittel pro Etappe
+   route: Routing-Profil (sonst Luftlinie/Bogen mit arc), pace: Dauer-Faktor (Gehen ≈ 2× Auto),
+   zoom: Zoom-Versatz der Folgekamera (Flug weiter draußen), color/dash: fester Linienstil */
 const MODES = {
-  car:   { route: "car",  label: "Auto" },
-  bike:  { route: "bike", label: "Fahrrad" },
-  foot:  { route: "foot", label: "Zu Fuß" },
-  bus:   { route: "car",  label: "Bus",   color: "#ff9a1f", dash: 1 },
-  train: { arc: 0,        label: "Zug",   dash: 1 },
-  ferry: { arc: 0.12,     label: "Fähre", color: "#ffffff", dash: 1 },
-  fly:   { arc: 0.18,     label: "Flug" }
+  foot:   { group: "Land",   icon: "🚶", label: "Zu Fuß",    route: "foot", pace: 2,    zoom: 1.2 },
+  bike:   { group: "Land",   icon: "🚲", label: "Fahrrad",   route: "bike", pace: 1.4,  zoom: 0.6 },
+  car:    { group: "Land",   icon: "🚗", label: "Auto",      route: "car",  pace: 1,    zoom: 0 },
+  camper: { group: "Land",   icon: "🚐", label: "Camper",    route: "car",  pace: 1.15, zoom: 0 },
+  moto:   { group: "Land",   icon: "🏍️", label: "Motorrad",  route: "car",  pace: 0.9,  zoom: 0.2 },
+  bus:    { group: "Land",   icon: "🚌", label: "Bus",       route: "car",  pace: 1.1,  zoom: 0, color: "#ff9a1f", dash: 1 },
+  train:  { group: "Land",   icon: "🚆", label: "Zug",       arc: 0,        pace: 0.7,  zoom: -0.6, dash: 1 },
+  ferry:  { group: "Wasser", icon: "⛴️", label: "Fähre",     arc: 0.12,     pace: 0.9,  zoom: -1,   color: "#ffffff", dash: 1 },
+  boat:   { group: "Wasser", icon: "⛵", label: "Segelboot", arc: 0.07,     pace: 1.3,  zoom: -0.6, color: "#ffffff", dash: 1 },
+  fly:    { group: "Luft",   icon: "✈️", label: "Flug",      arc: 0.18,     pace: 0.45, zoom: -2.2 },
+  heli:   { group: "Luft",   icon: "🚁", label: "Heli",      arc: 0.04,     pace: 0.8,  zoom: -0.8 }
 };
+const LEG_SPEEDS = [1, 0.5, 0.25, 2, 4];
 function legMode(wp){ return (wp && wp.mode) || val("travelMode"); }
 
 function boundsOf(coords){
@@ -1258,7 +1303,7 @@ async function buildRouteFor(rt){
   if (rt.gpx){
     const stops = rt.waypoints.map(wp => ({ wp, idx: nearestIndex(rt.gpx, [wp.lng, wp.lat]) }))
                               .sort((a, b) => a.idx - b.idx);
-    return { coords: rt.gpx, stops, legs: [{ from: 0, to: rt.gpx.length - 1, mode: "car" }] };
+    return { coords: rt.gpx, stops, legs: [{ from: 0, to: rt.gpx.length - 1, mode: legMode(null) }] };
   }
   if (rt.waypoints.length < 1) return null;
   const coords = [], stops = [], legs = [];
@@ -1281,7 +1326,7 @@ async function buildRouteFor(rt){
     }
     const from = coords.length - 1;
     coords.push(...leg.slice(1));
-    legs.push({ from, to: coords.length - 1, mode });
+    legs.push({ from, to: coords.length - 1, mode, speed: rt.waypoints[i].speed || 1 });
     stops.push({ wp: rt.waypoints[i], idx: coords.length - 1 });
   }
   return { coords, stops, legs };
@@ -1305,6 +1350,17 @@ function legFeatures(p, tipIdx){
                geometry: { type: "LineString", coordinates: line } });
   }
   return out;
+}
+function legAt(p, tipIdx){
+  for (const lg of p.legs) if (tipIdx <= lg.to + 1e-6) return lg;
+  return p.legs[p.legs.length - 1];
+}
+function headingAt(p, tipIdx){
+  const n = p.coords.length, k = Math.max(2, Math.round(n / 400));
+  const ia = Math.max(0, Math.floor(tipIdx) - k), ib = Math.min(n - 1, Math.ceil(tipIdx) + k);
+  const A = maplibregl.MercatorCoordinate.fromLngLat(p.coords[ia]), B = maplibregl.MercatorCoordinate.fromLngLat(p.coords[ib]);
+  if (A.x === B.x && A.y === B.y) return p._head || 0;
+  return (p._head = Math.atan2(B.y - A.y, B.x - A.x));
 }
 function setLineWidths(w){
   map.setPaintProperty("route-line", "line-width", w);
@@ -1341,6 +1397,8 @@ async function prepareAnim(){
         let dur = legDurBase;
         if (constSpeed && avgKm > 0)
           dur = Math.min(Math.max(legDurBase * (legKm[i] / avgKm), 1.2 / speed), legDurBase * 4);
+        const lg = r.legs && r.legs.length === stopIdxs.length - 1 ? r.legs[i] : null;
+        if (lg){ dur *= (MODES[lg.mode] || {}).pace || 1; dur /= lg.speed || 1; }
         segs.push({ type: "leg", from: stopIdxs[i], to: stopIdxs[i + 1], dur });
       }
     }
@@ -1479,7 +1537,8 @@ function renderAt(t, live){
   // Linien + Spitzen aller Routen
   const lineFeats = [], tipFeats = [];
   const activeP = anim.per.find(p => p.ri === activeRoute) || anim.per[0];
-  let activeTip = null;
+  let activeTip = null, activeLeg = null;
+  const models = [];
   for (const p of anim.per){
     const tipIdx = tipIndexFor(p, t);
     p._tipIdx = tipIdx;
@@ -1490,18 +1549,28 @@ function renderAt(t, live){
     if (p === activeP) activeTip = tip;
     lineFeats.push(...legFeatures(p, tipIdx));
     const done = tipIdx >= p.coords.length - 1 - 1e-6;
-    if (tipStyle !== "none" && t < total - 0.01 && !done)
-      tipFeats.push({ type: "Feature",
-        properties: { color: p.rt.color, icon: p.rt._tipIcon || "" },
-        geometry: { type: "Point", coordinates: tip } });
+    const lg = legAt(p, tipIdx);
+    if (p === activeP) activeLeg = lg;
+    if (tipStyle !== "none" && t < total - 0.01 && !done){
+      if (tipStyle === "model3d"){
+        const span = Math.max(lg.to - lg.from, 1e-6);
+        models.push({ lngLat: tip, heading: headingAt(p, tipIdx), mode: lg.mode, color: p.rt.color,
+                      prog: (tipIdx - lg.from) / span, px: 64 * sampleNum(tracks.tipScale, t, num("tipScale")) });
+      } else
+        tipFeats.push({ type: "Feature",
+          properties: { color: p.rt.color, icon: tipStyle === "mode" ? "tipmode-" + lg.mode + "-" + p.rt.id : (p.rt._tipIcon || "") },
+          geometry: { type: "Point", coordinates: tip } });
+    }
   }
   map.getSource("route").setData({ type: "FeatureCollection", features: lineFeats });
   map.getSource("tip").setData({ type: "FeatureCollection", features: tipFeats });
   const anyTip = tipFeats.length > 0;
-  map.setPaintProperty("tip-dot", "circle-opacity", anyTip ? 1 : 0);
-  map.setPaintProperty("tip-dot", "circle-stroke-opacity", anyTip ? 1 : 0);
+  const dotOn = anyTip && (tipStyle === "pin" || tipStyle === "dot" || tipStyle === "stop");
+  map.setPaintProperty("tip-dot", "circle-opacity", dotOn ? 1 : 0);
+  map.setPaintProperty("tip-dot", "circle-stroke-opacity", dotOn ? 1 : 0);
   if (map.getLayer("tip-pin"))
-    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop") && anyTip ? 1 : 0);
+    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop" || tipStyle === "mode") && anyTip ? 1 : 0);
+  M3D.update(models, t);
 
   // Stopps (pro Route, beim Überfahren)
   let dirty = false;
@@ -1552,7 +1621,7 @@ function renderAt(t, live){
 
   // Kamera (folgt der aktiven Route)
   const hasPos = tracks.pos.length > 0;
-  let zoomV = sampleNum(tracks.zoom, t, num("zoom"));
+  let zoomV = sampleNum(tracks.zoom, t, num("zoom") + (activeLeg && !tracks.zoom.length ? ((MODES[activeLeg.mode] || {}).zoom || 0) : 0));
   let bearV = tracks.bearing.length ? sampleNum(tracks.bearing, t, 0) : (num("rotSpeed") || 0) * t;
   const pitchV = sampleNum(tracks.pitch, t, num("pitch"));
   let center;
@@ -1579,11 +1648,12 @@ function renderAt(t, live){
 
 /* ---------- Statische Vorschau + Stil ---------- */
 async function drawStatic(){
-  if (!mapReady) return;
+  if (!mapReady || !map.getSource("tip") || !map.getSource("route")) return;
   invalidateAnim();
   applyStyleSettings();
   const a = await prepareAnim();
   if (/^Route „/.test(document.getElementById("status").textContent)) setStatus("");
+  M3D.update([]);
   map.getSource("tip").setData(emptyFC());
   if (map.getLayer("tip-pin")) map.setPaintProperty("tip-pin", "icon-opacity", 0);
   map.setPaintProperty("tip-dot", "circle-opacity", 0);
@@ -2172,7 +2242,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId"];
 
 document.getElementById("projSave").addEventListener("click", () => {
   const proj = {
@@ -2184,7 +2254,7 @@ document.getElementById("projSave").addEventListener("click", () => {
     routes: routes.map(rt => ({
       name: rt.name, color: rt.color, tipLabel: rt.tipLabel, gpx: rt.gpx,
       tipPhoto: imgToDataURL(rt.tipPhoto),
-      waypoints: rt.waypoints.map(wp => ({ name: wp.name, lat: wp.lat, lng: wp.lng, color: wp.color, mode: wp.mode || "", photo: imgToDataURL(wp.photo) }))
+      waypoints: rt.waypoints.map(wp => ({ name: wp.name, lat: wp.lat, lng: wp.lng, color: wp.color, mode: wp.mode || "", speed: wp.speed || 1, photo: imgToDataURL(wp.photo) }))
     })),
     features: features.map(f => ({ name: f.name, geometry: f.geometry, color: f.color, appearT: f.appearT })),
     pois,
@@ -2239,25 +2309,19 @@ document.getElementById("projLoad").addEventListener("change", e => {
         rt.tipPhoto = await loadImg(pr.tipPhoto);
         for (const w of (pr.waypoints || [])){
           const photo = await loadImg(w.photo);
-          rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, mode: w.mode || "", photo });
+          rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, mode: w.mode || "", speed: w.speed || 1, photo });
         }
         routes.push(rt);
       }
       activeRoute = 0;
       prevStyle = val("mapStyle");
       // Stil neu aufbauen und alles zeichnen
-      map.setStyle(buildBaseStyle(val("mapStyle")));
-      map.once("styledata", async () => {
-        addRuntimeLayers();
+      swapStyle(async () => {
         syncRouteInputs();
         renderRoutes();
         renderWpList();
         renderFeatList();
-        refreshFeatures();
-        await drawStatic();
-        applyLang();
-        setStatus(tr("Projekt geladen."));
-      });
+      }).then(() => { applyLang(); setStatus(tr("Projekt geladen.")); });
     } catch (err){
       setStatus("Projekt konnte nicht geladen werden: " + err.message);
     }
@@ -2265,6 +2329,12 @@ document.getElementById("projLoad").addEventListener("change", e => {
   reader.readAsText(file);
 });
 
+(() => {
+  const sel = document.getElementById("travelMode"), cur = sel.value;
+  sel.innerHTML = Object.entries(MODES).map(([k, m]) => `<option value="${k}">${m.icon} ${m.label}</option>`).join("");
+  sel.value = MODES[cur] ? cur : "car";
+  sel.addEventListener("change", () => renderWpList());
+})();
 routes.push(newRoute("Route 1", PALETTE[0]));
 renderPalettes();
 renderRoutes();

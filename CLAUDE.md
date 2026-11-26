@@ -11,7 +11,9 @@ Sprache im Tool und in der Kommunikation: Deutsch.
 ## Aufbau (Stand 26.11.2026)
 - Quellcode in `src/`:
   - `src/index.html` (Markup), `src/style.css`, `src/app.js` (die App, `/* ---------- `-Abschnitte).
-  - `src/ui.js`: Oberfläche (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
+  - `src/models3d.js`: 3D-Modelle an der Spitze (`M3D`, eigene WebGL-Custom-Layer `tip-3d`, prozedurale Low-Poly-Meshes je Verkehrsmittel, Schatten, Flugzeug steigt/landet).
+  - `src/templates.js`: Vorlagen (`TEMPLATES`, komplette Looks) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
+  - `src/ui.js`: Oberfläche (Einfach/Profi-Modus über `body.pro`, `.adv` = nur Profi), (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
   - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
   - `src/vendor/`: MapLibre GL JS 5.24.1 (+CSS), mp4-muxer 5.2.1.
 - Entwickeln: `python3 -m http.server 8000` → http://localhost:8000/src/ (lädt die Einzeldateien).
@@ -27,6 +29,7 @@ Sprache im Tool und in der Kommunikation: Deutsch.
   - Export: `#mp4Btn` (framegenau), `#recordBtn` (Echtzeit-WebM)
   - Overlay: `drawOverlay()` zeichnet in `#ovl` und wird beim Export aufs Video gelegt.
 - Projekt-Speichern: `SETTING_IDS`. Neue Einstellungen dort eintragen.
+- Stilwechsel immer über `swapStyle()` (Terrain vorher aus, `diff:false`, `styleBusy`-Promise).
 
 ## Neu in dieser Runde (Claude, Chat)
 1. MapLibre 4.7.1 → 5.24.1. Die Map nutzt `canvasContextAttributes.preserveDrawingBuffer`.
@@ -59,7 +62,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - `src/` (app.js, style.css, index.html) plus Build-Skript, das wieder eine einzelne `mapanimator.html` erzeugt (Bibliotheken inline).
    - Grund: Die 1-MB-Datei ist zum Editieren unhandlich.
    - Playwright-Smoke-Test: lädt die Seite, wählt alle Themes, rendert 1 s MP4 und prüft auf JS-Fehler.
-2. **Verkehrsmittel pro Etappe** (Kamelfamilie) – erledigt: `MODES`, `wp.mode` („Anreise per“), `legFeatures()`, Layer route-casing/route-line/route-dash:
+2. **Verkehrsmittel pro Etappe** (Kamelfamilie) – erledigt (11 Verkehrsmittel mit pace/zoom, Chips + ½×/2× am Stopp): `MODES`, `wp.mode` („Anreise per“), `legFeatures()`, Layer route-casing/route-line/route-dash:
    - Auto/Rad/Zu Fuß geroutet; Fähre und Flug als Bogen.
    - Linienstil je Etappe: durchgezogen rot mit weißer Kontur, Fähre weiß gestrichelt, Bus orange gestrichelt.
 3. **Kamera wie Baldinger:**
@@ -81,7 +84,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
     - `window.MA.load(plan)` / `render()`.
     - Plan-JSON mit Keyframes, Layern und Punkten.
     - Export als ein Bundle (MP4 + Positionen).
-11. Später: 3D-Modelle an der Spitze (Schiff, Auto, Fahrrad) als glTF über einen Custom Layer.
+11. 3D-Modelle an der Spitze – erledigt als prozedurale Modelle (`models3d.js`); glTF-Import wäre die Ausbaustufe.
 
 ## Regeln
 - Single-File-Auslieferung behalten (läuft offline per Doppelklick bzw. GitHub Pages).
