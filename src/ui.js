@@ -30,6 +30,8 @@
     $("panels").scrollTop = 0;
     if (mobile()) body.classList.add("sheet-open");
     try { localStorage.setItem("ma.tab", name); } catch {}
+    body.classList.toggle("assets-mode", name === "assets");
+    document.dispatchEvent(new CustomEvent("ma:tab", { detail: name }));
   }
   tabs.forEach(b => b.addEventListener("click", () => openTab(b.dataset.tab, true)));
   try { const t = localStorage.getItem("ma.tab"); if (t) openTab(t); } catch {}

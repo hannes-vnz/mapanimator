@@ -52,6 +52,7 @@
     <button data-tab="camera" role="tab" title="Schritt 3 (Taste 3)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="m16 11 5-3v9l-5-3z"/></svg><span class="num">3</span><span class="i18n">Kamera</span></button>
     <button data-tab="layers" role="tab" title="Schritt 4 (Taste 4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="num">4</span><span class="i18n">Ebenen</span></button>
     <button data-tab="export" role="tab" title="Schritt 5 (Taste 5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span class="num">5</span><span class="i18n">Export</span></button>
+    <button data-tab="assets" role="tab" title="Asset-Studio (Taste 6)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 20 7.4v9.2L12 21.2 4 16.6V7.4z"/><path d="m9 12 2 2 4-4"/></svg><span class="num">6</span><span class="i18n">Assets</span></button>
   </nav>
 
   <aside id="sidebar">
@@ -176,11 +177,10 @@
           <div class="setting"><label>Pin-Stil</label>
             <select id="pinStyle">
               <option value="photo">Foto-Pin (weiß)</option>
-              <option value="badge" selected>Foto-Badge + Name</option>
+              <option value="badge">Foto-Badge + Name</option>
               <option value="dot">Farbpunkt</option>
-              <option value="tag">Etikett (Ortsname)</option>
+              <option value="tag" selected>Etikett (Kara &amp; Nate, Standard)</option>
               <option value="stamp">Reisepass-Stempel</option>
-              <option value="ticket">Koordinaten-Ticket</option>
               <option value="callout">Leader-Linie (Doku)</option>
               <option value="flag">Fähnchen</option>
               <option value="sticker">Sticker</option>
@@ -431,6 +431,25 @@
       </section>
 
       <!-- ===== EXPORT ===== -->
+      <section class="pane" data-pane="assets">
+        <div class="card">
+          <h2>Asset-Studio</h2>
+          <div class="hint">Animierte Einblendungen ohne Karte zum Drüberlegen im Schnitt (Look wie THE RACE). Export mit transparentem Hintergrund als PNG-Sequenz (Premiere, DaVinci, Final Cut, After Effects) oder als Greenscreen-MP4 (CapCut: Chroma-Key).</div>
+          <div class="setting"><label>Format</label><select id="asRes">
+            <option value="1920x1080" selected>1920 × 1080 (16:9)</option>
+            <option value="1080x1920">1080 × 1920 (9:16)</option>
+            <option value="1080x1080">1080 × 1080 (1:1)</option>
+            <option value="3840x2160">3840 × 2160 (4K)</option>
+          </select></div>
+          <div class="setting"><label>Vorschau-Hintergrund</label><select id="asBg"><option value="checker" selected>transparent (Karo)</option><option value="black">schwarz</option><option value="green">grün</option></select></div>
+          <div class="insadd" id="asAdd"></div>
+        </div>
+        <div class="card">
+          <h2>Deine Assets</h2>
+          <div id="asList"></div>
+        </div>
+      </section>
+
       <section class="pane" data-pane="export">
         <div class="card">
           <h2>Export</h2>
@@ -473,6 +492,7 @@
     <div id="stage">
       <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="whipBlur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur id="whipBlurFe" stdDeviation="0 0" edgeMode="duplicate"/></filter></svg>
       <div id="mapwrap"><div id="map"></div><canvas id="ovl"></canvas><div id="safezone" aria-hidden="true"><i class="sz-top"></i><i class="sz-bottom"></i><i class="sz-right"></i></div></div>
+      <div id="assetStage" hidden><canvas id="assetCanvas"></canvas></div>
       <div id="status" role="status" aria-live="polite"></div>
     </div>
     <div id="timeline">
@@ -507,6 +527,7 @@
 <script src="regions.js"></script>
 <script src="overlays.js"></script>
 <script src="intro.js"></script>
+<script src="assets.js"></script>
 <script src="scenes.js"></script>
 <script src="api.js"></script>
 <script src="ui.js"></script>

@@ -423,3 +423,30 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
   #safeBtn{display:none;}
 }
 @media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important;} }
+
+/* Einblendungen */
+.insadd{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;}
+.insadd .btn{font-size:12px; padding:8px 6px;}
+.insitem{border:1px solid var(--line, rgba(127,127,127,.25)); border-radius:10px; margin:6px 0; overflow:hidden;}
+.inshead{display:flex; align-items:center; gap:6px; padding:7px 8px; cursor:pointer; font-size:13px;}
+.inshead span{font-weight:600; white-space:nowrap;}
+.inshead em{flex:1; font-style:normal; opacity:.7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.inshead small{opacity:.6;}
+.inshead button{border:0; background:transparent; color:inherit; cursor:pointer; font-size:13px; padding:2px 5px; border-radius:6px;}
+.inshead button:hover{background:rgba(127,127,127,.18);}
+.insbody{padding:4px 8px 8px; border-top:1px solid var(--line, rgba(127,127,127,.2));}
+.insexp{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px; font-size:12px;}
+.insexp span{width:100%; opacity:.7;}
+.insexp .btn{font-size:12px; padding:6px 8px;}
+
+/* Asset-Studio */
+#assetStage{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:5; background:#121316;}
+#assetStage[hidden]{display:none;}
+#assetCanvas{border-radius:6px; box-shadow:0 0 0 1px rgba(255,255,255,.1), 0 20px 60px rgba(0,0,0,.6);
+  background-color:#2a2b30; background-image:linear-gradient(45deg,#3a3b41 25%,transparent 25%,transparent 75%,#3a3b41 75%),linear-gradient(45deg,#3a3b41 25%,transparent 25%,transparent 75%,#3a3b41 75%);
+  background-size:24px 24px; background-position:0 0,12px 12px;}
+body.assets-mode #mapwrap{visibility:hidden;}
+body.assets-mode #timeline{display:none;}
+.insadd b{font-weight:400; margin-right:2px;}
+.setting.col{flex-direction:column; align-items:stretch; gap:4px;}
+.setting.col textarea{width:100%; box-sizing:border-box; font:inherit; font-size:12px; border-radius:8px; padding:6px; background:rgba(127,127,127,.12); color:inherit; border:1px solid rgba(127,127,127,.3); resize:vertical;}

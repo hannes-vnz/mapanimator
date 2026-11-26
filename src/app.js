@@ -863,24 +863,6 @@ const PIN_ART = {
     g.restore();
     g.fillStyle = "#ffffff"; g.beginPath(); g.moveTo(S / 2 - 14, cy + h / 2 + 4); g.lineTo(S / 2 + 14, cy + h / 2 + 4); g.lineTo(S / 2, g.canvas.height - 2); g.closePath(); g.fill();
   },
-  // Koordinaten-Ticket: Name groß, Koordinaten in Mono, Lochung links (Reisetagebuch)
-  ticket(c, wp, fs){
-    const name = (wp.name || "").toUpperCase(), coord = wp.sub || fmtCoord(wp), dark = pinDark();
-    let g = c.getContext("2d"); g.font = "900 32px " + fs; const t1 = g.measureText(name).width;
-    g.font = "700 16px " + FONT_STACKS.mono; const t2 = g.measureText(coord).width;
-    const W = Math.min(Math.max(t1, t2), 420) + 80, H = 140;
-    g = pinFit(c, W, H);
-    const bg = dark ? "#f4efe3" : "#1d1f24", fg = dark ? "#1d1f24" : "#f4efe3", col = wp.color || "#e3262b";
-    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 10; g.shadowOffsetY = 4; g.fillStyle = bg; roundRect(g, 0, 0, W, 92, 10); g.fill(); g.restore();
-    g.globalCompositeOperation = "destination-out"; g.beginPath(); g.arc(0, 46, 11, 0, Math.PI * 2); g.arc(W, 46, 11, 0, Math.PI * 2); g.fill();
-    g.globalCompositeOperation = "source-over";
-    g.strokeStyle = fg; g.globalAlpha = 0.35; g.setLineDash([4, 5]); g.lineWidth = 2; g.beginPath(); g.moveTo(26, 12); g.lineTo(26, 80); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
-    g.fillStyle = col; g.fillRect(12, 30, 6, 32);
-    g.fillStyle = fg; g.textBaseline = "alphabetic"; g.font = "900 32px " + fs; g.fillText(name, 40, 46, 420);
-    g.font = "700 16px " + FONT_STACKS.mono; g.globalAlpha = 0.75; g.fillText(coord, 40, 74, 420); g.globalAlpha = 1;
-    g.fillStyle = bg; g.beginPath(); g.moveTo(W / 2 - 12, 90); g.lineTo(W / 2 + 12, 90); g.lineTo(W / 2, 108); g.closePath(); g.fill();
-    g.fillStyle = col; g.strokeStyle = "#fff"; g.lineWidth = 4; g.beginPath(); g.arc(W / 2, H - 16, 9, 0, Math.PI * 2); g.fill(); g.stroke();
-  },
   // Rang-Nummer: großer Kreis „#3“ + Name (Countdown / Top-Listen)
   rank(c, wp, fs){
     const name = wp.name || "", n = pinRank(wp), col = wp.color || "#e3262b";
@@ -2693,7 +2675,8 @@ function serializeProject(){
     cam: typeof CAM !== "undefined" ? CAM.get() : null,
     marks: typeof MARKS !== "undefined" ? MARKS.get() : [],
     labels: typeof LABELS !== "undefined" ? LABELS.get() : [],
-    signs: typeof SIGNS !== "undefined" ? SIGNS.get() : []
+    signs: typeof SIGNS !== "undefined" ? SIGNS.get() : [],
+    assets: typeof ASSETS !== "undefined" ? ASSETS.get() : []
   };
 }
 function downloadJSON(obj, name){
@@ -2721,6 +2704,7 @@ async function loadProject(proj){
   if (typeof CAM !== "undefined") CAM.set(proj.cam);
   if (typeof MARKS !== "undefined") MARKS.set(proj.marks || []);
   if (typeof LABELS !== "undefined") LABELS.set(proj.labels || []);
+  if (typeof ASSETS !== "undefined") ASSETS.set(proj.assets || []);
   if (typeof SIGNS !== "undefined") await SIGNS.set(proj.signs || []);
   customColors = proj.customColors || null;
   pois = proj.pois || [];
