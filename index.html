@@ -8229,14 +8229,14 @@ const OVL = (() => {
     const x = Math.round(W * (portrait ? 0.08 : 0.06)), y = val("cntPos") === "bottom" ? Math.round(H * (portrait ? 0.74 : 0.82)) : Math.round(H * (portrait ? 0.1 : 0.08));
     const big = Math.round(u * 0.16), small = Math.round(u * 0.04);
     const font = (px, w = 900) => w + " " + px + "px 'Archivo Black','Arial Black',Impact,sans-serif";
-    const word = (val("cntLabel") || "LÄNDER").toUpperCase();
+    const word0 = (val("cntLabel") || "LÄNDER").toUpperCase(), word = (k0 + n) === 1 && word0 === "LÄNDER" ? "LAND" : word0;
     g.save();
     g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = u * 0.02; g.shadowOffsetY = u * 0.004;
     g.translate(x, y + big); g.scale(pop, pop);
     g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic";
     const num1 = String(k0 + n); g.fillText(num1, 0, 0);
     const nm = g.measureText(num1), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
-    g.font = font(small); g.fillText(word, nw + small * 0.75, 0);          // Wort auf der Grundlinie, deutlich neben der Zahl
+    g.font = font(small); g.fillText(word, nw + small * 1.0, 0);          // Wort auf der Grundlinie, deutlich neben der Zahl
     g.restore();
     // neuestes Land als Chip darunter (blendet nach 2 s aus)
     if (last && since < 2.2){
@@ -8430,6 +8430,11 @@ const ASSETS = (() => {
   const $ = id => document.getElementById(id);
   const TYPES = {
     kmintro:    { icon: "🚴", name: "Kilometer-Intro", dur: 4 },
+    daystamp:   { icon: "📮", name: "Tages-Marke", dur: 3.5 },
+    countdown:  { icon: "⏳", name: "Countdown", dur: 4 },
+    flapboard:  { icon: "🛫", name: "Abflugtafel", dur: 4 },
+    itempop:    { icon: "➕", name: "Item-Pop", dur: 2.2 },
+    nametag:    { icon: "✍️", name: "Namens-Label", dur: 3 },
     hexflag:    { icon: "⬢", name: "Hexagon-Flagge + Lametta", dur: 3.6 },
     rchallenge: { icon: "🎯", name: "Challenge-Karte", dur: 4.5 },
     rules:      { icon: "🚫", name: "Regel-Karten", dur: 4.5 },
@@ -8442,8 +8447,8 @@ const ASSETS = (() => {
     chapter:    { icon: "⏩", name: "Kapitel-Chip", dur: 3 },
     flag:       { icon: "🏳️", name: "Flagge (weht)", dur: 3.2 },
     challenge:  { icon: "📣", name: "Challenge-Banner", dur: 4.5 },
-    flags:      { icon: "🎌", name: "Flaggen-Sammlung", dur: 7 },
-    passintro:  { icon: "🛂", name: "Pass-Intro (Cutout)", dur: 9.1 }
+    flags:      { icon: "🎌", name: "Flaggen-Sammlung", dur: 7 }
+
   };
   const STAMP_INK = ["#c0262d", "#1f4fa8", "#1e7a46", "#6b2fa0", "#b35a00", "#0f6f78"];
   let list = [], counter = 0, sel = null, start = performance.now(), loopOn = false;
@@ -8570,7 +8575,7 @@ const ASSETS = (() => {
     stamp(g, W, H, p, lt, dur){
       const u = Math.min(W, H) * (p.size || 1), team = p.color || "#b06ae8";
       const out = 1 - easeIn(clamp((lt - (dur - 0.45)) / 0.45));
-      const pw = Math.min(W * 0.66, u * 1.05), ph = pw * 0.6, px = (W - pw) / 2, py = H * 0.56 - ph / 2;
+      const pw = Math.min(W * (H > W * 1.2 ? 0.92 : 0.66), u * 1.05), ph = pw * 0.6, px = (W - pw) / 2, py = H * 0.56 - ph / 2;
       const shake = lt > 2.0 && lt < 2.25 ? Math.sin(lt * 120) * u * 0.006 * (2.25 - lt) / 0.25 : 0;
       // Konfetti
       if (p.confetti !== false) flakes(g, W, H, u, lt, team, out, hash(p.country || "x"));
@@ -8610,72 +8615,6 @@ const ASSETS = (() => {
       g.restore();
     },
 
-    /* Pass-Intro im Cutout-/Pop-up-Buch-Stil: Datenseite mit Foto zoomt raus → pro Station klappt ein
-       Retro-Reiseplakat aus dem Pass, ausgeschnittene Figur ploppt hoch → Stempel knallt → Passumschlag. */
-    passintro(g, W, H, p, lt0, dur){
-      const u = Math.min(W, H) * (p.size || 1), st = stationsOf(p), T = introTimes(st.length);
-      const lt = lt0 * T.total / Math.max(0.5, dur);                                   // Dauer frei skalierbar
-      const out = 1 - easeIn(clamp((lt - (T.total - 0.4)) / 0.4));
-      // Hintergrund (Verlauf, Farbe wechselt je Station)
-      let pal = PALS.blue;
-      if (lt >= T.b0 && lt < T.c0){ const i = Math.min(st.length - 1, Math.floor((lt - T.b0) / T.per)); pal = palFor(st[i]); }
-      if (p.bg !== "none"){
-        g.save(); g.globalAlpha = out; const gr = g.createRadialGradient(W / 2, H * 0.45, u * 0.1, W / 2, H / 2, Math.hypot(W, H) * 0.6);
-        gr.addColorStop(0, pal.bg[0]); gr.addColorStop(1, pal.bg[1]); g.fillStyle = gr; g.fillRect(0, 0, W, H); g.restore();
-      }
-      g.save(); g.globalAlpha = out;
-      // A) Datenseite
-      if (lt < T.b0 + 0.25){
-        const k = easeInOut(clamp((lt - 0.25) / 1.6)), pw = Math.min(W * 0.8, u * 1.25), ph = pw * 0.7;
-        const flip = clamp((lt - (T.b0 - 0.35)) / 0.6);
-        g.save(); g.translate(W / 2, H / 2); g.rotate((-10 * k + 4) * Math.PI / 180 + flip * 0.3);
-        g.scale(2.6 - 1.6 * k, (2.6 - 1.6 * k) * (1 - easeIn(flip)) + 0.001);
-        g.translate(pw * 0.27 * (1 - k), ph * 0.08 * (1 - k));
-        dataPage(g, -pw / 2, -ph / 2, pw, ph, u, p);
-        g.restore();
-        if (lt < 0.35){ g.fillStyle = "rgba(255,255,255," + (1 - lt / 0.35).toFixed(3) + ")"; g.fillRect(0, 0, W, H); }   // weißer Blitz
-      }
-      // B) Pop-up-Stationen
-      if (lt >= T.b0 - 0.1 && lt < T.c0 + 0.2){
-        const bw = Math.min(W * 0.8, u * 1.2), bh = bw * 0.62, cx = W / 2, floorY = H * 0.5 + bh * 0.42;
-        const bk = easeOut(clamp((lt - T.b0 + 0.1) / 0.35)), bOut = 1 - clamp((lt - T.c0) / 0.2);
-        g.save(); g.globalAlpha *= bOut; g.translate(0, (1 - bk) * H * 0.3);
-        popFloor(g, cx, floorY, bw, bh * 0.36, u, st);
-        const i = Math.min(st.length - 1, Math.floor((lt - T.b0) / T.per)), s = st[i], lt2 = lt - T.b0 - i * T.per;
-        const up = Math.min(backOut(clamp(lt2 / 0.42)), 1.04) * (1 - easeIn(clamp((lt2 - (T.per - 0.16)) / 0.16)) * (i < st.length - 1 ? 1 : 0));
-        if (up > 0.01){
-          g.save(); g.translate(cx, floorY - bh * 0.05); g.scale(1, up); g.transform(1, 0, -0.04 * (1 - up), 1, 0, 0);
-          poster(g, -bw * 0.45, -bh * 1.02, bw * 0.9, bh, u, s, p);
-          g.restore();
-          // Schild mit Flagge rechts
-          const sk = Math.min(backOut(clamp((lt2 - 0.18) / 0.35)), 1.05) * up;
-          if (sk > 0.01){ g.save(); g.translate(cx + bw * 0.36, floorY + bh * 0.02); g.scale(1, sk); signPost(g, bh * 0.5, s); g.restore(); }
-          // ausgeschnittene Figur
-          const ck = Math.min(backOut(clamp((lt2 - 0.12) / 0.4)), 1.06) * up;
-          if (ck > 0.01){ g.save(); g.translate(cx + bw * 0.06, floorY + bh * 0.1); g.scale(1, ck); cutoutFig(g, bh * 0.6, p, u); g.restore(); }
-        }
-        g.restore();
-      }
-      // C) Stempel auf Passseite
-      if (lt >= T.c0 && lt < T.d0 + 0.3){
-        const lc = lt - T.c0, k = easeOut(clamp(lc / 0.35)), cOut = 1 - clamp((lt - T.d0) / 0.3);
-        const pw = Math.min(W * 0.62, u * 0.95), ph = pw * 0.68;
-        g.save(); g.globalAlpha *= cOut; g.translate(W / 2 + (1 - k) * W * 0.6, H / 2); g.rotate((-6 - 30 * (1 - k)) * Math.PI / 180);
-        stampPage(g, -pw / 2, -ph / 2, pw, ph, u, p);
-        const sk = clamp((lc - 0.45) / 0.22);
-        if (sk > 0){ const s = 1 + 1.4 * (1 - easeIn(sk)); g.save(); g.globalAlpha *= Math.min(1, 0.3 + sk); g.scale(s, s); bigStamp(g, ph * 0.36, p.stampText || "KEIN GELD", p.stampColor || "#d8262c"); g.restore(); }
-        g.restore();
-      }
-      // D) Passumschlag
-      if (lt >= T.d0){
-        const ld = lt - T.d0, k = backOut(clamp(ld / 0.5)), cw = Math.min(W * 0.42, u * 0.62), chh = cw * 1.4;
-        g.save(); g.translate(W / 2, H / 2 + (1 - Math.min(k, 1)) * H * 0.5); g.rotate((1 - Math.min(k, 1)) * -0.4 + 0.03);
-        cover(g, -cw / 2, -chh / 2, cw, chh, u, p, ld);
-        g.restore();
-      }
-      g.restore();
-    },
-
     /* Kilometer-Intro: Zähler rast hoch (Zählwerk-Unschärfe), Ruck + Akzentstrich am Ziel,
        darunter tippt sich „TAG 23 · LAOS“ mit Flagge, optional Höhenmeter-Chip. */
     kmintro(g, W, H, p, lt, dur){
@@ -8684,31 +8623,38 @@ const ASSETS = (() => {
       const v = from + (to - from) * e, speed = ck < 1 ? 4 * Math.pow(1 - ck, 3) * Math.abs(to - from) / (T1 - 0.15) : 0;
       const outK = easeIn(clamp((lt - (dur - 0.4)) / 0.4)), inK = easeOut(clamp(lt / 0.25));
       const punch = lt > T1 && lt < T1 + 0.35 ? 1 + 0.07 * Math.sin((lt - T1) / 0.35 * Math.PI) : 1;
-      const txt = Math.round(v).toLocaleString("de-DE"), fs = u * 0.26;
-      g.save(); g.font = CF(fs, 900); const digitW = g.measureText("0").width, sepW = g.measureText(".").width;
+      const txt = Math.round(v).toLocaleString("de-DE");
+      let fs = u * 0.26; g.save();
+      { g.font = CF(fs, 900); const dw = g.measureText("0").width, sw = g.measureText(".").width; g.font = CF(fs * 0.34, 900); const uw = g.measureText(unit).width;
+        let w0 = 0; for (const ch of Math.round(to).toLocaleString("de-DE")) w0 += /\d/.test(ch) ? dw : sw; w0 += u * 0.03 + uw;
+        if (w0 > W * 0.86) fs *= W * 0.86 / w0; }                                           // passt immer ins Bild (auch 9:16)
+      g.font = CF(fs, 900); const digitW = g.measureText("0").width, sepW = g.measureText(".").width;
       g.font = CF(fs * 0.34, 900); const unitW = g.measureText(unit).width;
       const finalTxt = Math.round(to).toLocaleString("de-DE"); let numW = 0; for (const ch of finalTxt) numW += /\d/.test(ch) ? digitW : sepW;
       const blockW = numW + u * 0.03 + unitW, blockH = fs * 1.55, [bx, by] = place(p, W, H, blockW, blockH, "center");
       g.globalAlpha = inK * (1 - outK); g.translate(0, outK * u * 0.12 + (1 - inK) * u * 0.05);
       const baseY = by + fs * 0.88;
       g.save(); g.translate(bx + blockW / 2, baseY - fs * 0.4); g.scale(punch, punch); g.translate(-(bx + blockW / 2), -(baseY - fs * 0.4));
-      // Ziffern rechtsbündig (Zählwerk): jede Stelle mit vertikaler Unschärfe je nach Tempo
-      g.font = CF(fs, 900); g.textAlign = "left"; g.textBaseline = "alphabetic";
-      g.shadowColor = "rgba(0,0,0,.65)"; g.shadowBlur = u * 0.045; g.shadowOffsetY = u * 0.01;
-      g.lineWidth = Math.max(2, u * 0.006); g.strokeStyle = "rgba(0,0,0,.35)"; g.lineJoin = "round";
-      const chars = [...txt]; let x = bx + numW;
-      for (let i = chars.length - 1, place10 = 0; i >= 0; i--){
-        const ch = chars[i], w = /\d/.test(ch) ? digitW : sepW; x -= w;
-        if (/\d/.test(ch)){
-          const blur = Math.min(1, speed / Math.pow(10, place10) / 18);                     // niedrige Stellen verwischen zuerst
-          if (blur > 0.05){
-            for (let k = -3; k <= 3; k++){ g.globalAlpha = inK * (1 - outK) * (k ? 0.18 * blur : 1 - 0.55 * blur); g.fillStyle = "#fff"; g.fillText(ch, x, baseY + k * fs * 0.09 * blur); }
-            g.globalAlpha = inK * (1 - outK);
-          } else { g.strokeText(ch, x, baseY); g.fillStyle = "#fff"; g.fillText(ch, x, baseY); }
-          place10++;
-        } else { g.fillStyle = "#fff"; g.fillText(ch, x, baseY); }
+      // Zählwerk: jede Stelle rollt in ihrem Fenster (Ziffer → nächste Ziffer), gezeichnet auf eigene Ebene, dann ein Schatten für alles
+      const finalDigits = String(Math.round(Math.abs(to))).length, layer = kmLayer(Math.ceil(numW + u * 0.02), Math.ceil(fs * 1.3)), lg = layer.getContext("2d");
+      lg.clearRect(0, 0, layer.width, layer.height); lg.font = CF(fs, 900); lg.textAlign = "center"; lg.textBaseline = "alphabetic"; lg.fillStyle = "#fff";
+      const lb = fs * 1.02, val = Math.max(0, v);
+      let x = numW, digitsShown = Math.max(1, String(Math.floor(val)).length);
+      for (let k = 0; k < finalDigits; k++){
+        if (k > 0 && k % 3 === 0){ x -= sepW; if (k < digitsShown) lg.fillText(".", x + sepW / 2, lb); }
+        x -= digitW;
+        if (k >= digitsShown) continue;                                                    // keine führenden Nullen
+        const vp = val / Math.pow(10, k), d = Math.floor(vp) % 10;
+        // nur rollen, wenn die darunterliegende Stelle gerade 9 → 0 wechselt (wie ein echtes Zählwerk)
+        const lower = k === 0 ? vp - Math.floor(vp) : Math.max(0, (val / Math.pow(10, k - 1)) % 10 - 9);
+        // Ziffer wechselt direkt; die neue springt kurz von unten ein (nie zwei Ziffern übereinander)
+        const snap = clamp((lower - 0.8) / 0.2), fast = speed / Math.pow(10, k) > 12;
+        if (!fast && snap > 0){ lg.globalAlpha = 0.35 + 0.65 * snap; lg.fillText(String((d + 1) % 10), x + digitW / 2, lb + (1 - snap) * fs * 0.12); lg.globalAlpha = 1; }
+        else lg.fillText(String(d), x + digitW / 2, lb);
       }
-      g.font = CF(fs * 0.34, 900); g.fillStyle = col; g.fillText(unit, bx + numW + u * 0.03, baseY);
+      g.save(); g.shadowColor = "rgba(0,0,0,.6)"; g.shadowBlur = u * 0.04; g.shadowOffsetY = u * 0.01;
+      g.drawImage(layer, bx, baseY - lb); g.restore();
+      g.font = CF(fs * 0.34, 900); g.textAlign = "left"; g.textBaseline = "alphabetic"; g.fillStyle = col; g.shadowColor = "rgba(0,0,0,.5)"; g.shadowBlur = u * 0.02; g.fillText(unit, bx + numW + u * 0.03, baseY); g.shadowBlur = 0;
       g.restore();
       // Akzentstrich
       const lk = easeOut(clamp((lt - T1) / 0.35));
@@ -8727,11 +8673,126 @@ const ASSETS = (() => {
       if (p.hm){
         const hk = backOut(clamp((lt - T1 - 0.25) / 0.35));
         if (hk > 0){
-          g.font = CF(fs * 0.13, 800); const t = p.hm, w = g.measureText(t).width + fs * 0.16, h = fs * 0.2, hx = bx + blockW - w, hy = by + fs * 0.02;
+          g.font = CF(fs * 0.13, 800); const t = p.hm, w = g.measureText(t).width + fs * 0.16, h = fs * 0.2, hx = bx + blockW - w, hy = baseY - fs * 0.86 - h - fs * 0.05;
           g.save(); g.translate(hx + w / 2, hy + h / 2); g.scale(hk, hk); g.shadowBlur = 0;
           g.fillStyle = "rgba(14,15,18,.72)"; rr(g, -w / 2, -h / 2, w, h, h / 2); g.fill();
           g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(t, 0, fs * 0.005); g.restore();
         }
+      }
+      g.restore();
+    },
+
+    /* ===== aus dem Niko-Video ===== */
+    // Tages-Marke: Briefmarke mit Tag + Wahrzeichen fällt rein, Land tippt sich darunter
+    daystamp(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#2f63c8", sw = u * 0.36, sh = sw * 1.25;
+      const [x, y] = place(p, W, H, sw, sh + u * 0.12, "center"), cx = x + sw / 2, cy = y + sh / 2;
+      const k = clamp(lt / 0.45), e = backOut(k), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35));
+      g.save(); g.globalAlpha = Math.min(1, k * 3) * (1 - outK);
+      g.save(); g.translate(cx, cy - (1 - e) * u * 0.25); g.rotate((1 - e) * 0.5 - 0.05); g.scale(0.7 + 0.3 * e, 0.7 + 0.3 * e);
+      // Zackenrand (eigene Ebene, damit die Löcher nichts anderes ausstanzen)
+      const c = stampLayer(Math.ceil(sw * 1.1), Math.ceil(sh * 1.1)), t = c.getContext("2d"), m0 = (c.width - sw) / 2, m1 = (c.height - sh) / 2;
+      t.clearRect(0, 0, c.width, c.height); t.fillStyle = "#f4f1e8"; t.fillRect(m0, m1, sw, sh);
+      t.globalCompositeOperation = "destination-out"; const rr0 = sw * 0.035;
+      for (let i = 0; i <= 10; i++){ for (const [px, py] of [[m0 + sw * i / 10, m1], [m0 + sw * i / 10, m1 + sh], [m0, m1 + sh * i / 10], [m0 + sw, m1 + sh * i / 10]]){ t.beginPath(); t.arc(px, py, rr0, 0, Math.PI * 2); t.fill(); } }
+      t.globalCompositeOperation = "source-over";
+      const ix = m0 + sw * 0.09, iy = m1 + sh * 0.07, iw = sw * 0.82, ih = sh * 0.86;
+      const gr = t.createLinearGradient(0, iy, 0, iy + ih); gr.addColorStop(0, shade(col, 1.6)); gr.addColorStop(1, shade(col, 1.05)); t.fillStyle = gr; t.fillRect(ix, iy, iw, ih);
+      t.strokeStyle = shade(col, 0.6); t.lineWidth = sw * 0.012; t.strokeRect(ix + sw * 0.02, iy + sw * 0.02, iw - sw * 0.04, ih - sw * 0.04);
+      t.fillStyle = shade(col, 0.45); t.textAlign = "center"; t.textBaseline = "middle"; t.font = CF(sw * 0.2, 900);
+      t.fillText((p.label || "TAG") + " " + (p.day || "8"), m0 + sw / 2, iy + ih * 0.15, iw * 0.9);
+      tinted(t, p.icon || "🛕", m0 + sw / 2, iy + ih * 0.58, sw * 0.55, shade(col, 0.55));
+      picto(t, "✈", m0 + sw * 0.72, iy + ih * 0.36, sw * 0.12, shade(col, 0.45));
+      g.shadowColor = "rgba(0,0,0,.4)"; g.shadowBlur = u * 0.025; g.shadowOffsetY = u * 0.008;
+      g.drawImage(c, -c.width / 2, -c.height / 2); g.restore();
+      // Land tippt sich
+      const name = (p.text || "THAILAND").toUpperCase(), tk = clamp((lt - 0.45) / Math.max(0.3, name.length * 0.05));
+      if (tk > 0){
+        g.font = "700 " + Math.round(u * 0.055) + "px Georgia,'Times New Roman',serif"; g.textAlign = "center"; g.textBaseline = "top";
+        g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.7)"; g.shadowBlur = u * 0.02;
+        g.fillText(name.slice(0, Math.ceil(name.length * tk)).split("").join(" "), cx, y + sh + u * 0.03);
+      }
+      g.restore();
+    },
+
+    // Countdown: leuchtende Digitalzahl, zählt sekundengenau runter, Schreibschrift darunter
+    countdown(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#3fd8ff";
+      const parts = String(p.start || "30:09:18").split(":").map(Number), total0 = parts.reduce((a, v) => a * 60 + (v || 0), 0);
+      const rate = +p.rate || 1, left = Math.max(0, total0 - Math.floor(Math.max(0, lt - 0.3) * rate));
+      const hh = Math.floor(left / 3600), mm = Math.floor(left / 60) % 60, ss = left % 60, pad = v => String(v).padStart(2, "0");
+      const txt = parts.length > 2 ? pad(hh) + ":" + pad(mm) + ":" + pad(ss) : pad(Math.floor(left / 60)) + ":" + pad(ss);
+      const k = backOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3)), fs = Math.min(u * 0.15, W * 0.85 / (txt.length * 0.62));
+      g.font = "700 " + Math.round(fs) + "px 'SF Mono','Menlo','Courier New',monospace"; const tw = g.measureText(txt).width;
+      const [x, y] = place(p, W, H, tw, fs * 1.6, "top");
+      g.save(); g.globalAlpha = Math.min(1, k) * (1 - outK); g.translate(x + tw / 2, y + fs * 0.5); g.scale(k, k);
+      g.textAlign = "center"; g.textBaseline = "middle";
+      g.shadowColor = col; g.shadowBlur = fs * 0.35; g.fillStyle = col; g.fillText(txt, 0, 0);
+      g.shadowBlur = fs * 0.1; g.fillStyle = "#eaffff"; g.fillText(txt, 0, 0);
+      g.lineWidth = fs * 0.03; g.strokeStyle = "rgba(0,40,70,.55)"; g.shadowBlur = 0; g.strokeText(txt, 0, 0); g.fillStyle = "#f2feff"; g.fillText(txt, 0, 0);
+      g.font = "italic 700 " + Math.round(fs * 0.5) + "px 'Brush Script MT','Snell Roundhand','Segoe Script',cursive"; g.fillStyle = "#fff"; g.shadowColor = col; g.shadowBlur = fs * 0.2;
+      g.fillText(p.text || "bis zum Flug", 0, fs * 0.72);
+      g.restore();
+    },
+
+    // Abflugtafel: Leiste mit Split-Flap-Buchstaben, die durchklappern und einrasten
+    flapboard(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), rows = String(p.text || "VIENTIANE   09:00").toUpperCase().split("\n").slice(0, 3);
+      const n = Math.max(...rows.map(r => r.length), 8), cw = Math.min(u * 0.055, W * 0.86 / (n + 1)), ch = cw * 1.45, gap = cw * 0.12;
+      const bw = n * (cw + gap) + cw, bh = rows.length * (ch + gap) + ch * 0.95, [x, y] = place(p, W, H, bw, bh, "bottom");
+      const k = easeOut(clamp(lt / 0.3)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate(0, (1 - k) * u * 0.08);
+      g.fillStyle = "rgba(12,12,14,.92)"; rr(g, x, y, bw, bh, cw * 0.25); g.fill();
+      g.fillStyle = "#ffcc33"; g.font = CF(ch * 0.5, 800); g.textAlign = "left"; g.textBaseline = "middle";
+      g.fillText("✈ " + (p.label || "ABFLUG · DEPARTURES"), x + cw * 0.5, y + ch * 0.45);
+      const CH = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-";
+      rows.forEach((row, r) => {
+        const ry = y + ch * 0.95 + r * (ch + gap);
+        for (let i = 0; i < n; i++){
+          const cx = x + cw * 0.5 + i * (cw + gap), target = row[i] || " ", settle = 0.35 + i * 0.06 + r * 0.15 + (hash(row + i) % 7) * 0.04;
+          let shown = target;
+          if (lt < settle && target !== " ") shown = CH[(Math.floor(lt * 24) + i * 7 + r * 3) % CH.length];
+          g.fillStyle = "#222327"; rr(g, cx, ry, cw, ch, cw * 0.12); g.fill();
+          g.fillStyle = "rgba(0,0,0,.6)"; g.fillRect(cx, ry + ch / 2 - 0.5, cw, 1.5);
+          const flip = lt < settle ? (lt * 24) % 1 : 1;                                     // Klappe: kurz gestaucht
+          g.save(); g.translate(cx + cw / 2, ry + ch / 2); g.scale(1, lt < settle ? 0.55 + 0.45 * flip : 1);
+          g.fillStyle = "#f2f2f2"; g.font = "700 " + Math.round(ch * 0.7) + "px 'SF Mono','Menlo','Courier New',monospace"; g.textAlign = "center"; g.fillText(shown, 0, ch * 0.03); g.restore();
+        }
+      });
+      g.restore();
+    },
+
+    // Item-Pop: „+1 Wasserflasche“ – Icon + Text ploppen auf, steigen und verblassen
+    itempop(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#3fd8ff", txt = p.text || "Wasserflasche", amt = p.amount || "+1";
+      const k = backOut(clamp(lt / 0.35)), outK = clamp((lt - (dur - 0.6)) / 0.6), rise = easeOut(clamp(lt / dur)) * u * 0.06;
+      g.font = CF(u * 0.07, 900); const tw = g.measureText(amt + " " + txt).width, [x, y] = place(p, W, H, tw + u * 0.12, u * 0.12, "center");
+      g.save(); g.globalAlpha = Math.min(1, k) * (1 - outK); g.translate(x + (tw + u * 0.12) / 2, y + u * 0.06 - rise); g.scale(k, k);
+      if (p.icon){ g.font = Math.round(u * 0.1) + "px 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(p.icon, 0, -u * 0.09); }
+      g.font = CF(u * 0.07, 900); g.textAlign = "center"; g.textBaseline = "middle";
+      g.lineWidth = u * 0.014; g.strokeStyle = "#0b2a3a"; g.lineJoin = "round"; g.strokeText(amt + " " + txt, 0, 0);
+      g.shadowColor = col; g.shadowBlur = u * 0.03; g.fillStyle = col; g.fillText(amt + " " + txt, 0, 0);
+      g.restore();
+    },
+
+    // Namens-Label: handschriftlicher Name mit geschwungenem Pfeil zur Person
+    nametag(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), txt = p.text || "Kambon", col = p.color || "#ffffff";
+      g.font = "700 " + Math.round(u * 0.085) + "px 'Marker Felt','Chalkboard SE','Bradley Hand','Comic Sans MS',cursive"; const tw = g.measureText(txt).width;
+      const [x, y] = place(p, W, H, tw, u * 0.25, "center"), k = backOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      const wig = Math.sin(lt * 9) * 0.03 * clamp(1 - lt);
+      g.save(); g.globalAlpha = Math.min(1, k) * (1 - outK); g.translate(x + tw / 2, y + u * 0.06); g.rotate(-0.06 + wig); g.scale(k, k);
+      g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+      g.lineWidth = u * 0.022; g.strokeStyle = "#111"; g.strokeText(txt, 0, 0);
+      g.fillStyle = col; g.fillText(txt, 0, 0);
+      const ak = easeOut(clamp((lt - 0.25) / 0.35)), dir = p.arrow === "left" ? -1 : 1;           // Pfeil zeichnet sich
+      if (ak > 0){
+        const sx = dir * tw * 0.3, sy = u * 0.06, ex = dir * tw * 0.75, ey = u * 0.28;
+        g.lineCap = "round"; g.beginPath(); g.moveTo(sx, sy);
+        const N = 20; for (let i = 1; i <= N * ak; i++){ const f = i / N; g.lineTo(sx + (ex - sx) * f + Math.sin(f * Math.PI) * dir * u * 0.05, sy + (ey - sy) * f); }
+        g.lineWidth = u * 0.02; g.strokeStyle = "#111"; g.stroke(); g.lineWidth = u * 0.009; g.strokeStyle = col; g.stroke();
+        if (ak >= 1){ g.beginPath(); g.moveTo(ex - dir * u * 0.035, ey - u * 0.03); g.lineTo(ex, ey); g.lineTo(ex + dir * u * 0.012, ey - u * 0.045);
+          g.lineWidth = u * 0.02; g.strokeStyle = "#111"; g.stroke(); g.lineWidth = u * 0.009; g.strokeStyle = col; g.stroke(); }
       }
       g.restore();
     },
@@ -8859,7 +8920,7 @@ const ASSETS = (() => {
       g.save(); g.translate(W * 0.08, y0 - r - u * 0.04); g.scale(pop, pop);
       g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.02; g.fillStyle = "#fff"; g.textBaseline = "alphabetic";
       g.font = F(u * 0.1); const ns = String(n); g.fillText(ns, 0, 0); const nm = g.measureText(ns), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
-      g.font = F(u * 0.038); g.fillText((p.word || "LÄNDER").toUpperCase(), nw + u * 0.03, 0);
+      const word = (p.word || "LÄNDER").toUpperCase(); g.font = F(u * 0.038); g.fillText(n === 1 && word === "LÄNDER" ? "LAND" : word, nw + u * 0.035, 0);
       g.restore();
       shown.forEach((it, i) => {
         const k = backOut(clamp((lt - it.t) / 0.45)), row = Math.floor(i / perRow), col = i % perRow;
@@ -8906,7 +8967,7 @@ const ASSETS = (() => {
         g.save(); g.globalAlpha = nk; g.font = CF(u * 0.075, 800); const tw = g.measureText(name).width, pw = tw + u * 0.09, ph = u * 0.1, py = cy + R * 1.32 + (1 - nk) * u * 0.05;
         rcard(g, cx - pw / 2, py, pw, ph, ph * 0.3, u);
         g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(name, cx, py + ph / 2 + u * 0.003);
-        if (p.sub){ g.font = CF(u * 0.036, 800); g.fillStyle = p.color || "#f5c542"; g.shadowColor = "rgba(0,0,0,.6)"; g.shadowBlur = u * 0.015; g.fillText(p.sub.toUpperCase().split("").join(" "), cx, py + ph + u * 0.04); }
+        if (p.sub){ g.font = CF(u * 0.048, 800); g.fillStyle = p.color || "#f5c542"; g.shadowColor = "rgba(0,0,0,.6)"; g.shadowBlur = u * 0.015; g.fillText(p.sub.toUpperCase().split("").join(" "), cx, py + ph + u * 0.04); }
         g.restore();
       }
     },
@@ -8974,10 +9035,10 @@ const ASSETS = (() => {
         g.restore();
         if ((forbid || allow) && p.pills !== false){
           const pk = clamp((lt - t0 - 0.45) / 0.25); if (pk > 0){
-            g.save(); g.globalAlpha = pk * (1 - outK); const txt = forbid ? "VERBOTEN" : "ERLAUBT", pw = cw * 0.8, ph = u * 0.045, px = rx + (cw - pw) / 2, py = ry + ch + u * 0.02;
-            g.fillStyle = forbid ? "rgba(255,59,69,.25)" : "rgba(61,220,111,.22)"; rr(g, px, py, pw, ph, ph / 2); g.fill();
+            g.save(); g.globalAlpha = pk * (1 - outK); const txt = forbid ? "VERBOTEN" : "ERLAUBT", pw = cw * 0.86, ph = u * 0.052, px = rx + (cw - pw) / 2, py = ry + ch + u * 0.02;
+            g.fillStyle = forbid ? "rgba(216,38,44,.85)" : "rgba(30,150,70,.85)"; rr(g, px, py, pw, ph, ph / 2); g.fill();
             g.strokeStyle = forbid ? "#ff3b45" : "#3ddc6f"; g.lineWidth = 1.5; g.stroke();
-            g.fillStyle = forbid ? "#ff6b72" : "#5be37d"; g.font = CF(u * 0.028, 800); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, px + pw / 2, py + ph / 2 + 1);
+            g.fillStyle = forbid ? "#ffd0d3" : "#c9ffd8"; g.font = CF(u * 0.034, 900); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, px + pw / 2, py + ph / 2 + 1);
             g.restore();
           }
         }
@@ -9188,173 +9249,6 @@ const ASSETS = (() => {
     const im = userImgs.get(src); return im.complete && im.naturalWidth ? im : null;
   }
 
-  /* ---------- Pass-Intro-Bausteine ---------- */
-  const introTimes = n => { const b0 = 2.5, per = 1.35, c0 = b0 + Math.max(1, n) * per, d0 = c0 + 1.7; return { b0, per, c0, d0, total: d0 + 2.3 }; };
-  const stationsOf = p => { const s = String(p.stations || "").split(",").map(x => x.trim()).filter(Boolean); return s.length ? s : ["Europa", "Asien"]; };
-  const PALS = {
-    blue:    { bg: ["#5fb4ff", "#0b47b8"], sky: ["#7fd3e6", "#2b9fc9"], sun: "#ffe07a", hills: ["#8fd0c4", "#3e9e9a", "#1f6e78"], title: "#fff4cf", shade: "#173f63" },
-    europa:  { bg: ["#62b8ff", "#0d4fc2"], sky: ["#79d0e8", "#2a98c4"], sun: "#ffd65c", hills: ["#9ad7c7", "#4aa6a8", "#22707e"], title: "#fff4cf", shade: "#183e66" },
-    afrika:  { bg: ["#ffb347", "#d3260f"], sky: ["#ffb347", "#f05a1a"], sun: "#ffe9a0", hills: ["#c9542b", "#8f2f1d", "#4a1a14"], title: "#fff1c4", shade: "#5a1d10" },
-    asien:   { bg: ["#ff8fa3", "#5b1e7a"], sky: ["#ffd37a", "#f4a13a"], sun: "#fff0b0", hills: ["#7cc48a", "#2f8f5a", "#1c5e3e"], title: "#ffd23f", shade: "#7a2a10" },
-    ozeanien:{ bg: ["#ffc46b", "#e2541a"], sky: ["#ffcf7a", "#f08a2a"], sun: "#fff3c0", hills: ["#d0662e", "#9c3c1c", "#5a2412"], title: "#fff4cf", shade: "#6b2410" },
-    amerika: { bg: ["#ffd27a", "#3c6fd8"], sky: ["#ffcf8a", "#f0884a"], sun: "#fff3c0", hills: ["#9c6a4a", "#5a3e34", "#2e2a30"], title: "#fff4cf", shade: "#7a2a10" },
-    antarktis:{ bg: ["#7ff0ff", "#1a7fb8"], sky: ["#d8f6ff", "#86d4ec"], sun: "#ffffff", hills: ["#e8f8ff", "#b8e2f2", "#7dbfdc"], title: "#ffffff", shade: "#1a4f7a" }
-  };
-  const CONT = { europa: "europa", europe: "europa", afrika: "afrika", africa: "afrika", asien: "asien", asia: "asien", australien: "ozeanien", ozeanien: "ozeanien", oceania: "ozeanien",
-    nordamerika: "amerika", südamerika: "amerika", amerika: "amerika", "north america": "amerika", "south america": "amerika", antarktis: "antarktis", antarctica: "antarktis" };
-  function palFor(name){
-    const k = String(name || "").toLowerCase(); if (CONT[k]) return PALS[CONT[k]];
-    const art = artFor({}, name), base = art.color, list = Object.values(PALS);
-    const pl = list[hash(k) % (list.length - 1) + 1];
-    return Object.assign({}, pl, { bg: [shade(base, 1.5), shade(base, 0.6)], hills: [shade(base, 1.25), shade(base, 0.85), shade(base, 0.5)] });
-  }
-  function dataPage(g, x, y, w, h, u, p){
-    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = u * 0.05; g.shadowOffsetY = u * 0.015;
-    const gr = g.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, "#f3f0f8"); gr.addColorStop(0.5, "#e9f5f1"); gr.addColorStop(1, "#f3e6f2");
-    g.fillStyle = gr; rr(g, x, y, w, h, w * 0.02); g.fill(); g.restore();
-    g.save(); rr(g, x, y, w, h, w * 0.02); g.clip();
-    g.strokeStyle = "rgba(150,110,170,.12)"; g.lineWidth = 1;                                         // Guilloche
-    for (let k = 0; k < 40; k++){ g.beginPath(); for (let xx = 0; xx <= w; xx += 8){ const yy = y + h * (k / 40) + Math.sin(xx / w * Math.PI * 5 + k * 0.4) * h * 0.02; xx ? g.lineTo(x + xx, yy) : g.moveTo(x + xx, yy); } g.stroke(); }
-    const holo = g.createRadialGradient(x + w * 0.82, y + h * 0.45, 0, x + w * 0.82, y + h * 0.45, h * 0.22); holo.addColorStop(0, "rgba(255,120,190,.35)"); holo.addColorStop(1, "rgba(255,120,190,0)");
-    g.fillStyle = holo; g.fillRect(x, y, w, h);
-    const P = "#7a1f5c", fs = h * 0.036, mono = px => "500 " + Math.round(px) + "px 'OCR A Std','OCR-A','Courier New',monospace";
-    g.fillStyle = P; g.font = "800 " + Math.round(h * 0.04) + "px 'Helvetica Neue',Arial,sans-serif"; g.textBaseline = "top";
-    g.fillText((p.country0 || "REPUBLIK DER WELTENBUMMLER").toUpperCase(), x + w * 0.05, y + h * 0.06, w * 0.75);
-    g.font = "700 " + Math.round(h * 0.03) + "px 'Helvetica Neue',Arial,sans-serif"; g.fillText("REISEPASS · PASSPORT", x + w * 0.05, y + h * 0.14);
-    const fx = x + w * 0.05, fy = y + h * 0.22, fw = w * 0.27, fh = h * 0.56;                       // Foto
-    g.save(); rr(g, fx, fy, fw, fh, w * 0.015); g.clip(); g.fillStyle = "#cfd6dc"; g.fillRect(fx, fy, fw, fh);
-    const im = userImg(p.photo) || userImg(p.cutout);
-    if (im){ const s = Math.max(fw / im.naturalWidth, fh / im.naturalHeight); g.drawImage(im, fx + (fw - im.naturalWidth * s) / 2, fy + (fh - im.naturalHeight * s) / 2, im.naturalWidth * s, im.naturalHeight * s); }
-    else picto(g, "👤", fx + fw / 2, fy + fh / 2, fw * 0.7, "#8a949c");
-    g.restore();
-    const rows = [["Nachname / Surname", p.surname || "MUSTERMANN"], ["Vorname / Name", p.given || "HANNES"], ["Staatsangehörigkeit / Nationality", p.nationality || "WELTENBUMMLER"],
-      ["Geburtsdatum / Date of birth", p.dob || "18 FEB / FEB 00"], ["Gültig bis / Date of expiry", p.expiry || "31 DEZ / DEC 35"]];
-    rows.forEach(([l, v], i) => { const ry = y + h * (0.22 + i * 0.112), rx = x + w * 0.37;
-      g.fillStyle = P; g.font = "italic 600 " + Math.round(fs * 0.8) + "px 'Helvetica Neue',Arial,sans-serif"; g.fillText(l, rx, ry);
-      g.fillStyle = "#1d1d22"; g.font = mono(fs * 1.25); g.fillText(String(v).toUpperCase(), rx, ry + fs * 1.0, w * 0.55); });
-    const mrz = ("P<" + (p.surname || "MUSTERMANN") + "<<" + (p.given || "HANNES")).toUpperCase().replace(/\s/g, "<") + "<".repeat(44);
-    g.fillStyle = "#1d1d22"; g.font = mono(fs * 1.1); g.fillText(mrz.slice(0, 44), x + w * 0.05, y + h * 0.84, w * 0.9);
-    g.fillText(("0" + (hash(p.surname || "x") % 1e9)).padEnd(28, "<") + "0000000<<<<<<00", x + w * 0.05, y + h * 0.91, w * 0.9);
-    g.restore();
-  }
-  function poster(g, x, y, w, h, u, name, p){
-    const pal = palFor(name), seed = hash(name), c = lookup(name);
-    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = u * 0.03; g.fillStyle = "#f4ead2"; rr(g, x, y, w, h, w * 0.012); g.fill(); g.restore();
-    const m = w * 0.025; g.save(); rr(g, x + m, y + m, w - 2 * m, h - 2 * m, w * 0.006); g.clip();
-    const X = x + m, Y = y + m, ww = w - 2 * m, hh = h - 2 * m;
-    const sky = g.createLinearGradient(0, Y, 0, Y + hh); sky.addColorStop(0, pal.sky[0]); sky.addColorStop(0.7, pal.sky[1]); g.fillStyle = sky; g.fillRect(X, Y, ww, hh);
-    const sx = X + ww * 0.68, sy = Y + hh * 0.5;                                                        // Sonnenstrahlen
-    g.fillStyle = "rgba(255,255,255,.13)";
-    for (let k = 0; k < 18; k++){ const a0 = k / 18 * Math.PI * 2, a1 = a0 + Math.PI / 36; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(a0) * ww, sy + Math.sin(a0) * ww); g.lineTo(sx + Math.cos(a1) * ww, sy + Math.sin(a1) * ww); g.closePath(); g.fill(); }
-    g.fillStyle = pal.sun; g.beginPath(); g.arc(sx, sy, hh * 0.17, 0, Math.PI * 2); g.fill();
-    let sd = seed % 2147483646 + 1; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-    pal.hills.forEach((col, i) => {                                                                     // Hügel / Berge
-      const base = Y + hh * (0.58 + i * 0.12), amp = hh * (0.1 - i * 0.02), f1 = 1.5 + rnd() * 2, f2 = 4 + rnd() * 5, ph = rnd() * 6;
-      g.fillStyle = col; g.beginPath(); g.moveTo(X, Y + hh);
-      for (let xx = 0; xx <= ww; xx += ww / 60){ const t = xx / ww; g.lineTo(X + xx, base - Math.abs(Math.sin(t * Math.PI * f1 + ph)) * amp - Math.sin(t * Math.PI * f2 + ph) * amp * 0.25); }
-      g.lineTo(X + ww, Y + hh); g.closePath(); g.fill();
-    });
-    g.fillStyle = "rgba(60,40,20,.08)"; for (let k = 0; k < 400; k++){ g.fillRect(X + rnd() * ww, Y + rnd() * hh, 1.5, 1.5); }   // Papierkorn
-    const vg = g.createRadialGradient(X + ww / 2, Y + hh / 2, hh * 0.3, X + ww / 2, Y + hh / 2, ww * 0.7); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(60,30,0,.28)"); g.fillStyle = vg; g.fillRect(X, Y, ww, hh);
-    g.restore();
-    // Titel
-    const title = (c ? c.name : name).toUpperCase();
-    g.save(); g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.font = "italic 700 " + Math.round(h * 0.075) + "px 'Brush Script MT','Snell Roundhand',Georgia,serif"; g.fillStyle = "#d8322c"; g.fillText(p.greet || "Grüße aus", x + w / 2, y + h * 0.15);
-    let fs = h * 0.26; g.font = CF(fs, 900); const tw = g.measureText(title).width; if (tw > w * 0.84){ fs *= w * 0.84 / tw; g.font = CF(fs, 900); }
-    const ty = y + h * 0.15 + fs * 0.95;
-    for (let k = 6; k >= 1; k--){ g.fillStyle = pal.shade; g.fillText(title, x + w / 2 + k * fs * 0.012, ty + k * fs * 0.012); }
-    g.lineWidth = fs * 0.04; g.strokeStyle = pal.shade; g.strokeText(title, x + w / 2, ty); g.fillStyle = pal.title; g.fillText(title, x + w / 2, ty);
-    g.restore();
-    // Flaggen-Sticker unten links + Poststempel oben rechts
-    const cf = contFlag(name), im = (c && flagImg(c.a2)) || (cf && flagImg(cf));
-    if (im){ const fw = w * 0.17, fh = fw * im.naturalHeight / im.naturalWidth; g.save(); g.translate(x + w * 0.16, y + h * 0.78); g.rotate(-0.12);
-      g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = u * 0.01; g.fillStyle = "#fff"; g.fillRect(-fw / 2 - fw * 0.07, -fh / 2 - fw * 0.07, fw * 1.14, fh + fw * 0.14); g.shadowBlur = 0;
-      g.drawImage(im, -fw / 2, -fh / 2, fw, fh); g.restore(); }
-    g.save(); g.translate(x + w * 0.86, y + h * 0.18); g.rotate(0.3); g.globalAlpha *= 0.55; g.strokeStyle = "#2b2b3a"; g.lineWidth = Math.max(1, h * 0.006);
-    g.beginPath(); g.arc(0, 0, h * 0.075, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(0, 0, h * 0.055, 0, Math.PI * 2); g.stroke();
-    for (let k = 0; k < 4; k++){ g.beginPath(); for (let xx = -h * 0.2; xx <= -h * 0.08; xx += 2){ const yy = -h * 0.045 + k * h * 0.03 + Math.sin(xx * 0.2) * h * 0.006; xx === -h * 0.2 ? g.moveTo(xx, yy) : g.lineTo(xx, yy); } g.stroke(); }
-    g.restore();
-  }
-  function popFloor(g, cx, y, w, h, u, st){
-    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = u * 0.04; g.shadowOffsetY = u * 0.01;
-    g.fillStyle = "#e9dcc4"; g.beginPath(); g.moveTo(cx - w * 0.47, y - h * 0.15); g.lineTo(cx + w * 0.47, y - h * 0.15); g.lineTo(cx + w * 0.55, y + h); g.lineTo(cx - w * 0.55, y + h); g.closePath(); g.fill(); g.restore();
-    g.save(); g.beginPath(); g.moveTo(cx - w * 0.47, y - h * 0.15); g.lineTo(cx + w * 0.47, y - h * 0.15); g.lineTo(cx + w * 0.55, y + h); g.lineTo(cx - w * 0.55, y + h); g.closePath(); g.clip();
-    g.fillStyle = "rgba(0,0,0,.18)"; g.fillRect(cx - u * 0.004, y - h * 0.2, u * 0.008, h * 1.3);                                // Falz
-    st.slice(0, 3).forEach((s, i) => { g.save(); g.translate(cx + (i - 1) * w * 0.32, y + h * 0.55); g.scale(1, 0.55); g.rotate((i - 1) * 0.3);
-      badge(g, 0, 0, h * 0.45, (lookup(s) ? lookup(s).name : s).toUpperCase(), {}, 0.55, true); g.restore(); });
-    g.restore();
-  }
-  // Figur: ausgeschnittenes PNG (oder Foto) mit weißem Sticker-Rand und Schatten; Anker = Füße
-  const outlineCache = new Map();
-  function cutoutFig(g, hgt, p, u){
-    const im = userImg(p.cutout) || userImg(p.photo);
-    if (!im){ g.save(); g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.4)"; g.shadowBlur = u * 0.02; rr(g, -hgt * 0.22, -hgt, hgt * 0.44, hgt, hgt * 0.05); g.fill(); g.shadowBlur = 0; picto(g, "🧍", 0, -hgt * 0.5, hgt * 0.6, "#3a3a44"); g.restore(); return; }
-    const transparent = !!p.cutout, key = (p.cutout || p.photo).length + ":" + Math.round(hgt) + ":" + transparent;
-    let c = outlineCache.get(key);
-    if (!c){
-      const s = hgt / im.naturalHeight, w = im.naturalWidth * s, b = Math.max(3, hgt * 0.022);
-      c = document.createElement("canvas"); c.width = Math.ceil(w + b * 4); c.height = Math.ceil(hgt + b * 4); const t = c.getContext("2d");
-      const tmp2 = document.createElement("canvas"); tmp2.width = c.width; tmp2.height = c.height; const t2 = tmp2.getContext("2d");
-      if (transparent) t2.drawImage(im, b * 2, b * 2, w, hgt);
-      else { t2.save(); rr(t2, b * 2, b * 2, w, hgt, hgt * 0.04); t2.clip(); t2.drawImage(im, b * 2, b * 2, w, hgt); t2.restore(); }
-      for (let a = 0; a < 16; a++){ t.drawImage(tmp2, Math.cos(a / 16 * Math.PI * 2) * b, Math.sin(a / 16 * Math.PI * 2) * b); }   // weißer Rand
-      t.globalCompositeOperation = "source-in"; t.fillStyle = "#ffffff"; t.fillRect(0, 0, c.width, c.height);
-      t.globalCompositeOperation = "source-over"; t.drawImage(tmp2, 0, 0);
-      if (outlineCache.size > 20) outlineCache.clear(); outlineCache.set(key, c);
-    }
-    g.save(); g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.025; g.shadowOffsetX = u * 0.012; g.shadowOffsetY = u * 0.008;
-    g.drawImage(c, -c.width / 2, -c.height); g.restore();
-  }
-  const contFlag = name => (CONT[String(name || "").toLowerCase()] === "europa" ? "eu" : null);
-  function signPost(g, hgt, name){
-    const c = lookup(name), cf = contFlag(name), im = (c && flagImg(c.a2)) || (cf && flagImg(cf)), w = hgt * 0.5, fh = im ? w * im.naturalHeight / im.naturalWidth : w * 0.6;
-    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = hgt * 0.05; g.shadowOffsetX = hgt * 0.02;
-    g.fillStyle = "#9aa0a6"; g.fillRect(-hgt * 0.015, -hgt, hgt * 0.03, hgt);
-    g.fillStyle = "#fff"; g.fillRect(-w / 2 - hgt * 0.02, -hgt - fh - hgt * 0.02, w + hgt * 0.04, fh + hgt * 0.04); g.restore();
-    if (im) g.drawImage(im, -w / 2, -hgt - fh, w, fh);
-    else { g.fillStyle = "#1f6f3a"; g.fillRect(-w / 2, -hgt - fh, w, fh); g.fillStyle = "#fff"; g.font = CF(fh * 0.42, 900); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(name).toUpperCase(), 0, -hgt - fh / 2, w * 0.9); }
-  }
-  function stampPage(g, x, y, w, h, u, p){
-    g.save(); g.shadowColor = "rgba(0,0,0,.4)"; g.shadowBlur = u * 0.04; g.fillStyle = "#efe4cc"; rr(g, x, y, w, h, u * 0.012); g.fill(); g.restore();
-    g.save(); rr(g, x, y, w, h, u * 0.012); g.clip();
-    g.strokeStyle = "rgba(40,60,140,.35)"; g.fillStyle = "rgba(40,60,140,.35)"; g.lineWidth = Math.max(1, h * 0.006); g.font = CF(h * 0.05, 800); g.textAlign = "center"; g.textBaseline = "middle";
-    let n = 1; for (let row = 0; row < 5; row++) for (let col = 0; col < 7; col++){                     // nummerierte Tagesstempel
-      const cx = x + w * (0.08 + col * 0.14), cy = y + h * (0.12 + row * 0.19); if (Math.hypot(cx - (x + w / 2), cy - (y + h / 2)) < h * 0.38) continue;
-      g.beginPath(); g.arc(cx, cy, h * 0.055, 0, Math.PI * 2); g.stroke(); g.fillText(String(n++).padStart(2, "0"), cx, cy + 1);
-    }
-    const fold = g.createLinearGradient(x, y + h * 0.4, x, y + h * 0.6); fold.addColorStop(0, "rgba(0,0,0,0)"); fold.addColorStop(0.5, "rgba(0,0,0,.08)"); fold.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = fold; g.fillRect(x, y, w, h);
-    g.restore();
-  }
-  function bigStamp(g, R, text, col){
-    const c = document.createElement("canvas"), S = Math.ceil(R * 2.6); c.width = c.height = S; const t = c.getContext("2d"), m = S / 2;
-    t.translate(m, m); t.rotate(-0.12); t.strokeStyle = col; t.fillStyle = col; t.lineWidth = R * 0.12; t.beginPath(); t.arc(0, 0, R, 0, Math.PI * 2); t.stroke();
-    t.lineWidth = R * 0.04; t.beginPath(); t.arc(0, 0, R * 0.82, 0, Math.PI * 2); t.stroke();
-    const words = String(text).toUpperCase().split(/\s+/); t.textAlign = "center"; t.textBaseline = "middle";
-    words.slice(0, 3).forEach((wd, i, a) => { let fs = R * (a.length > 1 ? 0.55 : 0.7); t.font = "900 " + Math.round(fs) + "px Impact,'Arial Black',sans-serif"; const tw = t.measureText(wd).width; if (tw > R * 1.9){ fs *= R * 1.9 / tw; t.font = "900 " + Math.round(fs) + "px Impact,'Arial Black',sans-serif"; }
-      t.fillText(wd, 0, (i - (a.length - 1) / 2) * R * 0.6); });
-    t.setTransform(1, 0, 0, 1, 0, 0); t.globalCompositeOperation = "destination-out"; let sd = 99; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 700; i++){ t.globalAlpha = 0.2 + rnd() * 0.8; t.beginPath(); t.arc(rnd() * S, rnd() * S, 0.6 + rnd() * R * 0.025, 0, Math.PI * 2); t.fill(); }
-    g.save(); g.globalCompositeOperation = "multiply"; g.drawImage(c, -m, -m); g.restore();
-  }
-  function cover(g, x, y, w, h, u, p, ld){
-    g.save(); g.shadowColor = "rgba(0,0,0,.5)"; g.shadowBlur = u * 0.05; g.shadowOffsetY = u * 0.02;
-    const gr = g.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, "#1d2f6b"); gr.addColorStop(1, "#0f1a40"); g.fillStyle = gr; rr(g, x, y, w, h, w * 0.04); g.fill(); g.restore();
-    const gold = g.createLinearGradient(x, y, x + w, y + h); gold.addColorStop(0, "#f8e3a0"); gold.addColorStop(0.5, "#c99a3c"); gold.addColorStop(1, "#f3d78a");
-    g.save(); g.fillStyle = gold; g.strokeStyle = gold; g.textAlign = "center"; g.textBaseline = "middle";
-    const lines = String(p.coverTitle || "DIE 0-EURO\nWELTREISE").split(/\n|\|/);
-    g.font = "700 " + Math.round(w * 0.06) + "px Georgia,serif"; g.fillText((p.coverTop || "HANNES PRÄSENTIERT").toUpperCase(), x + w / 2, y + h * 0.1, w * 0.85);
-    lines.forEach((ln, i) => { g.font = "900 " + Math.round(w * 0.12) + "px Georgia,'Times New Roman',serif"; g.fillText(ln.toUpperCase(), x + w / 2, y + h * (0.2 + i * 0.09), w * 0.86); });
-    const cy = y + h * 0.58, R = w * 0.25; g.lineWidth = w * 0.012;                                  // Wappen
-    g.beginPath(); g.arc(x + w / 2, cy, R, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(x + w / 2, cy, R * 0.78, 0, Math.PI * 2); g.stroke();
-    for (let k = 0; k < 12; k++){ const a = Math.PI * 0.6 + k * 0.16; for (const sgn of [-1, 1]){ g.save(); g.translate(x + w / 2 + Math.cos(a) * R * 1.18 * sgn, cy + Math.sin(a) * R * 1.18); g.rotate(a * sgn); g.beginPath(); g.ellipse(0, 0, R * 0.07, R * 0.16, 0, 0, Math.PI * 2); g.fill(); g.restore(); } }
-    g.font = "900 " + Math.round(R * 0.8) + "px Georgia,serif"; g.fillText(p.coverEmblem || "0€", x + w / 2, cy + R * 0.04);
-    g.font = "700 " + Math.round(w * 0.07) + "px Georgia,serif"; g.fillText((p.coverBottom || "WORLD TOUR").toUpperCase(), x + w / 2, y + h * 0.9, w * 0.85);
-    g.restore();
-    const sw = clamp((ld - 0.5) / 0.7);                                                                // Glanz
-    if (sw > 0 && sw < 1){ g.save(); rr(g, x, y, w, h, w * 0.04); g.clip(); g.translate(x + w / 2, y + h / 2); g.rotate(0.5); const xx = -w + sw * w * 2; const s2 = g.createLinearGradient(xx - w * 0.15, 0, xx + w * 0.15, 0); s2.addColorStop(0, "rgba(255,255,255,0)"); s2.addColorStop(0.5, "rgba(255,255,255,.35)"); s2.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = s2; g.fillRect(-w * 2, -h, w * 4, h * 2); g.restore(); }
-  }
-
   /* ---------- Einreisestempel nach echten Vorbildern ----------
      Aufbau wie die Stempel der Länder: Form, Tintenfarbe, Wörter in Landessprache, Grenzübergang, Datum,
      Piktogramm für das Verkehrsmittel. Schengen: Rechteck mit EU-Sternenkreis + Ländercode (Einreise = eckig). */
@@ -9475,6 +9369,17 @@ const ASSETS = (() => {
     g.save(); g.globalAlpha *= alpha; g.globalCompositeOperation = "multiply"; g.translate(cx, cy); g.rotate(rot || 0); g.drawImage(c, -c.width / 2, -c.height / 2); g.restore();
   }
 
+  function tinted(g, emoji, cx, cy, size, color){                           // Emoji in Stempelfarbe getönt (Details bleiben)
+    const c = document.createElement("canvas"); c.width = c.height = Math.ceil(size * 1.4); const t = c.getContext("2d"), f = Math.round(size) + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+    t.font = f; t.textAlign = "center"; t.textBaseline = "middle"; t.filter = "grayscale(1) contrast(1.3)"; t.fillText(emoji, c.width / 2, c.height / 2 + size * 0.06); t.filter = "none";
+    t.globalCompositeOperation = "multiply"; t.fillStyle = color; t.fillRect(0, 0, c.width, c.height);
+    t.globalCompositeOperation = "destination-in"; t.fillText(emoji, c.width / 2, c.height / 2 + size * 0.06);
+    g.drawImage(c, cx - c.width / 2, cy - c.height / 2);
+  }
+  let stampLayerC = null;
+  function stampLayer(w, h){ stampLayerC = stampLayerC || document.createElement("canvas"); if (stampLayerC.width !== w || stampLayerC.height !== h){ stampLayerC.width = w; stampLayerC.height = h; } return stampLayerC; }
+  let kmLayerC = null;
+  function kmLayer(w, h){ kmLayerC = kmLayerC || document.createElement("canvas"); if (kmLayerC.width !== w || kmLayerC.height !== h){ kmLayerC.width = w; kmLayerC.height = h; } return kmLayerC; }
   /* ---------- Bausteine ---------- */
   const CF = (px, w = 800) => w + " " + Math.round(px) + "px 'Avenir Next Condensed','Arial Narrow','Roboto Condensed','Helvetica Neue',sans-serif";
   const easeInOut = x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -9609,7 +9514,6 @@ const ASSETS = (() => {
       const a2s = a.type === "flags" ? itemsFor(a).map(i => i.a2) : names.map(n => lookup(n) && lookup(n).a2);
       for (const a2 of a2s) if (a2){ flagImg(a2); jobs.push(flags.get(a2).job); }
     }
-    for (const a of arr) if (a.type === "passintro" && stationsOf(a).some(s => contFlag(s))){ flagImg("eu"); jobs.push(flags.get("eu").job); }
     for (const a of arr) for (const k of ["img", "photo", "cutout"]) if (a[k]){ userImg(a[k]); const im = userImgs.get(a[k]); if (!im.complete) jobs.push(im.decode().catch(() => {})); }
     await Promise.all(jobs);
   }
@@ -9689,9 +9593,12 @@ const ASSETS = (() => {
     stamp: { country: "Thailand", team: "Hannes", color: "#b06ae8", prev: "Vietnam, Laos", headline: "NEUES LAND ERREICHT", confetti: true, stampStyle: "real", mode: "land", place: "", date: "" },
     teamcard: { color: "#9b59d0", label: "AKTUELLES BUDGET", value: "21,57 €", l1: "ZURÜCKGELEGT", v1: "1.186 KM", l2: "BIS ZUM ZIEL", v2: "2.936 KM", countries: "Vietnam, Laos", slots: 7, pos: "bl" },
     chapter: { text: "Was bisher geschah", color: "#f5c542", pos: "tl" },
+    daystamp: { day: "8", label: "TAG", text: "Thailand", icon: "🛕", color: "#2f63c8" },
+    countdown: { start: "30:09:18", text: "bis zum Flug", rate: 1, color: "#3fd8ff", pos: "top" },
+    flapboard: { label: "ABFLUG · DEPARTURES", text: "VIENTIANE   09:00", pos: "bottom" },
+    itempop: { amount: "+1", text: "Wasserflasche", icon: "💧", color: "#3fd8ff" },
+    nametag: { text: "Kambon", color: "#ffffff", arrow: "right" },
     kmintro: { from: "0", to: "1840", unit: "KM", sub: "Tag 23 · Laos", country: "Laos", hm: "↗ 12.340 HM", color: "#ff5a36" },
-    passintro: { surname: "Vincenz", given: "Hannes", nationality: "Weltenbummler", dob: "18 FEB / FEB 00", expiry: "31 DEZ / DEC 35", country0: "Republik der Weltenbummler",
-      stations: "Europa, Thailand, Laos", greet: "Grüße aus", stampText: "KEIN GELD", stampColor: "#d8262c", coverTop: "Hannes präsentiert", coverTitle: "DIE 0-EURO|WELTREISE", coverEmblem: "0€", coverBottom: "World Tour", bg: "blue" },
     flag: { country: "Laos", text: "WILLKOMMEN IN", sub: "" },
     challenge: { title: "CHALLENGE", text: "Mit 100 € in 3 Tagen nach Bangkok", goal: "💶 100 €", time: "⏱ 3 TAGE", status: "open" },
     flags: { auto: false, countries: "Vietnam, Laos, Thailand, Kambodscha", word: "LÄNDER", start: 0, pos: "top" }
@@ -9712,18 +9619,18 @@ const ASSETS = (() => {
       ["place", "Grenzübergang (optional)", "text"], ["date", "Datum (leer = heute)", "text"]],
     teamcard: [["img", "Teamfoto", "image"], ["color", "Teamfarbe", "color"], ["label", "Überschrift", "text"], ["value", "Wert", "text"], ["l1", "Kasten 1", "text"], ["v1", "Wert 1", "text"], ["l2", "Kasten 2", "text"], ["v2", "Wert 2", "text"], ["countries", "Besuchte Länder (Komma)", "text"], ["slots", "Plätze gesamt", "number"]],
     chapter: [["text", "Text", "text"], ["color", "Farbe", "color"]],
+    daystamp: [["day", "Tag", "text"], ["label", "Wort", "text"], ["text", "Land/Ort darunter", "text"], ["icon", "Wahrzeichen (Emoji, wird Silhouette)", "text"], ["color", "Farbe", "color"]],
+    countdown: [["start", "Start (hh:mm:ss oder mm:ss)", "text"], ["text", "Zeile darunter", "text"], ["rate", "Tempo (Sekunden pro Sekunde)", "number"], ["color", "Leuchtfarbe", "color"]],
+    flapboard: [["label", "Kopfzeile", "text"], ["text", "Zeilen (Enter = neue Zeile, max. 3)", "textarea"]],
+    itempop: [["amount", "Zahl", "text"], ["text", "Gegenstand", "text"], ["icon", "Icon (Emoji, bunt)", "text"], ["color", "Farbe", "color"]],
+    nametag: [["text", "Name", "text"], ["arrow", "Pfeil", "select", [["right", "nach rechts unten"], ["left", "nach links unten"]]], ["color", "Farbe", "color"]],
     kmintro: [["from", "Zählt von", "text"], ["to", "bis (Kilometer)", "text"], ["unit", "Einheit", "text"], ["sub", "Unterzeile", "text"], ["country", "Flagge (Land)", "text"], ["hm", "Chip oben (leer = aus)", "text"], ["color", "Akzentfarbe", "color"]],
-    passintro: [["photo", "Passfoto", "image"], ["cutout", "Ausgeschnittene Figur (PNG mit transparentem Hintergrund)", "image"], ["stations", "Stationen (Länder oder Kontinente, Komma)", "text"],
-      ["surname", "Nachname", "text"], ["given", "Vorname", "text"], ["nationality", "Staatsangehörigkeit (frei)", "text"], ["dob", "Geburtsdatum", "text"], ["expiry", "Gültig bis", "text"], ["country0", "Kopfzeile Pass", "text"],
-      ["greet", "Plakat-Zeile", "text"], ["stampText", "Stempel", "text"], ["stampColor", "Stempelfarbe", "color"], ["coverTop", "Umschlag oben", "text"], ["coverTitle", "Umschlag-Titel (| = neue Zeile)", "text"], ["coverEmblem", "Wappen-Text", "text"], ["coverBottom", "Umschlag unten", "text"],
-      ["bg", "Hintergrund", "select", [["blue", "Verlauf (wechselt je Station)"], ["none", "transparent"]]]],
     flag: [["country", "Land (mehrere mit Komma)", "text"], ["text", "Zeile oben", "text"], ["title", "Name (leer = Land)", "text"], ["sub", "Unterzeile", "text"]],
     challenge: [["title", "Titel", "text"], ["text", "Aufgabe", "text"], ["goal", "Chip 1", "text"], ["time", "Chip 2", "text"], ["status", "Status", "select", STATUS]],
     flags: [["countries", "Länder (Komma)", "text"], ["auto", "+ Länder-Markierungen der Route", "check"], ["word", "Wort", "text"], ["start", "Zählt ab", "number"]]
   };
   function add(type, opt = {}){
     const a = Object.assign({ id: ++counter, type, dur: TYPES[type].dur, size: 1, t0: 0 }, JSON.parse(JSON.stringify(DEFAULTS[type] || {})), opt);
-    if (type === "passintro") a.dur = +introTimes(stationsOf(a).length).total.toFixed(1);
     list.push(a); sel = a.id; start = performance.now(); render(); ready([a]);
     return a;
   }
@@ -9754,7 +9661,6 @@ const ASSETS = (() => {
           inp.addEventListener("input", () => {
             a[k] = inp.type === "checkbox" ? inp.checked : (inp.type === "number" || inp.type === "range") ? parseFloat(inp.value) || 0 : inp.value;
             if (k === "country" || k === "countries" || k === "stations" || k === "prev") ready([a]);
-            if (k === "stations" && a.type === "passintro"){ a.dur = +introTimes(stationsOf(a).length).total.toFixed(1); const d = body.querySelector('[data-k="dur"]'); if (d) d.value = a.dur; }
             el.querySelector("em").textContent = labelOf(a);
             if (k !== "size" && k !== "pos") start = performance.now();
           });

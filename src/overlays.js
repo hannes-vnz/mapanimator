@@ -283,14 +283,14 @@ const OVL = (() => {
     const x = Math.round(W * (portrait ? 0.08 : 0.06)), y = val("cntPos") === "bottom" ? Math.round(H * (portrait ? 0.74 : 0.82)) : Math.round(H * (portrait ? 0.1 : 0.08));
     const big = Math.round(u * 0.16), small = Math.round(u * 0.04);
     const font = (px, w = 900) => w + " " + px + "px 'Archivo Black','Arial Black',Impact,sans-serif";
-    const word = (val("cntLabel") || "LÄNDER").toUpperCase();
+    const word0 = (val("cntLabel") || "LÄNDER").toUpperCase(), word = (k0 + n) === 1 && word0 === "LÄNDER" ? "LAND" : word0;
     g.save();
     g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = u * 0.02; g.shadowOffsetY = u * 0.004;
     g.translate(x, y + big); g.scale(pop, pop);
     g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic";
     const num1 = String(k0 + n); g.fillText(num1, 0, 0);
     const nm = g.measureText(num1), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
-    g.font = font(small); g.fillText(word, nw + small * 0.75, 0);          // Wort auf der Grundlinie, deutlich neben der Zahl
+    g.font = font(small); g.fillText(word, nw + small * 1.0, 0);          // Wort auf der Grundlinie, deutlich neben der Zahl
     g.restore();
     // neuestes Land als Chip darunter (blendet nach 2 s aus)
     if (last && since < 2.2){
