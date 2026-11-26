@@ -308,6 +308,14 @@ body:not(.pro) #tlBody{height:auto;}
 .fxrow button.on{border-color:var(--accent); color:var(--text); background:var(--accent-soft);}
 .fxrow button.on em{filter:none; opacity:1;}
 .medit{margin-top:9px; padding-top:8px; border-top:1px solid var(--line);}
+#signList{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
+.sthumb{width:34px; height:34px; object-fit:cover; border-radius:6px; border:2px solid #fbfaf7; flex:none;}
+.sicon{width:30px; height:30px; display:grid; place-items:center; font-size:18px; background:var(--field); border-radius:8px; flex:none;}
+.stypes{grid-template-columns:repeat(4,1fr); margin-bottom:8px;}
+#tlSigns{flex:none; max-height:96px; overflow-y:auto;}
+.sbar{background:#3a3f55; border-color:#5d6584; border-radius:11px;}
+body:not(.pro) #tlSigns .shlabel{display:none;}
+body:not(.pro) #tlSigns{margin:2px 12px 0;}
 #labelList{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
 .ltext{flex:1; min-width:0; height:28px; border:1px solid var(--line); border-radius:7px; background:var(--field); color:var(--text); padding:0 8px; font-weight:650;}
 .lstyles{grid-template-columns:repeat(5,1fr);}
@@ -316,7 +324,7 @@ body:not(.pro) #tlBody{height:auto;}
 #tlLabels{flex:none; max-height:96px; overflow-y:auto;}
 body:not(.pro) #tlLabels .shlabel{display:none;}
 body:not(.pro) #tlLabels{margin:2px 12px 0;}
-#labelPick.on, #markPick.on{border-color:var(--accent); background:var(--accent-soft);}
+#signPick.on, #labelPick.on, #markPick.on{border-color:var(--accent); background:var(--accent-soft);}
 #tlMarks{flex:none; max-height:96px; overflow-y:auto;}
 .mrow{display:flex; height:22px; border-bottom:1px solid #222329;}
 .mrow .shlabel{width:104px; min-width:104px; display:flex; align-items:center; gap:5px; padding-left:12px; font-size:10.5px; color:var(--muted); border-right:1px solid var(--line); background:var(--panel); overflow:hidden; white-space:nowrap;}

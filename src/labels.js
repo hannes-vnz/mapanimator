@@ -122,7 +122,7 @@ const LABELS = (() => {
     const a = await ensureAnim();
     if (!a){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); return; }
     let n = 0;
-    for (const p of a.per) p.segs.filter(s => s.type === "leg").forEach(s => {
+    for (const p of a.per) p.segs.filter(s => s.type === "leg" && (!s.whole || p.segs.find(x => x.whole === s.whole) === s)).map(s => s.whole ? Object.assign({}, s.whole, { t0: s.t0, t1: p.segs.filter(x => x.whole === s.whole).pop().t1 }) : s).forEach(s => {
       const mid = p.coords[Math.round((s.from + s.to) / 2)];
       const km = s.km != null ? s.km : p.cum[s.to] - p.cum[s.from];
       const txt = km >= 100 ? Math.round(km / 10) * 10 + " km" : km >= 10 ? Math.round(km) + " km" : km.toFixed(1).replace(".", ",") + " km";

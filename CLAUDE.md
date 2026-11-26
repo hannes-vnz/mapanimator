@@ -15,6 +15,8 @@ Sprache im Tool und in der Kommunikation: Deutsch.
   - `src/camera.js`: Kamera-Abschnitte (`CAM`, Modi follow/still/overview/tripod/orbit, Norden/Fahrtrichtung oben, Vorausschau, Auto-Rauszoomen, Überblendung) + Kamera-Presets. Kamera ist reine Funktion der Zeit (`CAM.at(t)`); Keyframes auf pos/zoom/bearing/pitch haben Vorrang.
   - `src/marks.js`: Markierungen (`MARKS`, je Markierung eigene Quellen/Ebenen `mk<id>-*`: Füllung, Kontur mit `line-gradient` zum Nachzeichnen, Glühen, Schatten, Puls, Fokus-Maske, `fill-extrusion`), Suche/Land-Klick/„Länder der Route“ (Natural Earth 50m), Balken in der Timeline. Alte `hlIso`/Features werden beim Laden umgewandelt.
   - `src/labels.js`: Labels (`LABELS`, aufs Overlay `#ovl` gezeichnet → automatisch im MP4; Stile pill/callout/marker/spaced/plain, Animationen pop/fade/type, Balken in der Timeline; Namen aus Markierungen, Distanz-Labels je Etappe).
+  - `src/signs.js`: Schilder & Fotokarten (`SIGNS`; Polaroid an Schnur, Typen pin/tent/hotel/flag/star/view, Anzeige pass/passHide/always/window, EXIF-GPS-Parser, „Hier anhalten“ → `pausesFor()` teilt Etappen in `prepareAnim`).
+  - Stopp-Pins ohne Foto werden automatisch als Marker gezeichnet (`buildPinImage`, Stil `marker`).
   - `src/templates.js`: Looks (`TEMPLATES`, nur Aussehen) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
   - `src/ui.js`: Oberfläche (Einfach/Profi-Modus über `body.pro`, `.adv` = nur Profi), (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
   - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
@@ -82,7 +84,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - Eigene Labels an Punkt, Fläche oder Etappe: Stile Pille, Callout mit Linie zum Punkt (Leader-Line), Kreis-Marker + Name, gesperrter Großtext, Icon-/Bild-Marker.
    - Automatische Labels für markierte Länder/Städte, Distanz-Label an Etappen („412 km“).
    - Schrift, Größe, Farbe, Hintergrund, Kontur; Animationen Pop, Fade, Schreibmaschine; Zeitfenster in der Timeline.
-7. **Schilder (Signs):**
+7. **Schilder (Signs):** – erledigt (`signs.js`, Tab Ebenen). Offen: Schilder auf der Karte ziehen, HEIC direkt.
    - Freie Labels oder Fotokarten auf der Karte.
    - Anzeige: immer, wenn passiert, oder Zeitfenster; optional mit Pause.
    - Größenregler.

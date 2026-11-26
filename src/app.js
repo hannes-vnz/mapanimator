@@ -33,6 +33,7 @@ const EN = {
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
   "Kamera-Presets":"Camera presets",
+  "Fotos werden an ihren Aufnahmeort gesetzt (GPS aus dem Foto) und poppen als Polaroid auf, wenn die Linie vorbeikommt. Ohne GPS: zwischen zeitlich benachbarten Fotos oder per Klick. iPhone-Fotos (HEIC) vorher als JPEG exportieren, mit Ortsangabe.":"Photos are placed where they were taken (GPS from the photo) and pop up as instant prints when the line passes. Without GPS: between photos taken before/after, or by click. Export iPhone photos (HEIC) as JPEG with location first.",
   "Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.":"Your own labels on the map: pill, callout with a line to the point, marker with name, spaced title (“I T A L Y”). With pop, fade or typewriter animation and their own time window in the timeline.","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
   "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
   "Ein Look setzt nur das Aussehen: Kartenstil, Linie, Spitze, Pins. Kamera und Tempo stellst du im Tab Kamera ein.":"A look only sets the appearance: map style, line, tip, pins. Set camera and pace in the Camera tab.",
@@ -599,13 +600,31 @@ function applyTerrain(){
 
 /* ---------- Pin-Bilder ---------- */
 async function buildPinImage(wp, styleOverride){
-  const pinStyle = styleOverride || val("pinStyle");
+  let pinStyle = styleOverride || val("pinStyle");
+  if (!wp.photo && (pinStyle === "badge" || pinStyle === "photo")) pinStyle = "marker";   // ohne Foto: nur Marker
   const fontStack = FONT_STACKS[val("pinFont")] || FONT_STACKS.system;
   const c = document.createElement("canvas");
   const ctx = c.getContext("2d");
-  const name = "pin-" + wp.id + "-" + pinStyle + "-" + val("pinFont");
+  const name = "pin-" + wp.id + "-" + pinStyle + "-" + val("pinFont") + "-" + (wp.color || "").replace("#", "");
 
-  if (pinStyle === "dot"){
+  if (pinStyle === "marker"){
+    // klassischer Karten-Marker (Tropfen) in Stoppfarbe mit weißem Punkt
+    c.width = 100; c.height = 132; ctx.scale(100 / 72, 132 / 96);
+    const cx = 36, cy = 34, r = 26;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+    ctx.fillStyle = wp.color;
+    ctx.beginPath();
+    ctx.moveTo(cx, 92);
+    ctx.bezierCurveTo(cx - 8, 70, cx - r, 58, cx - r, cy);
+    ctx.arc(cx, cy, r, Math.PI, 0);
+    ctx.bezierCurveTo(cx + r, 58, cx + 8, 70, cx, 92);
+    ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.fill();
+  }
+  else if (pinStyle === "dot"){
     c.width = 64; c.height = 64;
     ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
     ctx.fillStyle = "#ffffff";
@@ -766,7 +785,7 @@ document.getElementById("tipPhoto").addEventListener("change", e => {
 });
 document.getElementById("tipLabel").addEventListener("change", () => { R().tipLabel = val("tipLabel"); updateTipPin(); });
 
-function labelFor(wp){ return val("pinStyle") === "badge" ? "" : wp.name; }
+function labelFor(wp){ return val("pinStyle") === "badge" && wp.photo ? "" : wp.name; }
 
 /* ---------- Routen-UI ---------- */
 function renderRoutes(){
@@ -1433,7 +1452,7 @@ async function prepareAnim(){
   const built = [];
   for (let ri = 0; ri < routes.length; ri++){
     const r = await buildRouteFor(routes[ri]);
-    if (r && r.coords.length >= 2) built.push({ ri, r });
+    if (r && r.coords.length >= 2){ built.push({ ri, r }); routes[ri]._coords = r.coords; }
   }
   if (built.length){
     const oc = map.cameraForBounds(boundsOf(built.flatMap(b => b.r.coords)), { padding: 90 });
@@ -1465,6 +1484,15 @@ async function prepareAnim(){
         if (lg) dur /= lg.speed || 1;
         segs.push({ type: "leg", from: stopIdxs[i], to: stopIdxs[i + 1], dur, km: legKm[i] });
       }
+    }
+    // „Hier anhalten“ an Schildern: Etappe am Schild teilen und Pause einfügen
+    if (typeof SIGNS !== "undefined") for (const pz of SIGNS.pausesFor(rt, coords)){
+      const k = segs.findIndex(s => s.type === "leg" && pz.idx > s.from && pz.idx < s.to);
+      if (k < 0) continue;
+      const s = segs[k], whole = s.whole || s, span = (cum[s.to] - cum[s.from]) || 1, f = (cum[pz.idx] - cum[s.from]) / span;
+      segs.splice(k, 1, { type: "leg", from: s.from, to: pz.idx, dur: Math.max(s.dur * f, 0.3), km: (s.km || 0) * f, whole },
+        { type: "pause", at: pz.idx, dur: pz.dur / speed, sign: true },
+        { type: "leg", from: pz.idx, to: s.to, dur: Math.max(s.dur * (1 - f), 0.3), km: (s.km || 0) * (1 - f), whole });
     }
     let tt = 0;
     segs.forEach(s => { s.t0 = tt; tt += s.dur; s.t1 = tt; });
@@ -2323,7 +2351,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale"];
 
 document.getElementById("projSave").addEventListener("click", () => {
   const proj = {
@@ -2343,7 +2371,8 @@ document.getElementById("projSave").addEventListener("click", () => {
     tracks,
     cam: typeof CAM !== "undefined" ? CAM.get() : null,
     marks: typeof MARKS !== "undefined" ? MARKS.get() : [],
-    labels: typeof LABELS !== "undefined" ? LABELS.get() : []
+    labels: typeof LABELS !== "undefined" ? LABELS.get() : [],
+    signs: typeof SIGNS !== "undefined" ? SIGNS.get() : []
   };
   const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
   const a = document.createElement("a");
@@ -2370,6 +2399,7 @@ document.getElementById("projLoad").addEventListener("change", e => {
       if (typeof CAM !== "undefined") CAM.set(proj.cam);
       if (typeof MARKS !== "undefined") MARKS.set(proj.marks || []);
       if (typeof LABELS !== "undefined") LABELS.set(proj.labels || []);
+      if (typeof SIGNS !== "undefined") SIGNS.set(proj.signs || []);
       customColors = proj.customColors || null;
       pois = proj.pois || [];
       features = [];

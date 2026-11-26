@@ -120,6 +120,20 @@ try {
     if (LABELS.list().length !== saved.length) throw new Error("Laden verliert Labels");
     return saved.length + " Labels";
   }));
+  await step("Schilder + Fotos + Halt", () => page.evaluate(async () => {
+    const c = document.createElement("canvas"); c.width = 200; c.height = 150; c.getContext("2d").fillRect(0, 0, 200, 150);
+    const src = c.toDataURL("image/jpeg");
+    const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = src; });
+    const p = anim.per[0], mid = p.coords[Math.round(p.coords.length * 0.3)];
+    SIGNS.add({ type: "photo", img, src, text: "Foto", lngLat: mid, show: "passHide", pause: 2 });
+    for (const ty of ["pin", "tent", "hotel", "flag", "star", "view"]) SIGNS.add({ type: ty, text: ty, lngLat: mid, show: "always" });
+    await drawStatic();
+    if (!anim.per[0].segs.some(s => s.sign)) throw new Error("Halt fehlt");
+    const [a] = SIGNS.windowOf(SIGNS.list()[0]); setPlayhead(a + 0.7, true);
+    const saved = SIGNS.get(); await SIGNS.set(saved);
+    if (SIGNS.list().length !== saved.length || !SIGNS.list()[0].img) throw new Error("Laden verliert Schilder/Fotos");
+    return SIGNS.list().length + " Schilder";
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     const a = CAM.at(0.05).c, b = CAM.at(0.6).c;

@@ -299,6 +299,16 @@
           <label class="btn ghost full filebtn adv">GeoJSON importieren<input id="markGeojson" type="file" accept=".json,.geojson" hidden></label>
         </div>
         <div class="card">
+          <h2>Schilder &amp; Fotos</h2>
+          <div class="btnrow">
+            <label class="btn ghost filebtn">📷 Fotos hinzufügen<input id="signPhotos" type="file" accept="image/jpeg,image/png,image/webp,image/heic" multiple hidden></label>
+            <button class="btn ghost" id="signPick">📍 Schild setzen</button>
+          </div>
+          <div class="setting" style="margin-top:8px"><label>Schildgröße</label><input type="range" id="signScale" min="0.4" max="2.5" step="0.05" value="1"></div>
+          <div id="signList"></div>
+          <div class="hint" id="signEmpty">Fotos werden an ihren Aufnahmeort gesetzt (GPS aus dem Foto) und poppen als Polaroid auf, wenn die Linie vorbeikommt. Ohne GPS: zwischen zeitlich benachbarten Fotos oder per Klick. iPhone-Fotos (HEIC) vorher als JPEG exportieren, mit Ortsangabe.</div>
+        </div>
+        <div class="card">
           <h2>Labels</h2>
           <div class="btnrow">
             <button class="btn ghost" id="labelPick">📍 Label setzen</button>
@@ -414,6 +424,7 @@
 <script src="camera.js"></script>
 <script src="marks.js"></script>
 <script src="labels.js"></script>
+<script src="signs.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>
