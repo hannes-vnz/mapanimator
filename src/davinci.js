@@ -319,6 +319,15 @@ const DAVINCI = (() => {
     try { const r = await install(textFiles(), "Mapanimator-Titel.zip"); if (r === "zip"){ ASSETS.download(build(), "Mapanimator-Titel.drfx"); setStatus(tr("DaVinci-Titelpaket erstellt – .drfx doppelklicken oder in Resolve ziehen.")); } }
     catch (e){ setStatus("DaVinci: " + e.message); }
   });
+  const pack = $("asDavinciPack");
+  if (pack) pack.addEventListener("click", async () => {
+    try {
+      const types = Object.keys(ASSETS.types); let files = textFiles(), i = 0;
+      for (const t of types){ i++; setStatus(tr("Komplettpaket") + " " + i + "/" + types.length + ": " + tr(ASSETS.types[t].name) + " …");
+        files = files.concat(await exportAsset(ASSETS.make(t), { collect: true })); }
+      await install(files, "Mapanimator-DaVinci-Komplettpaket.zip");
+    } catch (e){ setStatus("DaVinci: " + e.message); }
+  });
   const all = $("asDavinciAll");
   if (all) all.addEventListener("click", async () => {
     try {

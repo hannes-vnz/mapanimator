@@ -11,6 +11,14 @@ const ASSETS = (() => {
   const $ = id => document.getElementById(id);
   const TYPES = {
     kmintro:    { icon: "🚴", name: "Kilometer-Intro", dur: 4 },
+    quests:     { icon: "⚔️", name: "Daily Quests", dur: 6 },
+    gearlist:   { icon: "🎒", name: "Packliste", dur: 6 },
+    flats:      { icon: "🛞", name: "Pannen-Zähler", dur: 3 },
+    suntime:    { icon: "🌅", name: "Tageslicht", dur: 4 },
+    border:     { icon: "🛂", name: "Grenzübertritt", dur: 4 },
+    food:       { icon: "🍜", name: "Essens-Karte", dur: 4 },
+    phrase:     { icon: "🗣️", name: "Sprach-Karte", dur: 4.5 },
+    follow:     { icon: "🔔", name: "Folgen-Chip", dur: 3.5 },
     elevation:  { icon: "⛰️", name: "Höhenprofil", dur: 6 },
     miniglobe:  { icon: "🌍", name: "Mini-Globus", dur: 4 },
     daystats:   { icon: "📊", name: "Tagesstatistik", dur: 4.5 },
@@ -597,6 +605,135 @@ const ASSETS = (() => {
       g.restore();
     },
 
+    /* ===== Checklisten, Quests & Reise-Extras ===== */
+    // Daily Quests: Liste wie im Spiel, Aufgaben haken sich nacheinander ab (+XP, Fortschritt)
+    quests(g, W, H, p, lt, dur){ checklist(g, W, H, p, lt, dur, { head: p.title || "DAILY QUESTS", icon: "⚔️", xp: true }); },
+    // Ausrüstungs-Liste: Packliste mit Gewicht, haken sich ab, Summe zählt mit
+    gearlist(g, W, H, p, lt, dur){ checklist(g, W, H, p, lt, dur, { head: p.title || "PACKLISTE", icon: "🎒", weight: true }); },
+
+    // Pannen-Zähler: Chip mit Rad-Icon, Zahl springt hoch, Chip wackelt
+    flats(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ff5a36", n = parseInt(p.count || "4"), ph = u * 0.11;
+      g.font = CF(ph * 0.36, 800); const lab = (p.text || "PLATTEN").toUpperCase(), lw = g.measureText(lab).width, pw = ph * 1.1 + lw + ph * 1.3;
+      const [x, y] = place(p, W, H, pw, ph, "tl"), k = easeOut(clamp(lt / 0.3)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      const hit = clamp((lt - 0.7) / 0.5), shake = hit > 0 && hit < 1 ? Math.sin(hit * 40) * u * 0.008 * (1 - hit) : 0;
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate((1 - k) * -u * 0.12 + shake, 0);
+      rcard(g, x, y, pw, ph, ph / 2, u);
+      g.save(); g.translate(x + ph * 0.55, y + ph / 2); g.rotate(lt * (hit < 1 ? 6 : 0.5)); g.font = Math.round(ph * 0.6) + "px 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(p.icon || "🛞", 0, ph * 0.03); g.restore();
+      g.fillStyle = "rgba(255,255,255,.8)"; g.font = CF(ph * 0.36, 800); g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(lab, x + ph * 1.05, y + ph / 2 + 1);
+      const nx = x + ph * 1.05 + lw + ph * 0.65, cur = hit > 0.25 ? n : n - 1, pop = hit > 0.25 && hit < 0.7 ? 1 + 0.4 * Math.sin((hit - 0.25) / 0.45 * Math.PI) : 1;
+      g.save(); g.translate(nx, y + ph / 2); g.scale(pop, pop); g.fillStyle = hit > 0.25 ? col : "#fff"; g.font = CF(ph * 0.62, 900); g.textAlign = "center"; g.fillText("#" + cur, 0, ph * 0.03); g.restore();
+      if (hit > 0.25 && hit < 1){ g.save(); g.globalAlpha *= 1 - hit; g.fillStyle = col; g.font = CF(ph * 0.35, 900); g.textAlign = "center"; g.fillText("+1", nx + ph * 0.5, y - hit * ph * 0.6); g.restore(); }
+      g.restore();
+    },
+
+    // Tageszeit: Bogen vom Sonnenaufgang zum Untergang, Sonne wandert bis „jetzt“
+    suntime(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), cw = u * 0.5, ch = u * 0.26, [x, y] = place(p, W, H, cw, ch, "tr");
+      const toMin = s => { const [h, m] = String(s).split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+      const a = toMin(p.rise || "06:12"), b = toMin(p.set || "18:34"), now = toMin(p.now || "16:50"), f = clamp((now - a) / Math.max(1, b - a));
+      const k = easeOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3)), sk = easeInOut(clamp((lt - 0.3) / 1.4)) * f;
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate(0, (1 - k) * u * 0.05);
+      rcard(g, x, y, cw, ch, u * 0.025, u);
+      const cx = x + cw / 2, by = y + ch * 0.72, R = cw * 0.36;
+      g.strokeStyle = "rgba(255,255,255,.3)"; g.setLineDash([u * 0.008, u * 0.008]); g.lineWidth = Math.max(1.5, u * 0.003); g.beginPath(); g.arc(cx, by, R, Math.PI, 0); g.stroke(); g.setLineDash([]);
+      const gr = g.createLinearGradient(cx - R, 0, cx + R, 0); gr.addColorStop(0, "#ff9a3c"); gr.addColorStop(0.5, "#ffd54a"); gr.addColorStop(1, "#ff6a3c");
+      g.strokeStyle = gr; g.lineWidth = Math.max(3, u * 0.007); g.beginPath(); g.arc(cx, by, R, Math.PI, Math.PI + Math.PI * sk); g.stroke();
+      g.fillStyle = "rgba(255,255,255,.35)"; g.fillRect(x + cw * 0.06, by, cw * 0.88, Math.max(1, u * 0.002));
+      const sa = Math.PI + Math.PI * sk, sx = cx + Math.cos(sa) * R, sy = by + Math.sin(sa) * R;
+      g.save(); g.shadowColor = "#ffcc33"; g.shadowBlur = u * 0.03; g.fillStyle = "#ffd54a"; g.beginPath(); g.arc(sx, sy, u * 0.018, 0, Math.PI * 2); g.fill(); g.restore();
+      g.font = CF(u * 0.026, 800); g.fillStyle = "rgba(255,255,255,.8)"; g.textBaseline = "top";
+      g.textAlign = "left"; g.fillText("☀︎↑ " + (p.rise || "06:12"), x + cw * 0.06, by + u * 0.012); g.textAlign = "right"; g.fillText((p.set || "18:34") + " ↓☾", x + cw * 0.94, by + u * 0.012);
+      const left = Math.max(0, b - now); g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.font = CF(u * 0.042, 900);
+      g.fillText(p.now || "16:50", cx, by - R * 0.42); g.font = CF(u * 0.022, 700); g.fillStyle = "rgba(255,255,255,.7)";
+      g.fillText((p.label || "noch") + " " + Math.floor(left / 60) + " h " + String(left % 60).padStart(2, "0") + " min Licht", cx, by - R * 0.12);
+      g.restore();
+    },
+
+    // Grenzübertritt: zwei Flaggen fahren rein, Pfeil läuft dazwischen, Grenzübergang darunter
+    border(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ffcc33", A = lookup(p.from || "Thailand"), B = lookup(p.to || "Laos");
+      const bw = Math.min(W * 0.86, u * 0.95), bh = u * 0.24, [x, y] = place(p, W, H, bw, bh, "center"), cy = y + bh * 0.42, r = bh * 0.3;
+      const k = easeOut(clamp(lt / 0.45)), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35));
+      g.save(); g.globalAlpha = Math.min(1, k * 1.5) * (1 - outK);
+      const lx = x + r + (1 - k) * -u * 0.3, rx = x + bw - r + (1 - k) * u * 0.3;
+      g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = Math.max(3, u * 0.008); g.setLineDash([u * 0.02, u * 0.016]); g.lineDashOffset = -lt * u * 0.15;
+      const ak = easeOut(clamp((lt - 0.35) / 0.6)); g.beginPath(); g.moveTo(lx + r * 1.2, cy); g.lineTo(lx + r * 1.2 + (rx - lx - r * 2.6) * ak, cy); g.stroke(); g.setLineDash([]);
+      if (ak > 0.95){ g.fillStyle = "#fff"; g.beginPath(); g.moveTo(rx - r * 1.4, cy - r * 0.3); g.lineTo(rx - r * 1.1, cy); g.lineTo(rx - r * 1.4, cy + r * 0.3); g.closePath(); g.fill(); }
+      flagCircle(g, A && flagImg(A.a2), lx, cy, r, null); flagCircle(g, B && flagImg(B.a2), rx, cy, r, ak >= 1 ? col : null);
+      const tk = easeOut(clamp((lt - 0.8) / 0.35));
+      if (tk > 0){ g.save(); g.globalAlpha *= tk; g.textAlign = "center"; g.textBaseline = "middle"; g.shadowColor = "rgba(0,0,0,.7)"; g.shadowBlur = u * 0.02;
+        g.fillStyle = col; g.font = CF(u * 0.035, 900); g.fillText((p.head || "GRENZE ÜBERQUERT").toUpperCase().split("").join(" "), x + bw / 2, cy - r * 0.45);
+        g.fillStyle = "#fff"; g.font = CF(u * 0.05, 900); g.fillText(((A ? A.name : p.from) + " → " + (B ? B.name : p.to)).toUpperCase(), x + bw / 2, cy + r * 0.25, bw - r * 5);
+        if (p.place){ g.font = CF(u * 0.028, 700); g.fillStyle = "rgba(255,255,255,.85)"; g.fillText(p.place, x + bw / 2, cy + r * 1.25); }
+        g.restore(); }
+      g.restore();
+    },
+
+    // Essens-Karte: Foto (oder Emoji), Gericht, Preis in Landeswährung + ≈ Euro
+    food(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ffcc33", cw = u * 0.42, ch = cw * 1.22, [x, y] = place(p, W, H, cw, ch, "br");
+      const k = backOut(clamp(lt / 0.45)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      g.save(); g.globalAlpha = Math.min(1, k) * (1 - outK); g.translate(x + cw / 2, y + ch / 2); g.rotate(0.05 - (1 - Math.min(1, k)) * 0.4); g.scale(Math.min(1.05, k), Math.min(1.05, k)); g.translate(-cw / 2, -ch / 2);
+      g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.03; g.fillStyle = "#fbf8f2"; rr(g, 0, 0, cw, ch, u * 0.01); g.fill(); g.shadowBlur = 0;
+      const m = cw * 0.06, iw = cw - 2 * m, ih = iw * 0.85; g.save(); rr(g, m, m, iw, ih, u * 0.006); g.clip();
+      const im = userImg(p.img);
+      if (im){ const s = Math.max(iw / im.naturalWidth, ih / im.naturalHeight); g.drawImage(im, m + (iw - im.naturalWidth * s) / 2, m + (ih - im.naturalHeight * s) / 2, im.naturalWidth * s, im.naturalHeight * s); }
+      else { const gr = g.createLinearGradient(0, m, 0, m + ih); gr.addColorStop(0, "#ffe7b8"); gr.addColorStop(1, "#ffb86b"); g.fillStyle = gr; g.fillRect(m, m, iw, ih);
+        g.font = Math.round(ih * 0.6) + "px 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(p.icon || "🍜", m + iw / 2, m + ih / 2 + ih * 0.04); }
+      g.restore();
+      g.fillStyle = "#15171c"; g.font = "700 " + Math.round(cw * 0.085) + "px 'Marker Felt','Chalkboard SE','Bradley Hand',cursive"; g.textAlign = "left"; g.textBaseline = "middle";
+      g.fillText(p.text || "Khao Soi", m, m + ih + (ch - m - ih) * 0.4, iw);
+      const pk = backOut(clamp((lt - 0.45) / 0.3));
+      if (pk > 0){ g.save(); g.font = CF(cw * 0.07, 900); const t1 = p.price || "35.000 Kip", t2 = p.eur || "≈ 1,60 €", w1 = g.measureText(t1).width, w2 = g.measureText(t2).width, py = m + ih + (ch - m - ih) * 0.75;
+        g.translate(m, py); g.scale(pk, pk); g.fillStyle = "#15171c"; g.textAlign = "left"; g.fillText(t1, 0, 0);
+        g.fillStyle = col; rr(g, w1 + cw * 0.04, -cw * 0.055, w2 + cw * 0.06, cw * 0.11, cw * 0.055); g.fill(); g.fillStyle = "#15171c"; g.fillText(t2, w1 + cw * 0.07, cw * 0.003); g.restore(); }
+      g.restore();
+    },
+
+    // Sprach-Karte: deutsches Wort, Landesschrift groß, Lautschrift, Lautsprecher-Wellen
+    phrase(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#3fd8ff", c = lookup(p.country || "Laos"), cw = Math.min(W * 0.86, u * 0.7), ch = u * 0.34;
+      const [x, y] = place(p, W, H, cw, ch, "center"), k = easeOut(clamp(lt / 0.4)), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35));
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate(0, (1 - k) * u * 0.06);
+      rcard(g, x, y, cw, ch, u * 0.03, u);
+      const r = u * 0.03; flagCircle(g, c && flagImg(c.a2), x + u * 0.05, y + u * 0.05, r, null);
+      g.fillStyle = "rgba(255,255,255,.75)"; g.font = CF(u * 0.03, 800); g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(((p.de || "Danke") + " auf " + (c ? c.name : p.country || "")).toUpperCase(), x + u * 0.09, y + u * 0.05);
+      const sk = easeOut(clamp((lt - 0.35) / 0.4));
+      g.save(); g.globalAlpha *= sk; g.fillStyle = "#fff"; g.textAlign = "center"; g.font = "700 " + Math.round(u * 0.1) + "px 'Noto Sans','Lao Sangam MN','Thonburi','Hiragino Sans','Apple SD Gothic Neo',sans-serif";
+      g.fillText(p.local || "ຂອບໃຈ", x + cw / 2, y + ch * 0.5 + (1 - sk) * u * 0.03, cw * 0.85); g.restore();
+      const rk = clamp((lt - 0.7) / 0.4); if (rk > 0){ g.save(); g.globalAlpha *= rk; g.fillStyle = col; g.font = "italic 700 " + Math.round(u * 0.04) + "px Georgia,serif"; g.textAlign = "center"; g.fillText("„" + (p.roman || "khop chai") + "“", x + cw / 2, y + ch * 0.8); g.restore(); }
+      const sx = x + cw - u * 0.06, sy = y + u * 0.05; g.fillStyle = "#fff"; g.beginPath(); g.moveTo(sx - u * 0.02, sy - u * 0.008); g.lineTo(sx - u * 0.01, sy - u * 0.008); g.lineTo(sx, sy - u * 0.018); g.lineTo(sx, sy + u * 0.018); g.lineTo(sx - u * 0.01, sy + u * 0.008); g.lineTo(sx - u * 0.02, sy + u * 0.008); g.closePath(); g.fill();
+      g.strokeStyle = col; g.lineWidth = Math.max(1.5, u * 0.004); for (let i = 0; i < 3; i++){ const a2 = ((lt * 2 + i / 3) % 1); g.globalAlpha = k * (1 - outK) * (1 - a2); g.beginPath(); g.arc(sx, sy, u * (0.012 + a2 * 0.03), -0.8, 0.8); g.stroke(); }
+      g.restore();
+    },
+
+    // Folgen-Chip: Avatar + „Folg der Reise“, Knopf wird angetippt → ✓ gefolgt (mit Abhak-Animation)
+    follow(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ff3b45", ph = u * 0.12;
+      g.font = CF(ph * 0.3, 800); const t1 = p.text || "Folg der Reise", t2 = p.handle || "@hannes.radelt", tw = Math.max(g.measureText(t1).width, g.measureText(t2).width);
+      const bw = ph * 1.7, pw = ph * 1.15 + tw + ph * 0.3 + bw + ph * 0.25, [x, y] = place(p, W, H, pw, ph, "bottom"), k = backOut(clamp(lt / 0.4)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      g.save(); g.globalAlpha = Math.min(1, k) * (1 - outK); g.translate(x + pw / 2, y + ph / 2); g.scale(Math.min(1, k), Math.min(1, k)); g.translate(-pw / 2, -ph / 2);
+      rcard(g, 0, 0, pw, ph, ph / 2, u);
+      const r = ph * 0.38; g.save(); g.beginPath(); g.arc(ph * 0.55, ph / 2, r, 0, Math.PI * 2); g.fillStyle = col; g.fill(); g.clip();
+      const im = userImg(p.img); if (im){ const s = Math.max(2 * r / im.naturalWidth, 2 * r / im.naturalHeight); g.drawImage(im, ph * 0.55 - im.naturalWidth * s / 2, ph / 2 - im.naturalHeight * s / 2, im.naturalWidth * s, im.naturalHeight * s); }
+      else picto(g, "🚴", ph * 0.55, ph / 2, r * 1.3, "#fff");
+      g.restore();
+      g.fillStyle = "#fff"; g.font = CF(ph * 0.3, 900); g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(t1, ph * 1.1, ph * 0.38);
+      g.fillStyle = "rgba(255,255,255,.65)"; g.font = CF(ph * 0.24, 700); g.fillText(t2, ph * 1.1, ph * 0.68);
+      const bx = ph * 1.15 + tw + ph * 0.3, tap = clamp((lt - 1.1) / 0.5), press = tap > 0 && tap < 0.3 ? 0.9 : 1, done = tap >= 0.3;
+      g.save(); g.translate(bx + bw / 2, ph / 2); g.scale(press, press);
+      g.fillStyle = done ? "#2b2c31" : col; rr(g, -bw / 2, -ph * 0.3, bw, ph * 0.6, ph * 0.3); g.fill();
+      if (done){ g.strokeStyle = "rgba(255,255,255,.25)"; g.lineWidth = 1.5; rr(g, -bw / 2, -ph * 0.3, bw, ph * 0.6, ph * 0.3); g.stroke(); }
+      g.fillStyle = "#fff"; g.font = CF(ph * 0.26, 900); g.textAlign = "center";
+      if (done){ tickMark(g, -bw * 0.28, 0, ph * 0.2, clamp((tap - 0.3) / 0.35), "#3ddc6f", "#3ddc6f"); g.fillText(p.done || "GEFOLGT", bw * 0.1, ph * 0.01); }
+      else g.fillText(p.btn || "FOLGEN", 0, ph * 0.01);
+      g.restore();
+      if (lt > 0.6 && tap < 0.6){ const fx = bx + bw * 0.6, fy = ph * 0.7 + (1 - easeOut(clamp((lt - 0.6) / 0.5))) * ph * 0.8;          // Finger tippt
+        g.font = Math.round(ph * 0.55) + "px 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; g.textAlign = "center"; g.textBaseline = "top"; g.fillText("👆", fx, fy); }
+      g.restore();
+    },
+
     teamcard(g, W, H, p, lt, dur){
       const u = Math.min(W, H) * (p.size || 1), col = p.color || "#9b59d0";
       const cw = u * 0.62, ch = u * 0.42, [x, y] = place(p, W, H, cw, ch, "bl");
@@ -1176,6 +1313,89 @@ const ASSETS = (() => {
     t.globalCompositeOperation = "destination-in"; t.fillText(emoji, c.width / 2, c.height / 2 + size * 0.06);
     g.drawImage(c, cx - c.width / 2, cy - c.height / 2);
   }
+  /* ---------- Abhak-Animation (gemeinsam für Quests, Packliste, Folgen-Knopf) ---------- */
+  // Häkchen als Strich, k = 0…1 (erst kurzer Schenkel, dann langer)
+  function tickMark(g, cx, cy, s, k, col){
+    if (k <= 0) return;
+    const p1 = [cx - s * 0.5, cy + s * 0.02], p2 = [cx - s * 0.12, cy + s * 0.4], p3 = [cx + s * 0.55, cy - s * 0.42];
+    const l1 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]), l2 = Math.hypot(p3[0] - p2[0], p3[1] - p2[1]), d = k * (l1 + l2);
+    g.save(); g.strokeStyle = col; g.lineWidth = s * 0.26; g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); g.moveTo(p1[0], p1[1]);
+    if (d <= l1) g.lineTo(p1[0] + (p2[0] - p1[0]) * d / l1, p1[1] + (p2[1] - p1[1]) * d / l1);
+    else { g.lineTo(p2[0], p2[1]); const f = (d - l1) / l2; g.lineTo(p2[0] + (p3[0] - p2[0]) * f, p2[1] + (p3[1] - p2[1]) * f); }
+    g.stroke(); g.restore();
+  }
+  // Checkbox mit Abhak-Animation: c = Sekunden seit dem Abhaken (< 0 = noch offen)
+  function checkBox(g, cx, cy, s, c, col){
+    const open = c < 0;
+    let sc = 1;
+    if (!open){ if (c < 0.08) sc = 1 - 0.18 * (c / 0.08); else if (c < 0.3) sc = 0.82 + 0.38 * backOut(clamp((c - 0.08) / 0.22)); }
+    if (!open && c < 0.6){                                                             // Ring + Funken
+      const q = clamp((c - 0.08) / 0.5);
+      g.save(); g.globalAlpha *= (1 - q); g.strokeStyle = col; g.lineWidth = s * 0.08 * (1 - q) + 1; g.beginPath(); g.arc(cx, cy, s * (0.6 + 1.1 * q), 0, Math.PI * 2); g.stroke();
+      g.lineCap = "round"; for (let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2 + 0.3, r0 = s * (0.75 + 0.9 * q), r1 = r0 + s * 0.3 * (1 - q);
+        g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); g.stroke(); }
+      g.restore();
+    }
+    g.save(); g.translate(cx, cy); g.scale(sc, sc);
+    if (open){ g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = s * 0.1; rr(g, -s / 2, -s / 2, s, s, s * 0.25); g.stroke(); }
+    else { const fk = clamp(c / 0.12);
+      g.save(); g.globalAlpha *= fk; g.fillStyle = col; rr(g, -s / 2, -s / 2, s, s, s * 0.25); g.fill(); g.restore();
+      if (fk < 1){ g.save(); g.globalAlpha *= 1 - fk; g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = s * 0.1; rr(g, -s / 2, -s / 2, s, s, s * 0.25); g.stroke(); g.restore(); }
+      tickMark(g, 0, 0, s * 0.62, clamp((c - 0.06) / 0.22), "#ffffff"); }
+    g.restore();
+  }
+  // Checkliste: Kopf mit Fortschritt, Zeilen erscheinen, markierte Aufgaben haken sich nacheinander ab
+  function checklist(g, W, H, p, lt, dur, opt){
+    const u = Math.min(W, H) * (p.size || 1), col = p.color || (opt.xp ? "#a855f7" : "#3ddc6f");
+    const rows = String(p.items || "").split("\n").map(l => l.split("|").map(s => s.trim())).filter(r => r[0]).slice(0, 7).map(parts => {
+      const r = { text: parts[0], done: false, xp: 0, w: "" };
+      parts.slice(1).forEach(x => { if (/^(x|✓|✔|ok|ja|done)$/i.test(x)) r.done = true; else if (/kg|\bg\b/i.test(x)) r.w = x; else if (/^\+?\d+\s*(xp)?$/i.test(x)) r.xp = parseInt(x.replace(/\D/g, "")); });
+      return r; });
+    if (!rows.length) return;
+    const step = +p.step || 0.7, t0 = 0.9; let order = 0; rows.forEach(r => { r.tc = r.done ? t0 + (order++) * step : Infinity; });
+    const portrait = H > W * 1.2, cw = Math.min(W * (portrait ? 0.9 : 0.5), u * 0.85), rh = u * 0.078, hh = u * 0.1, ch = hh + rows.length * rh + u * 0.05;
+    const [x, y] = place(p, W, H, cw, ch, portrait ? "center" : "tl"), k = easeOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35));
+    g.save(); g.globalAlpha = k * (1 - outK); g.translate((1 - k) * -u * 0.15, 0);
+    rcard(g, x, y, cw, ch, u * 0.03, u);
+    picto(g, opt.icon, x + u * 0.05, y + hh * 0.48, hh * 0.45, col);
+    g.fillStyle = "#fff"; g.font = CF(hh * 0.38, 900); g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(opt.head.toUpperCase(), x + u * 0.09, y + hh * 0.48);
+    const doneNow = rows.filter(r => lt >= r.tc).length, total = rows.length;
+    g.textAlign = "right"; g.font = CF(hh * 0.3, 800); g.fillStyle = "rgba(255,255,255,.8)";
+    if (opt.weight){ let kg = 0; rows.forEach(r => { if (lt >= r.tc) kg += num0(String(r.w).replace(/[^\d,]/g, "")) * (/kg/i.test(r.w) ? 1 : 0.001); });
+      g.fillText(kg.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " kg", x + cw - u * 0.035, y + hh * 0.48); }
+    else g.fillText(doneNow + "/" + total, x + cw - u * 0.035, y + hh * 0.48);
+    const bx = x + u * 0.035, bw = cw - u * 0.07, by = y + hh * 0.88, bh = Math.max(3, u * 0.007);                // Fortschrittsbalken
+    let shown = 0; rows.forEach(r => { shown += clamp((lt - r.tc - 0.1) / 0.3); });
+    g.fillStyle = "rgba(255,255,255,.15)"; rr(g, bx, by, bw, bh, bh / 2); g.fill();
+    g.fillStyle = col; rr(g, bx, by, Math.max(bh, bw * shown / total), bh, bh / 2); g.fill();
+    rows.forEach((r, i) => {
+      const ry = y + hh + u * 0.02 + i * rh + rh / 2, rk = easeOut(clamp((lt - 0.3 - i * 0.08) / 0.3)); if (rk <= 0) return;
+      const c = lt - r.tc, s = rh * 0.46, tx = x + u * 0.035 + s * 1.6;
+      g.save(); g.globalAlpha *= rk; g.translate((1 - rk) * u * 0.04, 0);
+      if (c >= 0 && c < 0.6){ g.save(); g.globalAlpha *= 0.3 * (1 - c / 0.6); g.fillStyle = col; rr(g, x + u * 0.015, ry - rh * 0.45, cw - u * 0.03, rh * 0.9, rh * 0.2); g.fill(); g.restore(); }
+      checkBox(g, x + u * 0.035 + s / 2, ry, s, c, col);
+      const strike = c >= 0 ? easeOut(clamp((c - 0.18) / 0.3)) : 0;
+      g.font = CF(rh * 0.4, 800); g.textAlign = "left"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.globalAlpha *= 1 - 0.45 * strike;
+      const maxW = cw - (tx - x) - u * 0.12; g.fillText(r.text, tx, ry + 1, maxW); const tw = Math.min(g.measureText(r.text).width, maxW);
+      if (strike > 0){ g.fillStyle = "#fff"; g.fillRect(tx, ry, tw * strike, Math.max(2, rh * 0.05)); }
+      g.globalAlpha /= (1 - 0.45 * strike) || 1;
+      const rt = opt.weight ? r.w : (r.xp ? r.xp + " XP" : "");
+      if (rt){ g.textAlign = "right"; g.font = CF(rh * 0.32, 800); g.fillStyle = c >= 0 ? col : "rgba(255,255,255,.55)"; g.fillText(rt, x + cw - u * 0.035, ry + 1); }
+      if (opt.xp && r.xp && c >= 0.12 && c < 1.2){ const q = (c - 0.12) / 1.08; g.save(); g.globalAlpha *= Math.sin(q * Math.PI); g.fillStyle = col;
+        g.font = CF(rh * 0.45, 900); g.textAlign = "right"; g.shadowColor = col; g.shadowBlur = u * 0.02; g.fillText("+" + r.xp + " XP", x + cw - u * 0.035, ry - q * rh * 0.9); g.restore(); }
+      g.restore();
+    });
+    // alles erledigt → Banner
+    const last = Math.max(...rows.map(r => isFinite(r.tc) ? r.tc : -1)), allDone = rows.every(r => r.done);
+    if (allDone && lt > last + 0.45){
+      const q = backOut(clamp((lt - last - 0.45) / 0.35)), txt = (p.doneText || (opt.xp ? "QUEST ABGESCHLOSSEN" : "ALLES GEPACKT")).toUpperCase();
+      g.save(); g.translate(x + cw / 2, y + ch + u * 0.045); g.scale(q, q); g.font = CF(u * 0.04, 900); const w = g.measureText(txt).width + u * 0.1;
+      g.shadowColor = col; g.shadowBlur = u * 0.03; g.fillStyle = col; rr(g, -w / 2, -u * 0.035, w, u * 0.07, u * 0.035); g.fill(); g.shadowBlur = 0;
+      tickMark(g, -w / 2 + u * 0.045, 0, u * 0.03, clamp((lt - last - 0.6) / 0.25), "#fff");
+      g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, u * 0.02, u * 0.003); g.restore();
+    }
+    g.restore();
+  }
   let stampLayerC = null;
   function stampLayer(w, h){ stampLayerC = stampLayerC || document.createElement("canvas"); if (stampLayerC.width !== w || stampLayerC.height !== h){ stampLayerC.width = w; stampLayerC.height = h; } return stampLayerC; }
   // Höhendaten: Route (Tab Route, über OVL) oder eingetippte Höhen, geglättet
@@ -1347,7 +1567,7 @@ const ASSETS = (() => {
     await countriesReady();
     const jobs = [];
     for (const a of arr){
-      const names = [...countriesOf(a), ...String(a.countries || "").split(","), ...String(a.prev || "").split(","), ...String(a.stations || "").split(",")].map(s => s.trim()).filter(Boolean);
+      const names = [...countriesOf(a), ...String(a.countries || "").split(","), ...String(a.prev || "").split(","), ...String(a.stations || "").split(","), a.from || "", a.to || ""].map(s => String(s).trim()).filter(Boolean);
       const a2s = a.type === "flags" ? itemsFor(a).map(i => i.a2) : names.map(n => lookup(n) && lookup(n).a2);
       for (const a2 of a2s) if (a2){ flagImg(a2); jobs.push(flags.get(a2).job); }
     }
@@ -1436,6 +1656,14 @@ const ASSETS = (() => {
     flapboard: { label: "ABFLUG · DEPARTURES", text: "VIENTIANE   09:00", pos: "bottom" },
     itempop: { amount: "+1", text: "Wasserflasche", icon: "💧", color: "#3fd8ff" },
     nametag: { text: "Kambon", color: "#ffffff", arrow: "right" },
+    quests: { title: "Daily Quests", items: "100 km fahren | x | 50\nKokosnuss trinken | x | 20\nEinen Mönch grüßen | x | 30\nVor Sonnenuntergang zelten | 40", step: 0.8, color: "#a855f7", doneText: "" },
+    gearlist: { title: "Packliste", items: "Zelt | 1,2 kg | x\nSchlafsack | 0,8 kg | x\nKocher | 350 g | x\nFlickzeug | 120 g | x\nKamera | 0,9 kg | x", step: 0.6, color: "#3ddc6f", doneText: "" },
+    flats: { count: "4", text: "Platten", icon: "🛞", color: "#ff5a36", pos: "tl" },
+    suntime: { rise: "06:12", set: "18:34", now: "16:50", label: "noch", pos: "tr" },
+    border: { from: "Thailand", to: "Laos", head: "Grenze überquert", place: "Freundschaftsbrücke · Nong Khai", color: "#ffcc33" },
+    food: { text: "Khao Soi", price: "35.000 Kip", eur: "≈ 1,60 €", icon: "🍜", color: "#ffcc33", pos: "br" },
+    phrase: { country: "Laos", de: "Danke", local: "ຂອບໃຈ", roman: "khop chai", color: "#3fd8ff" },
+    follow: { text: "Folg der Reise", handle: "@hannes.radelt", btn: "FOLGEN", done: "GEFOLGT", color: "#ff3b45", pos: "bottom" },
     elevation: { source: "manuell", heights: "520, 610, 780, 1050, 1381, 1200, 900", km: "37", peak: "Brenner", color: "#ff5a36", pos: "bottom" },
     miniglobe: { to: "Laos", from: "Deutschland", label: "", color: "#ff3b45", pos: "tr" },
     daystats: { title: "Tag 23 · Etappe 12", route: "Luang Prabang → Vang Vieng", color: "#fc5200", v1: "112", v2: "1.840", v3: "6:12", v4: "18,1" },
@@ -1471,6 +1699,14 @@ const ASSETS = (() => {
     flapboard: [["label", "Kopfzeile", "text"], ["text", "Zeilen (Enter = neue Zeile, max. 3)", "textarea"]],
     itempop: [["amount", "Zahl", "text"], ["text", "Gegenstand", "text"], ["icon", "Icon (Emoji, bunt)", "text"], ["color", "Farbe", "color"]],
     nametag: [["text", "Name", "text"], ["arrow", "Pfeil", "select", [["right", "nach rechts unten"], ["left", "nach links unten"]]], ["color", "Farbe", "color"]],
+    quests: [["title", "Titel", "text"], ["items", "Aufgaben: Text | x (wird abgehakt) | XP, je Zeile", "textarea"], ["step", "Sekunden zwischen den Haken", "number"], ["doneText", "Text am Ende (leer = Quest abgeschlossen)", "text"], ["color", "Farbe", "color"]],
+    gearlist: [["title", "Titel", "text"], ["items", "Teile: Name | Gewicht | x (wird abgehakt), je Zeile", "textarea"], ["step", "Sekunden zwischen den Haken", "number"], ["doneText", "Text am Ende (leer = Alles gepackt)", "text"], ["color", "Farbe", "color"]],
+    flats: [["count", "Panne Nr.", "text"], ["text", "Wort", "text"], ["icon", "Icon (Emoji)", "text"], ["color", "Farbe", "color"]],
+    suntime: [["rise", "Sonnenaufgang", "text"], ["set", "Sonnenuntergang", "text"], ["now", "Jetzt", "text"], ["label", "Wort vor Restzeit", "text"]],
+    border: [["from", "Von (Land)", "text"], ["to", "Nach (Land)", "text"], ["head", "Kopfzeile", "text"], ["place", "Grenzübergang", "text"], ["color", "Farbe", "color"]],
+    food: [["img", "Foto vom Essen", "image"], ["icon", "Emoji (ohne Foto)", "text"], ["text", "Gericht", "text"], ["price", "Preis (Landeswährung)", "text"], ["eur", "≈ Euro", "text"], ["color", "Farbe", "color"]],
+    phrase: [["country", "Land", "text"], ["de", "Deutsch", "text"], ["local", "In Landessprache", "text"], ["roman", "Lautschrift", "text"], ["color", "Farbe", "color"]],
+    follow: [["img", "Profilbild", "image"], ["text", "Text", "text"], ["handle", "Name/Handle", "text"], ["btn", "Knopf", "text"], ["done", "Knopf danach", "text"], ["color", "Farbe", "color"]],
     elevation: [["source", "Daten", "select", [["manuell", "eigene Höhen"], ["route", "aus meiner Route (Tab Route)"]]], ["heights", "Höhen in m (Komma, von Start bis Ziel)", "text"], ["km", "Strecke (km)", "text"], ["peak", "Name des höchsten Punkts", "text"], ["color", "Farbe", "color"]],
     miniglobe: [["to", "Ziel (Land oder „Breite, Länge“)", "text"], ["from", "Start (optional, für Bogen)", "text"], ["label", "Beschriftung (leer = Land)", "text"], ["color", "Punktfarbe", "color"]],
     daystats: [["title", "Titel", "text"], ["route", "Strecke (rechts oben)", "text"], ["v1", "Wert 1 (km)", "text"], ["v2", "Wert 2 (Hm)", "text"], ["v3", "Wert 3 (Zeit h:mm)", "text"], ["v4", "Wert 4 (km/h)", "text"],
@@ -1486,8 +1722,9 @@ const ASSETS = (() => {
     challenge: [["title", "Titel", "text"], ["text", "Aufgabe", "text"], ["goal", "Chip 1", "text"], ["time", "Chip 2", "text"], ["status", "Status", "select", STATUS]],
     flags: [["countries", "Länder (Komma)", "text"], ["auto", "+ Länder-Markierungen der Route", "check"], ["word", "Wort", "text"], ["start", "Zählt ab", "number"]]
   };
+  function make(type, opt = {}){ return Object.assign({ id: 0, type, dur: TYPES[type].dur, size: 1, t0: 0 }, JSON.parse(JSON.stringify(DEFAULTS[type] || {})), opt); }
   function add(type, opt = {}){
-    const a = Object.assign({ id: ++counter, type, dur: TYPES[type].dur, size: 1, t0: 0 }, JSON.parse(JSON.stringify(DEFAULTS[type] || {})), opt);
+    const a = make(type, Object.assign({ id: ++counter }, opt));
     list.push(a); sel = a.id; start = performance.now(); render(); ready([a]);
     return a;
   }
@@ -1551,7 +1788,7 @@ const ASSETS = (() => {
     "Greenscreen-MP4 fertig": "Green-screen MP4 done", "Dateien": "files", "Links ein Asset wählen oder hinzufügen": "Pick or add an asset on the left", "Duplizieren": "Duplicate" });
 
   return {
-    add, list: () => list, ready, exportAsset, types: TYPES, draw: DRAW, realStamp, countriesReady, zip, download, current: () => list.find(x => x.id === sel), select: id => { sel = id; start = performance.now(); render(); },
+    add, make, list: () => list, ready, exportAsset, types: TYPES, draw: DRAW, realStamp, countriesReady, zip, download, current: () => list.find(x => x.id === sel), select: id => { sel = id; start = performance.now(); render(); },
     get: () => list.map(x => Object.assign({}, x)),
     set: arr => { list = (arr || []).map(x => Object.assign({}, x)); counter = list.reduce((m, x) => Math.max(m, x.id), 0); sel = list.length ? list[0].id : null; render(); }
   };
