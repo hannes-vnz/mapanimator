@@ -77,7 +77,7 @@
 
         <div class="card">
           <h2>Linie &amp; Tempo</h2>
-          <div class="setting"><label>Fortbewegung</label>
+          <div class="setting"><label>Standard-Fortbewegung</label>
             <select id="travelMode">
               <option value="fly">Flug (Bogen)</option>
               <option value="car" selected>Auto (Straße)</option>
@@ -85,6 +85,7 @@
               <option value="foot">Zu Fuß (Wege)</option>
             </select>
           </div>
+          <div class="hint" style="margin:-2px 0 10px">Pro Etappe änderbar: „Anreise per“ an jedem Stopp. Fähre = weiß gestrichelt, Bus = orange gestrichelt, Zug = gestrichelt, Flug/Fähre als Bogen.</div>
           <div class="setting"><label>Linienfarbe</label><input type="color" id="lineColor" value="#6d2e38"></div>
           <div class="setting"><label>Linienbreite</label><input type="number" id="lineWidth" value="3.5" step="0.5" min="1" max="14"></div>
           <div class="setting"><label>Linienstil</label>
@@ -94,6 +95,7 @@
               <option value="dotted">Gepunktet</option>
             </select>
           </div>
+          <div class="setting"><label>Weiße Kontur</label><input type="checkbox" id="lineCasing"></div>
           <div class="setting"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
           <div class="setting"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
           <div class="setting"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>

@@ -59,7 +59,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - `src/` (app.js, style.css, index.html) plus Build-Skript, das wieder eine einzelne `mapanimator.html` erzeugt (Bibliotheken inline).
    - Grund: Die 1-MB-Datei ist zum Editieren unhandlich.
    - Playwright-Smoke-Test: lädt die Seite, wählt alle Themes, rendert 1 s MP4 und prüft auf JS-Fehler.
-2. **Verkehrsmittel pro Etappe** (Kamelfamilie):
+2. **Verkehrsmittel pro Etappe** (Kamelfamilie) – erledigt: `MODES`, `wp.mode` („Anreise per“), `legFeatures()`, Layer route-casing/route-line/route-dash:
    - Auto/Rad/Zu Fuß geroutet; Fähre und Flug als Bogen.
    - Linienstil je Etappe: durchgezogen rot mit weißer Kontur, Fähre weiß gestrichelt, Bus orange gestrichelt.
 3. **Kamera wie Baldinger:**

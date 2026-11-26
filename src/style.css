@@ -155,6 +155,8 @@ button.btn:disabled{opacity:.45; cursor:default;}
 .photo-label input{display:none;}
 .wp .del, #tlInspector .del{background:none; border:0; color:var(--faint); font-size:15px; padding:4px 8px; border-radius:6px;}
 .wp .del:hover, #tlInspector .del:hover{color:var(--danger); background:rgba(255,93,108,.1);}
+.legsel{display:flex; align-items:center; gap:8px; margin:-2px 0 8px; font-size:11.5px; color:var(--muted);}
+.legsel select{flex:1; height:28px; border:1px solid var(--line); border-radius:7px; background:var(--field); color:var(--text); padding:0 8px; font-size:12px;}
 .wp .idx{position:absolute; top:12px; left:-9px; width:20px; height:20px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-size:10.5px; display:grid; place-items:center; font-weight:800; box-shadow:0 0 0 3px var(--card);}
 
 /* Theme-Kacheln */

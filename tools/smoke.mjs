@@ -47,6 +47,15 @@ try {
     addWaypoint("München", 48.137, 11.575); addWaypoint("Wien", 48.208, 16.372); addWaypoint("Venedig", 45.44, 12.33);
     await drawStatic();
   }));
+  await step("Verkehrsmittel pro Etappe", () => page.evaluate(async () => {
+    addWaypoint("Split", 43.508, 16.44); addWaypoint("Tunis", 36.8, 10.18);
+    const w = R().waypoints; w[2].mode = "bus"; w[3].mode = "ferry"; w[4].mode = "fly";
+    renderWpList(); await drawStatic();
+    const p = anim.per[0], modes = p.legs.map(l => l.mode).join(",");
+    if (p.legs.length !== 4 || !/bus,ferry,fly$/.test(modes)) throw new Error("Etappen falsch: " + modes);
+    if (document.querySelectorAll(".legsel select").length !== 4) throw new Error("Anreise-Auswahl fehlt");
+    return modes;
+  }));
   const themes = await page.evaluate(() => [...document.getElementById("mapStyle").options].map(o => o.value));
   for (const th of themes){
     await step("Theme " + th, () => page.evaluate(async th => {

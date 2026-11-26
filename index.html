@@ -2138,6 +2138,8 @@ button.btn:disabled{opacity:.45; cursor:default;}
 .photo-label input{display:none;}
 .wp .del, #tlInspector .del{background:none; border:0; color:var(--faint); font-size:15px; padding:4px 8px; border-radius:6px;}
 .wp .del:hover, #tlInspector .del:hover{color:var(--danger); background:rgba(255,93,108,.1);}
+.legsel{display:flex; align-items:center; gap:8px; margin:-2px 0 8px; font-size:11.5px; color:var(--muted);}
+.legsel select{flex:1; height:28px; border:1px solid var(--line); border-radius:7px; background:var(--field); color:var(--text); padding:0 8px; font-size:12px;}
 .wp .idx{position:absolute; top:12px; left:-9px; width:20px; height:20px; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-size:10.5px; display:grid; place-items:center; font-weight:800; box-shadow:0 0 0 3px var(--card);}
 
 /* Theme-Kacheln */
@@ -2320,7 +2322,7 @@ body.safe #safezone{display:block;}
 
         <div class="card">
           <h2>Linie &amp; Tempo</h2>
-          <div class="setting"><label>Fortbewegung</label>
+          <div class="setting"><label>Standard-Fortbewegung</label>
             <select id="travelMode">
               <option value="fly">Flug (Bogen)</option>
               <option value="car" selected>Auto (Straße)</option>
@@ -2328,6 +2330,7 @@ body.safe #safezone{display:block;}
               <option value="foot">Zu Fuß (Wege)</option>
             </select>
           </div>
+          <div class="hint" style="margin:-2px 0 10px">Pro Etappe änderbar: „Anreise per“ an jedem Stopp. Fähre = weiß gestrichelt, Bus = orange gestrichelt, Zug = gestrichelt, Flug/Fähre als Bogen.</div>
           <div class="setting"><label>Linienfarbe</label><input type="color" id="lineColor" value="#6d2e38"></div>
           <div class="setting"><label>Linienbreite</label><input type="number" id="lineWidth" value="3.5" step="0.5" min="1" max="14"></div>
           <div class="setting"><label>Linienstil</label>
@@ -2337,6 +2340,7 @@ body.safe #safezone{display:block;}
               <option value="dotted">Gepunktet</option>
             </select>
           </div>
+          <div class="setting"><label>Weiße Kontur</label><input type="checkbox" id="lineCasing"></div>
           <div class="setting"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
           <div class="setting"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
           <div class="setting"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>
@@ -2638,7 +2642,9 @@ const EN = {
   "Wählen":"Choose","Foto ✓":"Photo ✓","Foto hinzufügen":"Add photo","Foto ✓ (ändern)":"Photo ✓ (change)",
   "Fit":"Fit","✕ löschen":"✕ delete",
   // Labels
-  "Linienfarbe":"Line color","Linienbreite":"Line width","Linienstil":"Line style","Fortbewegung":"Travel mode",
+  "Linienfarbe":"Line color","Weiße Kontur":"White outline","Anreise per":"Arrive by","Standard":"Default",
+  "Auto":"Car","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
+  "Standard-Fortbewegung":"Default travel mode","Linienbreite":"Line width","Linienstil":"Line style","Fortbewegung":"Travel mode",
   "Sekunden pro Etappe":"Seconds per leg","Pause am Stopp (s)":"Pause at stop (s)",
   "Konstante Geschwindigkeit":"Constant speed","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
   "Zoom-In an Stopps":"Zoom in at stops","Neigung (Pitch)":"Tilt (pitch)","Kamera-Glättung":"Camera smoothing",
@@ -2743,7 +2749,7 @@ const THEMES = {
     country: { color: "#ffffff", halo: "rgba(60,40,40,0.25)", upper: true, spacing: 0.35 },
     city: { color: "#ffffff", halo: "rgba(60,40,40,0.3)" },
     detail: { states: "#f1d6c7", road: "#c7a08d", rail: "#b48c7c", wood: "#d9b6a2", urban: "#d6ac98", park: "#dcb9a5" },
-    defaultLine: "#e3262b", glowDefault: false
+    defaultLine: "#e3262b", glowDefault: false, casing: true
   },
   relief: {
     relief: true, bg: "#97a3b9", water: "#e6ebf3",
@@ -3066,10 +3072,23 @@ function addRuntimeLayers(){
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": ["get", "color"], "line-width": 12, "line-blur": 8, "line-opacity": 0 }
   });
+  if (!map.getLayer("route-casing")) map.addLayer({
+    id: "route-casing", type: "line", source: "route",
+    filter: ["==", ["get", "dash"], 0],
+    layout: { "line-cap": "round", "line-join": "round", visibility: checked("lineCasing") ? "visible" : "none" },
+    paint: { "line-color": "#ffffff", "line-width": 6.5 }
+  });
   if (!map.getLayer("route-line")) map.addLayer({
     id: "route-line", type: "line", source: "route",
+    filter: ["==", ["get", "dash"], 0],
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": ["get", "color"], "line-width": 3.5 }
+  });
+  if (!map.getLayer("route-dash")) map.addLayer({
+    id: "route-dash", type: "line", source: "route",
+    filter: ["==", ["get", "dash"], 1],
+    layout: { "line-cap": "butt", "line-join": "round" },
+    paint: { "line-color": ["get", "color"], "line-width": 3.5, "line-dasharray": [2, 1.5] }
   });
   if (!map.getLayer("tip-dot")) map.addLayer({
     id: "tip-dot", type: "circle", source: "tip",
@@ -3143,6 +3162,7 @@ document.getElementById("mapStyle").addEventListener("change", () => {
   const t = THEMES[name];
   document.getElementById("lineColor").value = t.defaultLine;
   document.getElementById("glow").checked = t.glowDefault;
+  document.getElementById("lineCasing").checked = !!t.casing;
   if (t.relief){ document.getElementById("terrain3d").checked = true; document.getElementById("terrainEx").value = 12; }
   else if (THEMES[prevStyle] && THEMES[prevStyle].relief){ document.getElementById("terrain3d").checked = false; document.getElementById("terrainEx").value = 1.5; }
   prevStyle = name;
@@ -3376,7 +3396,9 @@ function renderWpList(){
   R().waypoints.forEach((wp, i) => {
     const div = document.createElement("div");
     div.className = "wp";
-    div.innerHTML = `
+    const modeOpts = ['<option value="">' + tr("Standard") + "</option>"]
+      .concat(Object.entries(MODES).map(([k, m]) => `<option value="${k}" ${wp.mode === k ? "selected" : ""}>${tr(m.label)}</option>`)).join("");
+    div.innerHTML = (i > 0 ? `<div class="legsel"><span>${tr("Anreise per")}</span><select data-f="mode">${modeOpts}</select></div>` : "") + `
       <div class="idx">${i + 1}</div>
       <div class="row">
         <input type="text" data-f="name" placeholder="${tr("Name")}" value="${escapeHtml(wp.name)}">
@@ -3390,10 +3412,10 @@ function renderWpList(){
         <label class="photo-label ${wp.photo ? "has-photo" : ""}">${wp.photo ? tr("Foto ✓ (ändern)") : tr("Foto hinzufügen")}<input type="file" accept="image/*"></label>
         <button class="del" title="${tr("Entfernen")}">✕</button>
       </div>`;
-    div.querySelectorAll("input[data-f]").forEach(inp => {
+    div.querySelectorAll("input[data-f], select[data-f]").forEach(inp => {
       inp.addEventListener("change", () => {
         const f = inp.dataset.f;
-        wp[f] = (f === "name" || f === "color") ? inp.value : parseFloat(inp.value);
+        wp[f] = (f === "name" || f === "color" || f === "mode") ? inp.value : parseFloat(inp.value);
         drawStatic();
       });
     });
@@ -3771,6 +3793,32 @@ function greatCircleLeg(a, b, n){
   }
   return out;
 }
+/* Bogen-Etappe (Flug/Fähre): Großkreis, seitlich ausgebeult (bend = Anteil der Strecke) */
+function arcLeg(a, b, n, bend){
+  const gc = greatCircleLeg(a, b, n);
+  if (gc.length < 3 || !bend) return gc;
+  let dx = b[0] - a[0];
+  if (dx > 180) dx -= 360; else if (dx < -180) dx += 360;
+  const dy = b[1] - a[1];
+  const nx = -dy, ny = dx;                       // Normale (links der Fahrtrichtung)
+  return gc.map((p, i) => {
+    const f = i / (gc.length - 1), k = Math.sin(Math.PI * f) * bend;
+    return [p[0] + nx * k, p[1] + ny * k];
+  });
+}
+
+/* Verkehrsmittel pro Etappe */
+const MODES = {
+  car:   { route: "car",  label: "Auto" },
+  bike:  { route: "bike", label: "Fahrrad" },
+  foot:  { route: "foot", label: "Zu Fuß" },
+  bus:   { route: "car",  label: "Bus",   color: "#ff9a1f", dash: 1 },
+  train: { arc: 0,        label: "Zug",   dash: 1 },
+  ferry: { arc: 0.12,     label: "Fähre", color: "#ffffff", dash: 1 },
+  fly:   { arc: 0.18,     label: "Flug" }
+};
+function legMode(wp){ return (wp && wp.mode) || val("travelMode"); }
+
 function boundsOf(coords){
   let minX = 180, minY = 90, maxX = -180, maxY = -90;
   coords.forEach(c => { minX = Math.min(minX, c[0]); minY = Math.min(minY, c[1]); maxX = Math.max(maxX, c[0]); maxY = Math.max(maxY, c[1]); });
@@ -3805,35 +3853,61 @@ async function fetchRoadLeg(a, b, mode){
 }
 
 async function buildRouteFor(rt){
-  const mode = val("travelMode");
   if (rt.gpx){
     const stops = rt.waypoints.map(wp => ({ wp, idx: nearestIndex(rt.gpx, [wp.lng, wp.lat]) }))
                               .sort((a, b) => a.idx - b.idx);
-    return { coords: rt.gpx, stops };
+    return { coords: rt.gpx, stops, legs: [{ from: 0, to: rt.gpx.length - 1, mode: "car" }] };
   }
   if (rt.waypoints.length < 1) return null;
-  const coords = [];
-  const stops = [];
+  const coords = [], stops = [], legs = [];
   for (let i = 0; i < rt.waypoints.length; i++){
     const a = [rt.waypoints[i].lng, rt.waypoints[i].lat];
     if (i === 0){ coords.push(a); stops.push({ wp: rt.waypoints[0], idx: 0 }); continue; }
     const prev = [rt.waypoints[i - 1].lng, rt.waypoints[i - 1].lat];
+    const mode = legMode(rt.waypoints[i]), M = MODES[mode] || MODES.car;
     let leg;
-    if (mode === "fly"){
-      leg = greatCircleLeg(prev, a, 160);
+    if (!M.route){
+      leg = arcLeg(prev, a, 160, M.arc);
     } else {
       try {
         setStatus("Route „" + rt.name + "“: Etappe " + i + " von " + (rt.waypoints.length - 1) + " …");
-        leg = await fetchRoadLeg(prev, a, mode);
+        leg = await fetchRoadLeg(prev, a, M.route);
       } catch (err){
         setStatus("„" + rt.name + "“ Etappe " + i + ": Straßenroute fehlgeschlagen – Luftlinie verwendet.");
         leg = greatCircleLeg(prev, a, 160);
       }
     }
+    const from = coords.length - 1;
     coords.push(...leg.slice(1));
+    legs.push({ from, to: coords.length - 1, mode });
     stops.push({ wp: rt.waypoints[i], idx: coords.length - 1 });
   }
-  return { coords, stops };
+  return { coords, stops, legs };
+}
+
+/* Linien-Features je Etappe bis zur Spitze (tipIdx = gebrochener Index) */
+function legFeatures(p, tipIdx){
+  const out = [];
+  const i0 = Math.floor(tipIdx), f = tipIdx - i0;
+  for (const lg of p.legs){
+    if (lg.from >= tipIdx) break;
+    const end = Math.min(lg.to, i0);
+    const line = p.coords.slice(lg.from, end + 1);
+    if (end < lg.to && f > 0 && i0 + 1 < p.coords.length){
+      const a = p.coords[i0], b = p.coords[i0 + 1];
+      line.push([lerp(a[0], b[0], f), lerp(a[1], b[1], f)]);
+    }
+    if (line.length < 2) continue;
+    const M = MODES[lg.mode] || {};
+    out.push({ type: "Feature", properties: { color: M.color || p.rt.color, dash: M.dash || 0, mode: lg.mode },
+               geometry: { type: "LineString", coordinates: line } });
+  }
+  return out;
+}
+function setLineWidths(w){
+  map.setPaintProperty("route-line", "line-width", w);
+  if (map.getLayer("route-dash")) map.setPaintProperty("route-dash", "line-width", w);
+  if (map.getLayer("route-casing")) map.setPaintProperty("route-casing", "line-width", w + Math.max(2.5, w * 0.8));
 }
 
 /* ---------- Animations-Kontext (alle Routen) ---------- */
@@ -3878,7 +3952,8 @@ async function prepareAnim(){
         properties: { img, size: 0, label: labelFor(s.wp) } });
       stopMeta.push({ idx: s.idx, frac: cum[s.idx] / totalKm, feat: allStopsFeats.length - 1 });
     }
-    per.push({ ri, rt, coords, cum, totalKm, segs, natural: tt, stops: stopMeta, _tipIdx: 0 });
+    const legs = r.legs && r.legs.length ? r.legs : [{ from: 0, to: coords.length - 1, mode: "car" }];
+    per.push({ ri, rt, coords, cum, totalKm, segs, legs, natural: tt, stops: stopMeta, _tipIdx: 0 });
   }
   if (!per.length){ anim = null; return null; }
   const allCoords = per.flatMap(p => p.coords);
@@ -4007,16 +4082,11 @@ function renderAt(t, live){
     const tipIdx = tipIndexFor(p, t);
     p._tipIdx = tipIdx;
     const i0 = Math.floor(tipIdx), f = tipIdx - i0;
-    const line = p.coords.slice(0, i0 + 1);
-    if (f > 0 && i0 + 1 < p.coords.length){
-      const a = p.coords[i0], b = p.coords[i0 + 1];
-      line.push([lerp(a[0], b[0], f), lerp(a[1], b[1], f)]);
-    }
-    const tip = line[line.length - 1] || p.coords[0];
+    const tip = (f > 0 && i0 + 1 < p.coords.length)
+      ? [lerp(p.coords[i0][0], p.coords[i0 + 1][0], f), lerp(p.coords[i0][1], p.coords[i0 + 1][1], f)]
+      : p.coords[Math.min(i0, p.coords.length - 1)];
     if (p === activeP) activeTip = tip;
-    if (line.length > 1)
-      lineFeats.push({ type: "Feature", properties: { color: p.rt.color },
-                       geometry: { type: "LineString", coordinates: line } });
+    lineFeats.push(...legFeatures(p, tipIdx));
     const done = tipIdx >= p.coords.length - 1 - 1e-6;
     if (tipStyle !== "none" && t < total - 0.01 && !done)
       tipFeats.push({ type: "Feature",
@@ -4056,7 +4126,7 @@ function renderAt(t, live){
 
   // Animierbare Stil-Attribute
   const lwS = sampleNum(tracks.lineWidth, t, num("lineWidth") || 3.5);
-  map.setPaintProperty("route-line", "line-width", lwS);
+  setLineWidths(lwS);
   const glowS = sampleNum(tracks.glowOp, t, checked("glow") ? 0.55 : 0);
   map.setPaintProperty("route-glow", "line-opacity", glowS);
   map.setPaintProperty("route-glow", "line-width", lwS * 3.2);
@@ -4111,14 +4181,14 @@ async function drawStatic(){
   invalidateAnim();
   applyStyleSettings();
   const a = await prepareAnim();
+  if (/^Route „/.test(document.getElementById("status").textContent)) setStatus("");
   map.getSource("tip").setData(emptyFC());
   if (map.getLayer("tip-pin")) map.setPaintProperty("tip-pin", "icon-opacity", 0);
   map.setPaintProperty("tip-dot", "circle-opacity", 0);
   map.setPaintProperty("tip-dot", "circle-stroke-opacity", 0);
   if (!a){ map.getSource("route").setData(emptyFC()); map.getSource("stops").setData(emptyFC()); renderTimeline(); return; }
   map.getSource("route").setData({ type: "FeatureCollection",
-    features: a.per.map(p => ({ type: "Feature", properties: { color: p.rt.color },
-      geometry: { type: "LineString", coordinates: p.coords } })) });
+    features: a.per.flatMap(p => legFeatures(p, p.coords.length - 1)) });
   features.forEach(f => f.op = 1);
   refreshFeatures();
   a.stopsData.features.forEach(ft => ft.properties.size = 0.75);
@@ -4130,7 +4200,8 @@ function applyStyleSettings(){
   if (!map.getLayer("route-line")) return;
   const width = num("lineWidth") || 3.5;
   const style = val("lineStyle");
-  map.setPaintProperty("route-line", "line-width", width);
+  setLineWidths(width);
+  if (map.getLayer("route-casing")) map.setLayoutProperty("route-casing", "visibility", checked("lineCasing") ? "visible" : "none");
   map.setPaintProperty("route-line", "line-dasharray",
     style === "dashed" ? [2.2, 1.8] : style === "dotted" ? [0.1, 2] : [1, 0]);
   const glowOn = checked("glow");
@@ -4153,7 +4224,7 @@ function applyStyleSettings(){
     }
   }
 }
-["lineColor", "lineWidth", "lineStyle", "glow", "tipStyle", "travelMode", "pinStyle",
+["lineColor", "lineWidth", "lineStyle", "lineCasing", "glow", "tipStyle", "travelMode", "pinStyle",
  "pinScale", "tipScale", "labelSize", "pinFont", "legDur", "pauseDur", "constSpeed",
  "speedMult", "legEase"].forEach(id =>
   document.getElementById(id).addEventListener("change", async () => { await drawStatic(); setStatus(tr("Aktualisiert.")); }));
@@ -4696,7 +4767,7 @@ function imgToDataURL(img){
   return c.toDataURL("image/jpeg", 0.85);
 }
 const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyle","pinScale","tipScale",
-  "labelSize","pinFont","lineColor","lineWidth","lineStyle","travelMode","legDur","pauseDur","constSpeed",
+  "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
   "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur"];
@@ -4711,7 +4782,7 @@ document.getElementById("projSave").addEventListener("click", () => {
     routes: routes.map(rt => ({
       name: rt.name, color: rt.color, tipLabel: rt.tipLabel, gpx: rt.gpx,
       tipPhoto: imgToDataURL(rt.tipPhoto),
-      waypoints: rt.waypoints.map(wp => ({ name: wp.name, lat: wp.lat, lng: wp.lng, color: wp.color, photo: imgToDataURL(wp.photo) }))
+      waypoints: rt.waypoints.map(wp => ({ name: wp.name, lat: wp.lat, lng: wp.lng, color: wp.color, mode: wp.mode || "", photo: imgToDataURL(wp.photo) }))
     })),
     features: features.map(f => ({ name: f.name, geometry: f.geometry, color: f.color, appearT: f.appearT })),
     pois,
@@ -4766,7 +4837,7 @@ document.getElementById("projLoad").addEventListener("change", e => {
         rt.tipPhoto = await loadImg(pr.tipPhoto);
         for (const w of (pr.waypoints || [])){
           const photo = await loadImg(w.photo);
-          rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, photo });
+          rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, mode: w.mode || "", photo });
         }
         routes.push(rt);
       }
