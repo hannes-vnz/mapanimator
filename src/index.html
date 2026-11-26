@@ -2,11 +2,12 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kartenanimator</title>
-<meta name="description" content="Browser-Tool für Reise-Animationen im Vlog-Stil: mehrere Routen, Foto-Badges, Keyframe-Timeline, 3D-Terrain und WebM-Export bis 4K.">
-<meta property="og:title" content="Kartenanimator">
-<meta property="og:description" content="Karten-Animationen für Reisevideos, direkt im Browser. Ohne Framework, ohne Build-Schritt.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#16171a">
+<title>Mapanimator</title>
+<meta name="description" content="Browser-Tool für Reise-Animationen im Vlog-Stil: mehrere Routen, Foto-Badges, Keyframe-Timeline, 3D-Terrain und framegenauer MP4-Export bis 4K.">
+<meta property="og:title" content="Mapanimator">
+<meta property="og:description" content="Karten-Animationen für Reisevideos und Shorts, direkt im Browser.">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%BA%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
@@ -16,291 +17,338 @@
 </head>
 <body>
 
-<aside id="sidebar">
-  <header style="position:relative;">
-    <h1>Kartenanimator <small>Reise-Animationen im Vlog-Stil · rendert lokal im Browser</small></h1>
-    <div id="langSel">
-      <button class="lbtn active" data-lang="de" title="Deutsch">
-        <svg viewBox="0 0 16 11" width="16" height="11"><rect width="16" height="11" fill="#000"/><rect y="3.67" width="16" height="3.66" fill="#DD0000"/><rect y="7.33" width="16" height="3.67" fill="#FFCE00"/></svg>DE
-      </button>
-      <button class="lbtn" data-lang="en" title="English">
-        <svg viewBox="0 0 16 11" width="16" height="11"><rect width="16" height="11" fill="#012169"/><path d="M0,0 L16,11 M16,0 L0,11" stroke="#fff" stroke-width="2.4"/><path d="M0,0 L16,11 M16,0 L0,11" stroke="#C8102E" stroke-width="1"/><rect x="6.6" width="2.8" height="11" fill="#fff"/><rect y="3.9" width="16" height="3.2" fill="#fff"/><rect x="7.2" width="1.6" height="11" fill="#C8102E"/><rect y="4.5" width="16" height="2" fill="#C8102E"/></svg>EN
-      </button>
-      <input type="hidden" id="uiLang" value="de">
-    </div>
-  </header>
-
-  <div id="panels">
-    <div class="section">
-      <h2>Routen &amp; Orte</h2>
-      <div id="routeChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
-      <button class="btn ghost full" id="routeAdd" style="margin-bottom:8px">＋ Route hinzufügen</button>
-      <div class="search-row">
-        <input id="searchInput" type="text" placeholder="Ort suchen (z.B. Reykjavík) …">
-        <button class="btn" id="searchBtn">Suchen</button>
-      </div>
-      <div id="wpList"></div>
-      <button class="btn ghost full" id="addManual">+ Stopp manuell (Koordinaten)</button>
-      <label class="btn ghost full" style="display:block; text-align:center; cursor:pointer;">
-        GPX-Track importieren
-        <input id="gpxInput" type="file" accept=".gpx" style="display:none">
-      </label>
-      <div class="hint" id="gpxInfo"></div>
-    </div>
-
-    <div class="section">
-      <h2>Stil</h2>
-      <div class="setting"><label>Karten-Stil</label>
-        <select id="mapStyle">
-          <option value="hell" selected>Vlog Hell (Creme)</option>
-          <option value="relief">Relief (70-SW-Look)</option>
-          <option value="atlas">Atlas (Vlog-Weltkarte)</option>
-          <option value="dunkel">Race Dunkel</option>
-          <option value="satellit">Satellit</option>
-          <option value="minimal">Minimal Flach</option>
-        </select>
-      </div>
-      <div class="setting"><label>Pin-Stil</label>
-        <select id="pinStyle">
-          <option value="photo">Foto-Pin (weiß)</option>
-          <option value="badge" selected>Foto-Badge + Name</option>
-          <option value="dot">Farbpunkt</option>
-        </select>
-      </div>
-      <div class="setting"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
-      <div class="setting"><label>Linienspitze</label>
-        <select id="tipStyle">
-          <option value="stop" selected>Wie Stopp-Pins (Foto/Badge)</option>
-          <option value="pin">Pin + Punkt (wie Google Maps)</option>
-          <option value="dot">Nur Punkt</option>
-          <option value="none">Aus</option>
-        </select>
-      </div>
-      <div class="setting"><label>Foto/Logo Spitze</label>
-        <label class="photo-label" id="tipPhotoLbl" style="flex:none;width:92px;">Wählen<input type="file" id="tipPhoto" accept="image/*" style="display:none"></label>
-      </div>
-      <div class="setting"><label>Name Spitze</label>
-        <input type="text" id="tipLabel" placeholder="z.B. HANNES" style="width:92px;border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:13px;background:#fff;color:var(--ink);">
-      </div>
-      <div class="setting"><label>Pin-Einblendung</label>
-        <select id="popStyle">
-          <option value="pop" selected>Pop (Overshoot)</option>
-          <option value="soft">Sanft</option>
-          <option value="instant">Sofort</option>
-        </select>
-      </div>
-      <div class="setting"><label>Pin-Größe</label><input type="range" id="pinScale" min="0.3" max="2" step="0.05" value="1"></div>
-      <div class="setting"><label>Spitzen-Pin-Größe</label><input type="range" id="tipScale" min="0.3" max="2" step="0.05" value="1"></div>
-      <div class="setting"><label>Label-Größe (px)</label><input type="number" id="labelSize" value="14" min="8" max="48"></div>
-      <div class="setting"><label>Schrift (Pins)</label>
-        <select id="pinFont">
-          <option value="system" selected>System Sans</option>
-          <option value="rounded">Rounded</option>
-          <option value="serif">Serif</option>
-          <option value="display">Display (fett)</option>
-          <option value="mono">Mono</option>
-        </select>
-      </div>
-      <div class="setting"><label>MapTiler-Key (optional)</label>
-        <input type="text" id="mtKey" placeholder="für HQ-Tiles" style="width:92px;border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:12px;background:#fff;color:var(--ink);">
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Farben (Style-Editor)</h2>
-      <div class="setting"><label>Land</label><input type="color" id="ccLand" value="#f3eee5"></div>
-      <div class="setting"><label>Wasser</label><input type="color" id="ccWater" value="#c6dbe8"></div>
-      <div class="setting"><label>Grenzen</label><input type="color" id="ccBoundary" value="#d3c4b6"></div>
-      <div class="setting"><label>Labels</label><input type="color" id="ccLabel" value="#6d2e38"></div>
-      <div id="palList" style="display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 8px;"></div>
-      <button class="btn ghost full" id="ccReset">Auf Theme zurücksetzen</button>
-      <div class="hint">Paletten anklicken oder Farben einzeln setzen – wirkt auf jeden Karten-Stil.</div>
-    </div>
-
-    <div class="section">
-      <h2>Features (Regionen &amp; GeoJSON)</h2>
-      <div class="search-row">
-        <input id="featInput" type="text" placeholder="Land/Region suchen (z.B. Bayern) …">
-        <button class="btn" id="featBtn">Suchen</button>
-      </div>
-      <div id="featList"></div>
-      <label class="btn ghost full" style="display:block; text-align:center; cursor:pointer;">
-        GeoJSON importieren
-        <input id="geojsonInput" type="file" accept=".json,.geojson" style="display:none">
-      </label>
-      <div class="hint">Features erscheinen als Flächen/Linien unter der Route. „Ab (s)“ leer = immer sichtbar, sonst blendet das Feature zu diesem Zeitpunkt animiert ein (Race-Stil: Land leuchtet auf).</div>
-    </div>
-
-    <div class="section">
-      <h2>Kartendetails</h2>
-      <div class="setting"><label>Bundesländer-Grenzen</label><input type="checkbox" id="dtStates"></div>
-      <div class="setting"><label>Hauptstraßen</label><input type="checkbox" id="dtRoads"></div>
-      <div class="setting"><label>Bahnlinien</label><input type="checkbox" id="dtRail"></div>
-      <div class="setting"><label>Wälder</label><input type="checkbox" id="dtWood"></div>
-      <div class="setting"><label>Siedlungsflächen</label><input type="checkbox" id="dtUrban"></div>
-      <div class="setting"><label>Parks</label><input type="checkbox" id="dtParks"></div>
-      <div class="setting"><label>Dörfer anzeigen</label><input type="checkbox" id="dtTowns"></div>
-    </div>
-
-    <div class="section">
-      <h2>POIs entlang der Route</h2>
-      <div class="setting"><label>Gipfel</label><input type="checkbox" id="poiPeak" checked></div>
-      <div class="setting"><label>Burgen &amp; Schlösser</label><input type="checkbox" id="poiCastle" checked></div>
-      <div class="setting"><label>Bahnhöfe</label><input type="checkbox" id="poiStation"></div>
-      <div class="setting"><label>Sehenswürdigkeiten</label><input type="checkbox" id="poiSight"></div>
-      <div class="setting"><label>Korridor (km)</label><input type="number" id="poiDist" value="8" min="1" max="50" step="1"></div>
-      <div style="display:flex; gap:6px;">
-        <button class="btn" id="poiLoad" style="flex:1">POIs laden</button>
-        <button class="btn ghost" id="poiClear" style="flex:1">Leeren</button>
-      </div>
-      <div class="hint" id="poiInfo">Lädt benannte Orte aus OpenStreetMap im Umkreis der Route und markiert sie mit Icons.</div>
-    </div>
-
-    <div class="section">
-      <h2>Route &amp; Kamera</h2>
-      <div class="setting"><label>Linienfarbe</label><input type="color" id="lineColor" value="#6d2e38"></div>
-      <div class="setting"><label>Linienbreite</label><input type="number" id="lineWidth" value="3.5" step="0.5" min="1" max="14"></div>
-      <div class="setting"><label>Linienstil</label>
-        <select id="lineStyle">
-          <option value="dashed">Gestrichelt</option>
-          <option value="solid" selected>Durchgezogen</option>
-          <option value="dotted">Gepunktet</option>
-        </select>
-      </div>
-      <div class="setting"><label>Fortbewegung</label>
-        <select id="travelMode">
-          <option value="fly">Flug (Bogen)</option>
-          <option value="car" selected>Auto (Straße)</option>
-          <option value="bike">Fahrrad (Straße)</option>
-          <option value="foot">Zu Fuß (Wege)</option>
-        </select>
-      </div>
-      <div class="setting"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
-      <div class="setting"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>
-      <div class="setting"><label>Konstante Geschwindigkeit</label><input type="checkbox" id="constSpeed" checked></div>
-      <div class="setting"><label>Kamera</label>
-        <select id="camMode">
-          <option value="follow" selected>Folgt der Linie</option>
-          <option value="overview">Feste Übersicht</option>
-        </select>
-      </div>
-      <div class="setting"><label>Kamera-Zoom</label><input type="range" id="zoom" min="3" max="13" step="0.1" value="5.6"></div>
-      <div class="setting"><label>Zoom-In an Stopps</label><input type="checkbox" id="stopZoom"></div>
-      <div class="setting"><label>Neigung (Pitch)</label><input type="range" id="pitch" min="0" max="60" step="1" value="0"></div>
-      <div class="setting"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
-      <div class="setting"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
-      <div class="setting"><label>Linien-Beschleunigung</label>
-        <select id="legEase">
-          <option value="linear">Linear (konstant)</option>
-          <option value="quadInOut">Quadratisch (weich)</option>
-          <option value="easeInOut" selected>Kubisch (sehr weich)</option>
-          <option value="easeOut">Schnell starten → ausrollen</option>
-          <option value="easeIn">Langsam anlaufen → schnell</option>
-        </select>
-      </div>
-      <div class="setting"><label>Tempo ×</label><input type="number" id="speedMult" value="1" step="0.1" min="0.1" max="5"></div>
-      <div class="setting"><label>Übersicht am Ende</label><input type="checkbox" id="endOverview" checked></div>
-    </div>
-
-    <div class="section">
-      <h2>Zähler-Overlay</h2>
-      <div class="setting"><label>Zähler anzeigen</label><input type="checkbox" id="ovOn"></div>
-      <div class="setting"><label>km am Start</label><input type="number" id="ovKm0" value="0" step="10" style="width:80px"></div>
-      <div class="setting"><label>km runden auf</label><input type="number" id="ovRound" value="10" step="1" min="1" style="width:60px"></div>
-      <div class="setting"><label>Tag am Start / Ende</label><span><input type="number" id="ovDay0" value="" placeholder="–" style="width:56px"> <input type="number" id="ovDay1" value="" placeholder="–" style="width:56px"></span></div>
-      <div class="setting"><label>Text Zeile 2</label><input type="text" id="ovPrefix" value="TAG #" style="width:80px"></div>
-      <div class="setting"><label>Position</label><select id="ovPos"><option value="top" selected>oben</option><option value="bottom">unten</option></select></div>
-      <div class="hint">Zählt mit der Linienspitze hoch (Summe aller Routen). Tag wird linear über die Strecke verteilt; leer lassen = keine Tag-Zeile.</div>
-    </div>
-
-    <div class="section">
-      <h2>Länder hervorheben</h2>
-      <div class="setting"><label>Länder (ISO3)</label><input type="text" id="hlIso" placeholder="DEU, AUT" style="width:110px"></div>
-      <div class="setting"><label>Füllfarbe</label><input type="color" id="hlColor" value="#86ccff"></div>
-      <div class="setting"><label>Deckkraft</label><input type="range" id="hlOp" min="0" max="1" step="0.02" value="0.66"></div>
-      <div class="setting"><label>Weiße Kontur + Schatten</label><input type="checkbox" id="hlLine" checked></div>
-      <div class="setting"><label>Einblenden ab (s)</label><input type="number" id="hlT0" value="" step="0.1" min="0" placeholder="immer" style="width:70px"></div>
-      <div class="hint">Ländergrenzen: Natural Earth 1:10 Mio. (ISO3 z. B. DEU, FRA, ITA, CHE). Liegt unter den Routen.</div>
-    </div>
-
-    <div class="section">
-      <h2>Kamera-Presets</h2>
-      <div class="setting"><label>Vorschlag</label>
-        <select id="camPreset">
-          <option value="" selected>– wählen –</option>
-          <option value="vlog">Vlog Standard (folgend)</option>
-          <option value="cine">Cinematic Schwenk</option>
-          <option value="drone">Drohnenflug</option>
-          <option value="orbit">Übersicht + Orbit</option>
-          <option value="snap70">70-SW: Snap-Zooms + Drift</option>
-        </select>
-      </div>
-      <div class="setting"><label>3D-Terrain</label><input type="checkbox" id="terrain3d"></div>
-      <div class="setting"><label>Terrain-Überhöhung</label><input type="range" id="terrainEx" min="1" max="20" step="0.5" value="1.5"></div>
-      <div class="hint">Presets erzeugen Keyframes in der Timeline unten – dort frei anpassbar. Ohne Keyframes gelten die Regler oben.</div>
-    </div>
-
-    <div class="section">
-      <h2>Projekt</h2>
-      <div style="display:flex; gap:6px;">
-        <button class="btn ghost" id="projSave" style="flex:1">Speichern</button>
-        <label class="btn ghost" style="flex:1; text-align:center; cursor:pointer;">Laden<input type="file" id="projLoad" accept=".json" style="display:none"></label>
-      </div>
-      <div class="hint">Speichert Orte, Fotos, Stil, Keyframes als JSON-Datei.</div>
-    </div>
-
-    <div class="section">
-      <h2>Export</h2>
-      <div class="setting"><label>Auflösung</label>
-        <select id="resolution">
-          <option value="1920x1080">1920 × 1080</option>
-          <option value="2560x1440">2560 × 1440</option>
-          <option value="3840x2160">3840 × 2160</option>
-          <option value="1080x1920">1080 × 1920 (9:16)</option>
-        </select>
-      </div>
-      <div class="setting"><label>Bildrate</label>
-        <select id="expFps"><option value="30" selected>30 fps</option><option value="25">25 fps</option><option value="60">60 fps</option></select>
-      </div>
-      <div class="setting"><label>Stopp-Positionen (JSON)</label><input type="checkbox" id="expPos"></div>
-      <div class="setting"><label>Bewegungsunschärfe</label><input type="checkbox" id="expBlur"></div>
-      <button class="btn full" id="mp4Btn">■ MP4 framegenau rendern</button>
-      <div class="hint">Rendert Bild für Bild und wartet jedes Mal, bis alle Kacheln geladen sind: scharf, ohne Ruckler, auch in 4K. Dauert länger als Echtzeit.</div>
-      <button class="btn full ghost" id="recordBtn">● Echtzeit-Aufnahme (WebM)</button>
-      <div class="hint">Export als WebM. Für DaVinci Resolve ggf. umwandeln:<br>
-      <code>ffmpeg -i map.webm -c:v prores_ks -profile:v 3 map.mov</code></div>
-    </div>
+<header id="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6.5 15.5c2-4 5-1 7-5.5 1-2 2.5-2.5 4-2.5" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1 3.2"/></svg>
+    <span>Mapanimator</span>
   </div>
-
-  <div id="status"></div>
-  <div id="footerbar">
-    <button class="btn ghost" id="previewBtn">▶ Vorschau</button>
-    <button class="btn ghost" id="resetBtn">Zurücksetzen</button>
+  <div id="formatBar" class="seg" role="group" aria-label="Format">
+    <button data-res="1080x1920" title="Shorts / TikTok / Reels">9:16</button>
+    <button data-res="1080x1350" title="Instagram-Feed">4:5</button>
+    <button data-res="1080x1080" title="Quadrat">1:1</button>
+    <button data-res="1920x1080" title="YouTube">16:9</button>
   </div>
-</aside>
-
-<div id="main">
-  <div id="stage">
-    <div id="mapwrap"><div id="map"></div><canvas id="ovl" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5"></canvas></div>
+  <button class="iconbtn" id="safeBtn" title="Safe-Zone für Shorts-UI (nur Vorschau)" aria-pressed="false">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 16.5h7M15.5 8v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+  </button>
+  <div class="spacer"></div>
+  <div class="topactions">
+    <button class="tbtn i18n" id="projSaveTop" title="Projekt als JSON speichern">Speichern</button>
+    <label class="tbtn i18n" title="Projekt-JSON laden">Laden<input type="file" id="projLoadTop" accept=".json" hidden></label>
   </div>
-  <div id="timeline">
-    <div id="tlHead">
-      <button class="btn" id="tlPlay">▶</button>
-      <span id="tlTime">0.0 s</span>
-      <label>Dauer (s) <input type="number" id="totalDur" placeholder="auto" min="1" step="0.5"></label>
-      <button class="btn ghost" id="tlAddCam">＋ Kamera-KF am Playhead</button>
-      <button class="btn ghost" id="tlLineKF">Linie → Keyframes</button>
-      <span class="hint">Ziehen in Spur/Lineal = Scrubben · ＋ oder Doppelklick in Spur = Keyframe · Raute ziehen = Zeit · Doppelklick auf Raute / Entf = löschen · Pfeiltasten = feinjustieren</span>
+  <div id="langSel">
+    <button class="lbtn active" data-lang="de" title="Deutsch">DE</button>
+    <button class="lbtn" data-lang="en" title="English">EN</button>
+    <input type="hidden" id="uiLang" value="de">
+  </div>
+  <button class="primary i18n" id="exportTop">Exportieren</button>
+</header>
+
+<div id="app">
+  <nav id="tabs" role="tablist">
+    <button data-tab="route" class="active" role="tab" title="Schritt 1 (Taste 1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 17.5c5-1 2-6.5 6.5-8.8"/></svg><span class="num">1</span><span class="i18n">Route</span></button>
+    <button data-tab="style" role="tab" title="Schritt 2 (Taste 2)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.7 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span class="num">2</span><span class="i18n">Karte</span></button>
+    <button data-tab="layers" role="tab" title="Schritt 3 (Taste 3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="num">3</span><span class="i18n">Ebenen</span></button>
+    <button data-tab="camera" role="tab" title="Schritt 4 (Taste 4)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="11" rx="2"/><path d="m16 11 5-3v9l-5-3z"/></svg><span class="num">4</span><span class="i18n">Kamera</span></button>
+    <button data-tab="export" role="tab" title="Schritt 5 (Taste 5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span class="num">5</span><span class="i18n">Export</span></button>
+  </nav>
+
+  <aside id="sidebar">
+    <div class="sheet-grab" aria-hidden="true"></div>
+    <div id="panels">
+
+      <!-- ===== ROUTE ===== -->
+      <section class="pane active" data-pane="route">
+        <div class="card">
+          <h2>Routen &amp; Orte</h2>
+          <div id="routeChips"></div>
+          <div class="search-row">
+            <input id="searchInput" type="search" enterkeyhint="search" autocomplete="off" placeholder="Ort suchen (z.B. Reykjavík) …">
+            <button class="btn" id="searchBtn">Suchen</button>
+          </div>
+          <div id="wpList"></div>
+          <div class="btnrow">
+            <button class="btn ghost" id="routeAdd">＋ Route hinzufügen</button>
+            <button class="btn ghost" id="addManual">+ Stopp manuell (Koordinaten)</button>
+          </div>
+          <label class="btn ghost full filebtn">GPX-Track importieren<input id="gpxInput" type="file" accept=".gpx" hidden></label>
+          <div class="hint" id="gpxInfo"></div>
+        </div>
+
+        <div class="card">
+          <h2>Linie &amp; Tempo</h2>
+          <div class="setting"><label>Fortbewegung</label>
+            <select id="travelMode">
+              <option value="fly">Flug (Bogen)</option>
+              <option value="car" selected>Auto (Straße)</option>
+              <option value="bike">Fahrrad (Straße)</option>
+              <option value="foot">Zu Fuß (Wege)</option>
+            </select>
+          </div>
+          <div class="setting"><label>Linienfarbe</label><input type="color" id="lineColor" value="#6d2e38"></div>
+          <div class="setting"><label>Linienbreite</label><input type="number" id="lineWidth" value="3.5" step="0.5" min="1" max="14"></div>
+          <div class="setting"><label>Linienstil</label>
+            <select id="lineStyle">
+              <option value="dashed">Gestrichelt</option>
+              <option value="solid" selected>Durchgezogen</option>
+              <option value="dotted">Gepunktet</option>
+            </select>
+          </div>
+          <div class="setting"><label>Linien-Glow</label><input type="checkbox" id="glow"></div>
+          <div class="setting"><label>Sekunden pro Etappe</label><input type="number" id="legDur" value="4" step="0.5" min="1" max="60"></div>
+          <div class="setting"><label>Pause am Stopp (s)</label><input type="number" id="pauseDur" value="1.6" step="0.2" min="0" max="10"></div>
+          <div class="setting"><label>Konstante Geschwindigkeit</label><input type="checkbox" id="constSpeed" checked></div>
+          <div class="setting"><label>Linien-Beschleunigung</label>
+            <select id="legEase">
+              <option value="linear">Linear (konstant)</option>
+              <option value="quadInOut">Quadratisch (weich)</option>
+              <option value="easeInOut" selected>Kubisch (sehr weich)</option>
+              <option value="easeOut">Schnell starten → ausrollen</option>
+              <option value="easeIn">Langsam anlaufen → schnell</option>
+            </select>
+          </div>
+          <div class="setting"><label>Tempo ×</label><input type="number" id="speedMult" value="1" step="0.1" min="0.1" max="5"></div>
+        </div>
+
+        <details class="card">
+          <summary><h2>POIs entlang der Route</h2></summary>
+          <div class="setting"><label>Gipfel</label><input type="checkbox" id="poiPeak" checked></div>
+          <div class="setting"><label>Burgen &amp; Schlösser</label><input type="checkbox" id="poiCastle" checked></div>
+          <div class="setting"><label>Bahnhöfe</label><input type="checkbox" id="poiStation"></div>
+          <div class="setting"><label>Sehenswürdigkeiten</label><input type="checkbox" id="poiSight"></div>
+          <div class="setting"><label>Korridor (km)</label><input type="number" id="poiDist" value="8" min="1" max="50" step="1"></div>
+          <div class="btnrow">
+            <button class="btn" id="poiLoad">POIs laden</button>
+            <button class="btn ghost" id="poiClear">Leeren</button>
+          </div>
+          <div class="hint" id="poiInfo">Lädt benannte Orte aus OpenStreetMap im Umkreis der Route und markiert sie mit Icons.</div>
+        </details>
+      </section>
+
+      <!-- ===== STIL ===== -->
+      <section class="pane" data-pane="style">
+        <div class="card">
+          <h2>Karten-Stil</h2>
+          <div id="themeGrid" class="themegrid"></div>
+          <div class="setting sr-only-setting"><label>Karten-Stil</label>
+            <select id="mapStyle">
+              <option value="hell" selected>Vlog Hell (Creme)</option>
+              <option value="relief">Relief (70-SW-Look)</option>
+              <option value="atlas">Atlas (Vlog-Weltkarte)</option>
+              <option value="dunkel">Race Dunkel</option>
+              <option value="satellit">Satellit</option>
+              <option value="minimal">Minimal Flach</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Pins &amp; Spitze</h2>
+          <div class="setting"><label>Pin-Stil</label>
+            <select id="pinStyle">
+              <option value="photo">Foto-Pin (weiß)</option>
+              <option value="badge" selected>Foto-Badge + Name</option>
+              <option value="dot">Farbpunkt</option>
+            </select>
+          </div>
+          <div class="setting"><label>Linienspitze</label>
+            <select id="tipStyle">
+              <option value="stop" selected>Wie Stopp-Pins (Foto/Badge)</option>
+              <option value="pin">Pin + Punkt (wie Google Maps)</option>
+              <option value="dot">Nur Punkt</option>
+              <option value="none">Aus</option>
+            </select>
+          </div>
+          <div class="setting"><label>Foto/Logo Spitze</label>
+            <label class="photo-label" id="tipPhotoLbl">Wählen<input type="file" id="tipPhoto" accept="image/*" hidden></label>
+          </div>
+          <div class="setting"><label>Name Spitze</label><input type="text" id="tipLabel" placeholder="z.B. HANNES"></div>
+          <div class="setting"><label>Pin-Einblendung</label>
+            <select id="popStyle">
+              <option value="pop" selected>Pop (Overshoot)</option>
+              <option value="soft">Sanft</option>
+              <option value="instant">Sofort</option>
+            </select>
+          </div>
+          <div class="setting"><label>Pin-Größe</label><input type="range" id="pinScale" min="0.3" max="2" step="0.05" value="1"></div>
+          <div class="setting"><label>Spitzen-Pin-Größe</label><input type="range" id="tipScale" min="0.3" max="2" step="0.05" value="1"></div>
+          <div class="setting"><label>Label-Größe (px)</label><input type="number" id="labelSize" value="14" min="8" max="48"></div>
+          <div class="setting"><label>Schrift (Pins)</label>
+            <select id="pinFont">
+              <option value="system" selected>System Sans</option>
+              <option value="rounded">Rounded</option>
+              <option value="serif">Serif</option>
+              <option value="display">Display (fett)</option>
+              <option value="mono">Mono</option>
+            </select>
+          </div>
+        </div>
+
+        <details class="card">
+          <summary><h2>Farben (Style-Editor)</h2></summary>
+          <div class="colorrow">
+            <label><input type="color" id="ccLand" value="#f3eee5"><span>Land</span></label>
+            <label><input type="color" id="ccWater" value="#c6dbe8"><span>Wasser</span></label>
+            <label><input type="color" id="ccBoundary" value="#d3c4b6"><span>Grenzen</span></label>
+            <label><input type="color" id="ccLabel" value="#6d2e38"><span>Labels</span></label>
+          </div>
+          <div id="palList"></div>
+          <button class="btn ghost full" id="ccReset">Auf Theme zurücksetzen</button>
+          <div class="hint">Paletten anklicken oder Farben einzeln setzen – wirkt auf jeden Karten-Stil.</div>
+        </details>
+
+        <details class="card">
+          <summary><h2>Kartendetails</h2></summary>
+          <div class="setting"><label>Bundesländer-Grenzen</label><input type="checkbox" id="dtStates"></div>
+          <div class="setting"><label>Hauptstraßen</label><input type="checkbox" id="dtRoads"></div>
+          <div class="setting"><label>Bahnlinien</label><input type="checkbox" id="dtRail"></div>
+          <div class="setting"><label>Wälder</label><input type="checkbox" id="dtWood"></div>
+          <div class="setting"><label>Siedlungsflächen</label><input type="checkbox" id="dtUrban"></div>
+          <div class="setting"><label>Parks</label><input type="checkbox" id="dtParks"></div>
+          <div class="setting"><label>Dörfer anzeigen</label><input type="checkbox" id="dtTowns"></div>
+          <div class="setting"><label>MapTiler-Key (optional)</label><input type="text" id="mtKey" placeholder="für HQ-Tiles" autocomplete="off"></div>
+        </details>
+      </section>
+
+      <!-- ===== KAMERA ===== -->
+      <section class="pane" data-pane="camera">
+        <div class="card">
+          <h2>Kamera-Presets</h2>
+          <div class="setting"><label>Vorschlag</label>
+            <select id="camPreset">
+              <option value="" selected>– wählen –</option>
+              <option value="vlog">Vlog Standard (folgend)</option>
+              <option value="cine">Cinematic Schwenk</option>
+              <option value="drone">Drohnenflug</option>
+              <option value="orbit">Übersicht + Orbit</option>
+              <option value="snap70">70-SW: Snap-Zooms + Drift</option>
+            </select>
+          </div>
+          <div class="hint">Presets erzeugen Keyframes in der Timeline unten – dort frei anpassbar. Ohne Keyframes gelten die Regler unten.</div>
+        </div>
+        <div class="card">
+          <h2>Kamera</h2>
+          <div class="setting"><label>Kamera</label>
+            <select id="camMode">
+              <option value="follow" selected>Folgt der Linie</option>
+              <option value="overview">Feste Übersicht</option>
+            </select>
+          </div>
+          <div class="setting"><label>Kamera-Zoom</label><input type="range" id="zoom" min="3" max="13" step="0.1" value="5.6"></div>
+          <div class="setting"><label>Zoom-In an Stopps</label><input type="checkbox" id="stopZoom"></div>
+          <div class="setting"><label>Neigung (Pitch)</label><input type="range" id="pitch" min="0" max="60" step="1" value="0"></div>
+          <div class="setting"><label>Kamera-Glättung</label><input type="range" id="smooth" min="0" max="0.9" step="0.05" value="0.6"></div>
+          <div class="setting"><label>Rotation (°/s)</label><input type="number" id="rotSpeed" value="0" step="0.5" min="-30" max="30"></div>
+          <div class="setting"><label>Übersicht am Ende</label><input type="checkbox" id="endOverview" checked></div>
+        </div>
+        <div class="card">
+          <h2>3D-Terrain</h2>
+          <div class="setting"><label>3D-Terrain</label><input type="checkbox" id="terrain3d"></div>
+          <div class="setting"><label>Terrain-Überhöhung</label><input type="range" id="terrainEx" min="1" max="20" step="0.5" value="1.5"></div>
+        </div>
+      </section>
+
+      <!-- ===== EBENEN ===== -->
+      <section class="pane" data-pane="layers">
+        <div class="card">
+          <h2>Länder hervorheben</h2>
+          <div class="setting"><label>Länder (ISO3)</label><input type="text" id="hlIso" placeholder="DEU, AUT" autocapitalize="characters" autocomplete="off"></div>
+          <div class="setting"><label>Füllfarbe</label><input type="color" id="hlColor" value="#86ccff"></div>
+          <div class="setting"><label>Deckkraft</label><input type="range" id="hlOp" min="0" max="1" step="0.02" value="0.66"></div>
+          <div class="setting"><label>Weiße Kontur + Schatten</label><input type="checkbox" id="hlLine" checked></div>
+          <div class="setting"><label>Einblenden ab (s)</label><input type="number" id="hlT0" value="" step="0.1" min="0" placeholder="immer"></div>
+          <div class="hint">Ländergrenzen: Natural Earth 1:10 Mio. (ISO3 z. B. DEU, FRA, ITA, CHE). Liegt unter den Routen.</div>
+        </div>
+
+        <div class="card">
+          <h2>Zähler-Overlay</h2>
+          <div class="setting"><label>Zähler anzeigen</label><input type="checkbox" id="ovOn"></div>
+          <div class="setting"><label>km am Start</label><input type="number" id="ovKm0" value="0" step="10"></div>
+          <div class="setting"><label>km runden auf</label><input type="number" id="ovRound" value="10" step="1" min="1"></div>
+          <div class="setting"><label>Tag am Start / Ende</label><span class="pair"><input type="number" id="ovDay0" value="" placeholder="–"><input type="number" id="ovDay1" value="" placeholder="–"></span></div>
+          <div class="setting"><label>Text Zeile 2</label><input type="text" id="ovPrefix" value="TAG #"></div>
+          <div class="setting"><label>Position</label><select id="ovPos"><option value="top" selected>oben</option><option value="bottom">unten</option></select></div>
+          <div class="hint">Zählt mit der Linienspitze hoch (Summe aller Routen). Tag wird linear über die Strecke verteilt; leer lassen = keine Tag-Zeile.</div>
+        </div>
+
+        <details class="card">
+          <summary><h2>Features (Regionen &amp; GeoJSON)</h2></summary>
+          <div class="search-row">
+            <input id="featInput" type="search" enterkeyhint="search" autocomplete="off" placeholder="Land/Region suchen (z.B. Bayern) …">
+            <button class="btn" id="featBtn">Suchen</button>
+          </div>
+          <div id="featList"></div>
+          <label class="btn ghost full filebtn">GeoJSON importieren<input id="geojsonInput" type="file" accept=".json,.geojson" hidden></label>
+          <div class="hint">Features erscheinen als Flächen/Linien unter der Route. „Ab (s)“ leer = immer sichtbar, sonst blendet das Feature zu diesem Zeitpunkt animiert ein (Race-Stil: Land leuchtet auf).</div>
+        </details>
+      </section>
+
+      <!-- ===== EXPORT ===== -->
+      <section class="pane" data-pane="export">
+        <div class="card">
+          <h2>Export</h2>
+          <div class="setting"><label>Auflösung</label>
+            <select id="resolution">
+              <option value="1080x1920">1080 × 1920 (9:16)</option>
+              <option value="1080x1350">1080 × 1350 (4:5)</option>
+              <option value="1080x1080">1080 × 1080 (1:1)</option>
+              <option value="1920x1080" selected>1920 × 1080 (16:9)</option>
+              <option value="2560x1440">2560 × 1440</option>
+              <option value="3840x2160">3840 × 2160 (4K)</option>
+              <option value="2160x3840">2160 × 3840 (4K 9:16)</option>
+            </select>
+          </div>
+          <div class="setting"><label>Bildrate</label>
+            <select id="expFps"><option value="30" selected>30 fps</option><option value="25">25 fps</option><option value="60">60 fps</option></select>
+          </div>
+          <div class="setting"><label>Bewegungsunschärfe</label><input type="checkbox" id="expBlur"></div>
+          <div class="setting"><label>Stopp-Positionen (JSON)</label><input type="checkbox" id="expPos"></div>
+          <button class="btn full big" id="mp4Btn">■ MP4 framegenau rendern</button>
+          <div class="hint">Rendert Bild für Bild und wartet jedes Mal, bis alle Kacheln geladen sind: scharf, ohne Ruckler, auch in 4K. Dauert länger als Echtzeit.</div>
+          <button class="btn full ghost" id="recordBtn">● Echtzeit-Aufnahme (WebM)</button>
+          <div class="hint">Export als WebM. Für DaVinci Resolve ggf. umwandeln:<br>
+          <code>ffmpeg -i map.webm -c:v prores_ks -profile:v 3 map.mov</code></div>
+        </div>
+        <div class="card">
+          <h2>Projekt</h2>
+          <div class="btnrow">
+            <button class="btn ghost" id="projSave">Speichern</button>
+            <label class="btn ghost filebtn">Laden<input type="file" id="projLoad" accept=".json" hidden></label>
+          </div>
+          <div class="hint">Speichert Orte, Fotos, Stil, Keyframes als JSON-Datei.</div>
+        </div>
+      </section>
     </div>
-    <div id="tlBody">
-      <div id="tlRuler"></div>
-      <div id="tlTracks"></div>
-      <div id="tlPlayhead"></div>
+  </aside>
+
+  <div id="main">
+    <div id="stage">
+      <div id="mapwrap"><div id="map"></div><canvas id="ovl"></canvas><div id="safezone" aria-hidden="true"><i class="sz-top"></i><i class="sz-bottom"></i><i class="sz-right"></i></div></div>
+      <div id="status" role="status" aria-live="polite"></div>
     </div>
-    <div id="tlInspector"><span class="hint">Kein Keyframe ausgewählt.</span></div>
+    <div id="timeline">
+      <div id="tlHead">
+        <button class="btn round" id="tlPlay" title="Abspielen / Pause (Leertaste)">▶</button>
+        <button class="btn ghost icon" id="previewBtn" title="Von vorn abspielen">⏮</button>
+        <span id="tlTime">0.0 s</span>
+        <label class="dur">Dauer (s) <input type="number" id="totalDur" placeholder="auto" min="1" step="0.5"></label>
+        <button class="btn ghost" id="tlAddCam">＋ Kamera-KF am Playhead</button>
+        <button class="btn ghost" id="tlLineKF">Linie → Keyframes</button>
+        <button class="btn ghost" id="resetBtn">Zurücksetzen</button>
+        <button class="btn ghost icon" id="tlToggle" title="Timeline ein-/ausklappen">▾</button>
+        <span class="hint">Ziehen in Spur/Lineal = Scrubben · ＋ oder Doppelklick in Spur = Keyframe · Raute ziehen = Zeit · Doppelklick auf Raute / Entf = löschen · Pfeiltasten = feinjustieren</span>
+      </div>
+      <div id="tlBody">
+        <div id="tlRuler"></div>
+        <div id="tlTracks"></div>
+        <div id="tlPlayhead"></div>
+      </div>
+      <div id="tlInspector"><span class="hint">Kein Keyframe ausgewählt.</span></div>
+    </div>
   </div>
 </div>
 
 <script src="app.js"></script>
+<script src="ui.js"></script>
 </body>
 </html>

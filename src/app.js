@@ -110,7 +110,7 @@ function tr(s){ return lang === "de" ? s : (EN[s] || s); }
 function applyLang(){
   lang = document.getElementById("uiLang").value || "de";
   document.querySelectorAll("#langSel .lbtn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
-  const sel = "#sidebar h2, #sidebar h1 small, #sidebar .setting > label, " +
+  const sel = ".i18n, #sidebar .colorrow span, #sidebar h2, #sidebar .setting > label, " +
     "#sidebar button:not(.lbtn):not(.del):not(.kfadd), #sidebar option, #sidebar .hint, " +
     "#sidebar label.photo-label, #tlHead label, #tlHead .hint, #tlHead button.ghost";
   document.querySelectorAll(sel).forEach(el => {
@@ -2026,7 +2026,7 @@ document.getElementById("recordBtn").addEventListener("click", async () => {
   if (playing) return;
   await ensureAnim();
   const [w, h] = val("resolution").split("x").map(Number);
-  sizeStage(w, h);
+  sizeStage(w, h); drawOverlay();
   await new Promise(r => setTimeout(r, 600));
 
   const canvas = map.getCanvas();
@@ -2049,23 +2049,28 @@ document.getElementById("recordBtn").addEventListener("click", async () => {
   play(0, () => { recorder.stop(); });
 });
 
+/* Vorschau zeigt immer exakt den Export-Ausschnitt: Die Karte hat die
+   Export-Größe in CSS-Pixeln und wird per transform in die Bühne skaliert.
+   Vorschau: pixelRatio = Bildschirm-Pixel pro Karten-Pixel (scharf + schnell).
+   Export (w,h gesetzt): pixelRatio 1 → Canvas exakt W×H. */
+let stageLock = false;
 function sizeStage(w, h){
   const wrap = document.getElementById("mapwrap");
   const stage = document.getElementById("stage");
-  if (w == null){
-    wrap.style.width = "100%"; wrap.style.height = "100%"; wrap.style.transform = "none";
-  } else {
-    wrap.style.width = w + "px"; wrap.style.height = h + "px";
-    const s = Math.min(stage.clientWidth / w, stage.clientHeight / h);
-    wrap.style.transform = "scale(" + s + ")";
-  }
+  const exportMode = w != null;
+  stageLock = exportMode;
+  if (!exportMode) [w, h] = val("resolution").split("x").map(Number);
+  const pad = exportMode ? 0 : (stage.clientWidth < 600 ? 10 : 24);
+  const sw = Math.max(1, stage.clientWidth - pad * 2), sh = Math.max(1, stage.clientHeight - pad * 2);
+  const s = Math.min(sw / w, sh / h);
+  const x = (stage.clientWidth - w * s) / 2, y = (stage.clientHeight - h * s) / 2;
+  wrap.style.width = w + "px"; wrap.style.height = h + "px";
+  wrap.style.transform = "translate(" + x + "px," + y + "px) scale(" + s + ")";
+  const pr = exportMode ? 1 : Math.min(2, Math.max(0.35, s * (window.devicePixelRatio || 1)));
+  if (Math.abs(map.getPixelRatio() - pr) > 0.01) map.setPixelRatio(pr);
   map.resize();
 }
-window.addEventListener("resize", () => {
-  const wrap = document.getElementById("mapwrap");
-  if (wrap.style.transform === "none" || !wrap.style.transform) map.resize();
-  renderTimeline();
-});
+window.addEventListener("resize", () => { if (!stageLock) sizeStage(null); renderTimeline(); });
 sizeStage(null);
 
 /* Tastatur: Entf = Keyframe löschen, Pfeiltasten = verschieben (Shift = 1 s) */

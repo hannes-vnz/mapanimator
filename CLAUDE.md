@@ -11,6 +11,8 @@ Sprache im Tool und in der Kommunikation: Deutsch.
 ## Aufbau (Stand 26.11.2026)
 - Quellcode in `src/`:
   - `src/index.html` (Markup), `src/style.css`, `src/app.js` (die App, `/* ---------- `-Abschnitte).
+  - `src/ui.js`: Oberfläche (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
+  - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
   - `src/vendor/`: MapLibre GL JS 5.24.1 (+CSS), mp4-muxer 5.2.1.
 - Entwickeln: `python3 -m http.server 8000` → http://localhost:8000/src/ (lädt die Einzeldateien).
 - Bauen: `python3 tools/build.py` (oder `npm run build`) erzeugt die Einzeldatei `index.html` mit allem inline. **`index.html` nie direkt editieren.**
@@ -72,7 +74,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
 6. **Avatar an der Spitze:** rundes Foto mit weißem Ring und Pin. Foto-Spitze gibt es schon, Look angleichen.
 7. **Gesperrte Regionslabels** („A L P E N“, „I R A N“) aus Natural Earth geography_regions (Gebirge, Wüsten, Meere).
 8. **Szenen:** mehrere Szenen pro Projekt, die nacheinander exportiert werden; Projekt als JSON-Datei.
-9. **Formate:**
+9. **Formate:** (erledigt: Buttons 9:16/4:5/1:1/16:9 und Safe-Zone in der Topbar)
    - 9:16, 4:5, 1:1, 16:9 als Buttons.
    - Safe-Zone-Overlay für Shorts/TikTok-UI (nur Vorschau).
 10. **Skript-API** für automatisches Rendern, wie im Tool `~/Kartenvideos/reliefkarte/reliefkarte.html`:
