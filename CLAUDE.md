@@ -9,11 +9,13 @@ Maßstab sind drei Referenzen:
 Sprache im Tool und in der Kommunikation: Deutsch.
 
 ## Aufbau (Stand 26.11.2026)
-- `index.html` ist alles in einer Datei (~1,3 MB):
-  - Script 1: MapLibre GL JS 5.24.1, inline.
-  - Script 2: mp4-muxer 5.2.1, inline.
-  - Script 3: die App (~95 KB, ab `/* ---------- ` Abschnitten).
-- Starten: `python3 -m http.server 8000` → http://localhost:8000. Braucht WebGL + WebCodecs, also Chrome/Edge mit Hardwarebeschleunigung.
+- Quellcode in `src/`:
+  - `src/index.html` (Markup), `src/style.css`, `src/app.js` (die App, `/* ---------- `-Abschnitte).
+  - `src/vendor/`: MapLibre GL JS 5.24.1 (+CSS), mp4-muxer 5.2.1.
+- Entwickeln: `python3 -m http.server 8000` → http://localhost:8000/src/ (lädt die Einzeldateien).
+- Bauen: `python3 tools/build.py` (oder `npm run build`) erzeugt die Einzeldatei `index.html` mit allem inline. **`index.html` nie direkt editieren.**
+- Testen: `npm test` = Build + Playwright-Smoke-Test (`tools/smoke.mjs`: alle Themes, 1 s MP4, keine JS-Fehler). Nutzt das installierte Chrome.
+- Braucht WebGL + WebCodecs, also Chrome/Edge mit Hardwarebeschleunigung.
 - Zentrale Funktionen:
   - Grundkarte: `buildBaseStyle(name)` + `THEMES`
   - Laufzeit-Layer: `addRuntimeLayers()` (Highlight, Features, Routen, Pins)
@@ -48,7 +50,7 @@ Sprache im Tool und in der Kommunikation: Deutsch.
 
 Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
 - Atlas-Stil, Highlight, Zähler, Snap-Preset und MP4 mit Unschärfe laufen ohne JS-Fehler.
-- **Zuerst auf dem Mac prüfen:** Relief-Stil mit echten Kacheln, alle alten Themes nach dem MapLibre-5-Update, WebM-Export, Projekt speichern/laden.
+- Auf dem Mac geprüft (26.11.): alle Themes mit echten Kacheln, MP4 (auch mit Unschärfe), WebM, Speichern/Laden. Behoben: Pin-Bild-Race („image already exists“), 3D-Terrain blieb nach Relief an.
 
 ## Roadmap (Priorität von oben)
 1. **Entwicklungs-Setup:**

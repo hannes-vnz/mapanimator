@@ -22,7 +22,16 @@ Browser-based map animation tool for travel videos: draw routes on a map, animat
 Open `index.html` in a modern browser, or serve the folder:
 
 ```bash
-python -m http.server 8000
+python3 -m http.server 8000
+```
+
+## Development
+
+Source lives in `src/` (`index.html`, `style.css`, `app.js`, `vendor/`). Open http://localhost:8000/src/ while editing, then build the single-file `index.html`:
+
+```bash
+npm install      # once, for the Playwright smoke test
+npm test         # build + smoke test (all themes, 1 s MP4, no JS errors)
 ```
 
 An optional [MapTiler](https://www.maptiler.com/) key can be entered in the app to enable satellite imagery and vector tiles. Without a key the app falls back to free sources. The key stays in your browser. It is not written into saved project files (`.json`), so projects can be shared safely.
