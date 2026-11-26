@@ -291,6 +291,37 @@ body:not(.pro) #tlShots{margin:6px 12px 0;}
 body:not(.pro) #tlShots .shlane{border-radius:7px;}
 body:not(.pro) #tlBody{height:auto;}
 
+/* ---------- Markierungen ---------- */
+#markList{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+.mark{border:1px solid var(--line); border-radius:11px; background:var(--card-2); padding:8px 9px; cursor:pointer;}
+.mark.sel{border-color:var(--accent);}
+.mhead{display:flex; align-items:center; gap:8px;}
+.mhead input[type=color]{width:26px !important; height:26px !important; padding:2px !important; flex:none;}
+.mhead b{flex:1; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.mhead span{font-size:11px; color:var(--faint); font-variant-numeric:tabular-nums; white-space:nowrap;}
+.mhead button{background:none; border:0; color:var(--muted); font-size:15px; padding:2px 5px; border-radius:6px;}
+.mhead button:hover{color:var(--text);}
+.mhead .del:hover{color:var(--danger);}
+.fxrow{display:grid; grid-template-columns:repeat(6,1fr); gap:3px; margin-top:7px;}
+.fxrow button{display:flex; flex-direction:column; align-items:center; gap:1px; padding:4px 0; border:1px solid var(--line); border-radius:7px; background:var(--field); color:var(--faint); font-size:9.5px; font-weight:650;}
+.fxrow button em{font-style:normal; font-size:13px; filter:grayscale(1); opacity:.6;}
+.fxrow button.on{border-color:var(--accent); color:var(--text); background:var(--accent-soft);}
+.fxrow button.on em{filter:none; opacity:1;}
+.medit{margin-top:9px; padding-top:8px; border-top:1px solid var(--line);}
+#markPick.on{border-color:var(--accent); background:var(--accent-soft);}
+#tlMarks{flex:none; max-height:96px; overflow-y:auto;}
+.mrow{display:flex; height:22px; border-bottom:1px solid #222329;}
+.mrow .shlabel{width:104px; min-width:104px; display:flex; align-items:center; gap:5px; padding-left:12px; font-size:10.5px; color:var(--muted); border-right:1px solid var(--line); background:var(--panel); overflow:hidden; white-space:nowrap;}
+.mrow .shlabel i{width:8px; height:8px; border-radius:50%; flex:none;}
+.mrow .shlabel span{overflow:hidden; text-overflow:ellipsis;}
+.mrow .shlane{flex:1; position:relative; background:#121317;}
+.mbar{position:absolute; top:3px; bottom:3px; border-radius:5px; background:color-mix(in srgb, var(--c) 35%, #16181d); border:1px solid color-mix(in srgb, var(--c) 70%, #000); color:#fff; font-size:10px; display:flex; align-items:center; overflow:hidden; white-space:nowrap; cursor:grab; touch-action:none;}
+.mbar span{flex:1; padding:0 6px; overflow:hidden; text-overflow:ellipsis; pointer-events:none;}
+.mbar .eL, .mbar .eR{width:7px; align-self:stretch; cursor:ew-resize; background:rgba(255,255,255,.18); flex:none;}
+.mbar.sel{box-shadow:0 0 0 1.5px var(--accent);}
+body:not(.pro) #tlMarks .shlabel{display:none;}
+body:not(.pro) #tlMarks{margin:4px 12px 0;}
+
 /* ---------- Tempo ---------- */
 .tempo-row{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
 .tempo-row > span{width:52px; flex:none; color:#c9cad1;}
@@ -350,7 +381,7 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
   .tlRow{height:34px;}
   .tlRow .tlabel{width:78px; min-width:78px; padding-left:8px; font-size:10.5px;}
   .tlval{display:none;}
-  #tlShots .shlabel{width:78px; min-width:78px; padding-left:8px;}
+  #tlShots .shlabel, .mrow .shlabel{width:78px; min-width:78px; padding-left:8px;}
   .modes button{font-size:9.5px;}
   .kfdia{width:14px; height:14px; margin:-7px 0 0 -7px;}
   #status{bottom:8px; left:8px; font-size:11.5px;}

@@ -13,6 +13,7 @@ Sprache im Tool und in der Kommunikation: Deutsch.
   - `src/index.html` (Markup), `src/style.css`, `src/app.js` (die App, `/* ---------- `-Abschnitte).
   - `src/models3d.js`: 3D-Modelle an der Spitze (`M3D`, eigene WebGL-Custom-Layer `tip-3d`, prozedurale Low-Poly-Meshes je Verkehrsmittel, Schatten, Flugzeug steigt/landet).
   - `src/camera.js`: Kamera-Abschnitte (`CAM`, Modi follow/still/overview/tripod/orbit, Norden/Fahrtrichtung oben, Vorausschau, Auto-Rauszoomen, Überblendung) + Kamera-Presets. Kamera ist reine Funktion der Zeit (`CAM.at(t)`); Keyframes auf pos/zoom/bearing/pitch haben Vorrang.
+  - `src/marks.js`: Markierungen (`MARKS`, je Markierung eigene Quellen/Ebenen `mk<id>-*`: Füllung, Kontur mit `line-gradient` zum Nachzeichnen, Glühen, Schatten, Puls, Fokus-Maske, `fill-extrusion`), Suche/Land-Klick/„Länder der Route“ (Natural Earth 50m), Balken in der Timeline. Alte `hlIso`/Features werden beim Laden umgewandelt.
   - `src/templates.js`: Looks (`TEMPLATES`, nur Aussehen) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
   - `src/ui.js`: Oberfläche (Einfach/Profi-Modus über `body.pro`, `.adv` = nur Profi), (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
   - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
@@ -71,7 +72,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - „Norden oben“ / „Fahrtrichtung oben“.
    - Kamera-Segmente als Blöcke in der Timeline.
 4. **Whip-Pan-Übergänge** – erledigt (`whipState()` in camera.js, Vorschau per SVG-Filter, MP4 echt verschmiert; nicht im WebM): schneller Schwenk mit starker Richtungsunschärfe, wie der Ein- und Ausstieg in Kamelfamilie.
-5. **Landmarkierungen (GeoLayers-Stil, geolayers.app):**
+5. **Landmarkierungen (GeoLayers-Stil, geolayers.app):** – erledigt (`marks.js`, Tab Ebenen). Offen: Innenglühen (nur Außen-Glow), Seen/Gebirge nur über Nominatim-Suche.
    - Länder, Regionen, Städte, Seen, Gebirge per Suche markieren (Natural Earth / Nominatim-Polygone).
    - Fläche einfärben, Kontur zeichnet sich animiert (Strich „draw-on“), Innenglühen/Schatten, optional 3D-Extrusion.
    - Effekte: einblenden, pulsieren/blinken, Kontur nachzeichnen, Fokus (Rest der Karte abdunkeln).

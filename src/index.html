@@ -285,6 +285,20 @@
       <!-- ===== EBENEN ===== -->
       <section class="pane" data-pane="layers">
         <div class="card">
+          <h2>Markierungen</h2>
+          <div class="search-row">
+            <input id="markInput" type="search" enterkeyhint="search" autocomplete="off" placeholder="Land, Region, Stadt, See, Gebirge …">
+            <button class="btn" id="markBtn">Suchen</button>
+          </div>
+          <div class="btnrow">
+            <button class="btn ghost" id="markPick">👆 Land anklicken</button>
+            <button class="btn ghost" id="markRoute">🧭 Länder der Route</button>
+          </div>
+          <div id="markList"></div>
+          <div class="hint" id="markEmpty">Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.</div>
+          <label class="btn ghost full filebtn adv">GeoJSON importieren<input id="markGeojson" type="file" accept=".json,.geojson" hidden></label>
+        </div>
+        <div hidden>        <div>
           <h2>Länder hervorheben</h2>
           <div class="setting"><label>Länder (ISO3)</label><input type="text" id="hlIso" placeholder="DEU, AUT" autocapitalize="characters" autocomplete="off"></div>
           <div class="setting"><label>Füllfarbe</label><input type="color" id="hlColor" value="#86ccff"></div>
@@ -292,6 +306,17 @@
           <div class="setting"><label>Weiße Kontur + Schatten</label><input type="checkbox" id="hlLine" checked></div>
           <div class="setting"><label>Einblenden ab (s)</label><input type="number" id="hlT0" value="" step="0.1" min="0" placeholder="immer"></div>
           <div class="hint">Ländergrenzen: Natural Earth 1:10 Mio. (ISO3 z. B. DEU, FRA, ITA, CHE). Liegt unter den Routen.</div>
+        <div>
+          <summary><h2>Features (Regionen &amp; GeoJSON)</h2></summary>
+          <div class="search-row">
+            <input id="featInput" type="search" enterkeyhint="search" autocomplete="off" placeholder="Land/Region suchen (z.B. Bayern) …">
+            <button class="btn" id="featBtn">Suchen</button>
+          </div>
+          <div id="featList"></div>
+          <label class="btn ghost full filebtn">GeoJSON importieren<input id="geojsonInput" type="file" accept=".json,.geojson" hidden></label>
+          <div class="hint">Features erscheinen als Flächen/Linien unter der Route. „Ab (s)“ leer = immer sichtbar, sonst blendet das Feature zu diesem Zeitpunkt animiert ein (Race-Stil: Land leuchtet auf).</div>
+        </div>
+</div>
         </div>
 
         <div class="card">
@@ -305,16 +330,6 @@
           <div class="hint">Zählt mit der Linienspitze hoch (Summe aller Routen). Tag wird linear über die Strecke verteilt; leer lassen = keine Tag-Zeile.</div>
         </div>
 
-        <details class="card adv">
-          <summary><h2>Features (Regionen &amp; GeoJSON)</h2></summary>
-          <div class="search-row">
-            <input id="featInput" type="search" enterkeyhint="search" autocomplete="off" placeholder="Land/Region suchen (z.B. Bayern) …">
-            <button class="btn" id="featBtn">Suchen</button>
-          </div>
-          <div id="featList"></div>
-          <label class="btn ghost full filebtn">GeoJSON importieren<input id="geojsonInput" type="file" accept=".json,.geojson" hidden></label>
-          <div class="hint">Features erscheinen als Flächen/Linien unter der Route. „Ab (s)“ leer = immer sichtbar, sonst blendet das Feature zu diesem Zeitpunkt animiert ein (Race-Stil: Land leuchtet auf).</div>
-        </details>
       </section>
 
       <!-- ===== EXPORT ===== -->
@@ -387,6 +402,7 @@
 <script src="app.js"></script>
 <script src="templates.js"></script>
 <script src="camera.js"></script>
+<script src="marks.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

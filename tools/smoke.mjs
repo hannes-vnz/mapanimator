@@ -99,6 +99,16 @@ try {
       return map.getStyle().layers.length + " Layer";
     }, th));
   }
+  await step("Markierungen", () => page.evaluate(async () => {
+    await MARKS.routeCountries();
+    await MARKS.pickAt({ lng: 2.35, lat: 48.85 });
+    const L = MARKS.list();
+    if (L.length < 3) throw new Error("zu wenige Markierungen: " + L.length);
+    L[0].fx.focus = true; L[1].fx.extrude = true; L[1].fx.pulse = true;
+    setPlayhead(timelineTotal() * 0.6, true); await waitIdle(15000);
+    if (!map.getLayer("mk1-fill") || document.querySelectorAll(".mbar").length !== L.length) throw new Error("Ebenen/Balken fehlen");
+    return L.map(m => m.name).join(", ");
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     const a = CAM.at(0.05).c, b = CAM.at(0.6).c;

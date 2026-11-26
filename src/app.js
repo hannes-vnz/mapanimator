@@ -32,7 +32,8 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
+  "Kamera-Presets":"Camera presets","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
+  "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
   "Ein Look setzt nur das Aussehen: Kartenstil, Linie, Spitze, Pins. Kamera und Tempo stellst du im Tab Kamera ein.":"A look only sets the appearance: map style, line, tip, pins. Set camera and pace in the Camera tab.",
   "Jeder Abschnitt gilt bis zum nächsten; Übergänge werden weich überblendet. Blöcke in der Timeline anklicken oder an der Kante ziehen.":"Each shot lasts until the next; transitions blend smoothly. Click blocks in the timeline or drag their edge.","Größe Spitze / 3D-Modell":"Tip / 3D model size","Look":"Look","Gefühl":"Feel","Profi":"Pro",
   "Eine Vorlage setzt Kartenstil, Linie, Spitze, Kamera, Tempo und Format. Deine Orte bleiben. Danach alles frei anpassbar.":"A template sets map style, line, tip, camera, pace and format. Your places stay. Adjust anything afterwards.",
@@ -2339,7 +2340,8 @@ document.getElementById("projSave").addEventListener("click", () => {
     pois,
     customColors,
     tracks,
-    cam: typeof CAM !== "undefined" ? CAM.get() : null
+    cam: typeof CAM !== "undefined" ? CAM.get() : null,
+    marks: typeof MARKS !== "undefined" ? MARKS.get() : []
   };
   const blob = new Blob([JSON.stringify(proj)], { type: "application/json" });
   const a = document.createElement("a");
@@ -2364,6 +2366,7 @@ document.getElementById("projLoad").addEventListener("change", e => {
       tracks = proj.tracks || {};
       ensureTrackKeys();
       if (typeof CAM !== "undefined") CAM.set(proj.cam);
+      if (typeof MARKS !== "undefined") MARKS.set(proj.marks || []);
       customColors = proj.customColors || null;
       pois = proj.pois || [];
       features = [];
