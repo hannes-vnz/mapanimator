@@ -65,12 +65,19 @@ const ASSETS = (() => {
   }
   function lookup(name){ countriesReady(); return ctry && name ? ctry.byName.get(String(name).trim().toLowerCase()) || null : null; }
   const flags = new Map();
+  function euFlag(){                                                         // flagcdn liefert die EU-Flagge ohne CORS → selbst zeichnen
+    const c = document.createElement("canvas"); c.width = 600; c.height = 400; const t = c.getContext("2d");
+    t.fillStyle = "#003399"; t.fillRect(0, 0, 600, 400); t.fillStyle = "#ffcc00";
+    for (let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2, x = 300 + Math.sin(a) * 133, y = 200 - Math.cos(a) * 133; t.beginPath();
+      for (let k = 0; k < 10; k++){ const r = k % 2 ? 9 : 22, b = k / 10 * Math.PI * 2 - Math.PI / 2; t.lineTo(x + Math.cos(b) * r, y + Math.sin(b) * r); } t.closePath(); t.fill(); }
+    return c.toDataURL("image/png");
+  }
   function flagImg(a2){
     if (!a2) return null;
     if (!flags.has(a2)){
       const img = new Image(); img.crossOrigin = "anonymous";
       const job = new Promise(res => { img.onload = () => { res(); drawOverlay(); }; img.onerror = () => res(); });
-      img.src = "https://flagcdn.com/w640/" + a2 + ".png";
+      img.src = a2 === "eu" ? euFlag() : "https://flagcdn.com/w640/" + a2 + ".png";
       flags.set(a2, { img, job });
     }
     const f = flags.get(a2); return f.img.complete && f.img.naturalWidth ? f.img : null;
@@ -179,7 +186,7 @@ const ASSETS = (() => {
       const c = lookup(firstCountry(p)), name = (p.title || (c ? c.name : firstCountry(p)) || "").toUpperCase();
       g.save(); g.globalAlpha = out * Math.min(1, bk * 2.5);
       if (inked < 1) badge(g, cx, cy, R, name, p, 1 - inked, false);
-      if (inked > 0) badge(g, cx, cy, R, name, p, inked, true);
+      if (inked > 0){ if (p.stampStyle === "badge") badge(g, cx, cy, R, name, p, inked, true); else realStamp(g, cx, cy, R * 0.92, firstCountry(p) || name, p, inked, -0.07); }
       g.restore();
     },
 
@@ -676,7 +683,9 @@ const ASSETS = (() => {
       const c = lookup(nm), name = (c ? c.name : nm).toUpperCase(), R = h * 0.17;
       const sx = x + w * (0.13 + (i % 2) * 0.2), sy = y + h * (0.4 + Math.floor(i / 2) * 0.32 + (i % 2) * 0.12);
       g.save(); g.translate(sx, sy); g.rotate(((hash(nm) % 24) - 12) * Math.PI / 180);
-      badge(g, 0, 0, R, name, Object.assign({}, p, { icon: "", badgeColor: "" }), 0.95, true); g.restore();
+      if (p.stampStyle === "badge") badge(g, 0, 0, R, name, Object.assign({}, p, { icon: "", badgeColor: "" }), 0.95, true);
+      else realStamp(g, 0, 0, R * 0.95, nm, { date: "", place: "", mode: i % 2 ? "land" : "air" }, 0.9, 0);
+      g.restore();
     });
   }
   // Konfetti-Flocken in Teamfarbe
@@ -864,6 +873,126 @@ const ASSETS = (() => {
     g.restore();
     const sw = clamp((ld - 0.5) / 0.7);                                                                // Glanz
     if (sw > 0 && sw < 1){ g.save(); rr(g, x, y, w, h, w * 0.04); g.clip(); g.translate(x + w / 2, y + h / 2); g.rotate(0.5); const xx = -w + sw * w * 2; const s2 = g.createLinearGradient(xx - w * 0.15, 0, xx + w * 0.15, 0); s2.addColorStop(0, "rgba(255,255,255,0)"); s2.addColorStop(0.5, "rgba(255,255,255,.35)"); s2.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = s2; g.fillRect(-w * 2, -h, w * 4, h * 2); g.restore(); }
+  }
+
+  /* ---------- Einreisestempel nach echten Vorbildern ----------
+     Aufbau wie die Stempel der Länder: Form, Tintenfarbe, Wörter in Landessprache, Grenzübergang, Datum,
+     Piktogramm für das Verkehrsmittel. Schengen: Rechteck mit EU-Sternenkreis + Ländercode (Einreise = eckig). */
+  const SCHENGEN = { deutschland: "D", frankreich: "F", italien: "I", spanien: "E", portugal: "P", österreich: "A", schweiz: "CH", niederlande: "NL", belgien: "B",
+    luxemburg: "L", dänemark: "DK", schweden: "S", norwegen: "N", finnland: "FIN", island: "IS", polen: "PL", tschechien: "CZ", slowakei: "SK", ungarn: "H",
+    slowenien: "SLO", kroatien: "HR", griechenland: "GR", estland: "EST", lettland: "LV", litauen: "LT", malta: "M", bulgarien: "BG", rumänien: "RO", liechtenstein: "FL" };
+  const REAL = {
+    thailand:   { shape: "rect", ink: "#2c3e9e", top: "IMMIGRATION", word: "ADMITTED", sub: "THAILAND", until: true },
+    vietnam:    { shape: "rect", ink: "#b3262e", top: "VIỆT NAM", word: "NHẬP CẢNH", sub: "CỬA KHẨU", star: true },
+    laos:       { shape: "round", ink: "#4b3a9e", top: "LAO P.D.R.", word: "ARRIVAL", sub: "IMMIGRATION" },
+    kambodscha: { shape: "rect", ink: "#5a2f8a", top: "KINGDOM OF CAMBODIA", word: "ARRIVAL", sub: "IMMIGRATION" },
+    malaysia:   { shape: "rect", ink: "#5b2a86", top: "IMIGRESEN MALAYSIA", word: "MASUK", sub: "PAS LAWATAN" },
+    indonesien: { shape: "oval", ink: "#1e5aa8", top: "IMIGRASI", word: "MASUK", sub: "INDONESIA" },
+    philippinen:{ shape: "rect", ink: "#1f3f99", top: "BUREAU OF IMMIGRATION", word: "ADMITTED", sub: "PHILIPPINES" },
+    myanmar:    { shape: "rect", ink: "#1f5f99", top: "IMMIGRATION", word: "ARRIVAL", sub: "MYANMAR" },
+    singapur:   { shape: "rect", ink: "#c0262d", top: "IMMIGRATION", word: "ARRIVAL", sub: "SINGAPORE" },
+    china:      { shape: "rect", ink: "#c0262d", top: "中国边检", word: "入境 ENTRY", sub: "CHINA IMMIGRATION" },
+    "volksrepublik china": { shape: "rect", ink: "#c0262d", top: "中国边检", word: "入境 ENTRY", sub: "CHINA IMMIGRATION" },
+    japan:      { shape: "sticker", ink: "#2b2b2b", top: "JAPAN", word: "LANDING PERMISSION", sub: "IMMIGRATION SERVICES" },
+    südkorea:   { shape: "sticker", ink: "#2b2b2b", top: "KOREA IMMIGRATION SERVICE", word: "ARRIVAL", sub: "REPUBLIC OF KOREA" },
+    indien:     { shape: "rect", ink: "#2c3e9e", top: "IMMIGRATION", word: "ARRIVAL", sub: "INDIA" },
+    nepal:      { shape: "rect", ink: "#1f3f99", top: "NEPAL IMMIGRATION", word: "ARRIVAL", sub: "VISA ON ARRIVAL" },
+    "sri lanka":{ shape: "rect", ink: "#5a2f8a", top: "DEPARTMENT OF IMMIGRATION", word: "ARRIVAL", sub: "SRI LANKA" },
+    mongolei:   { shape: "round", ink: "#1f5f99", top: "MONGOLIA", word: "ARRIVAL", sub: "IMMIGRATION" },
+    türkei:     { shape: "rect", ink: "#c0262d", top: "TÜRKİYE", word: "GİRİŞ", sub: "POLİS" },
+    georgien:   { shape: "rect", ink: "#c0262d", top: "GEORGIA", word: "ENTRY", sub: "BORDER POLICE" },
+    marokko:    { shape: "oval", ink: "#1e7a46", top: "ROYAUME DU MAROC", word: "ENTRÉE", sub: "SÛRETÉ NATIONALE" },
+    ägypten:    { shape: "round", ink: "#2c3e9e", top: "ARAB REP. OF EGYPT", word: "ARRIVAL", sub: "IMMIGRATION" },
+    "vereinigtes königreich": { shape: "rect", ink: "#2b2b2b", top: "LEAVE TO ENTER", word: "FOR SIX MONTHS", sub: "UK BORDER" },
+    usa:        { shape: "rect", ink: "#2c3e9e", top: "DEPARTMENT OF HOMELAND SECURITY", word: "ADMITTED", sub: "U.S. CUSTOMS AND BORDER PROTECTION", until: true },
+    "vereinigte staaten": { shape: "rect", ink: "#2c3e9e", top: "DEPARTMENT OF HOMELAND SECURITY", word: "ADMITTED", sub: "U.S. CUSTOMS AND BORDER PROTECTION", until: true },
+    kanada:     { shape: "round", ink: "#c0262d", top: "CANADA", word: "ENTRY", sub: "BORDER SERVICES" },
+    mexiko:     { shape: "rect", ink: "#1e7a46", top: "MÉXICO", word: "ENTRADA", sub: "INSTITUTO NACIONAL DE MIGRACIÓN" },
+    peru:       { shape: "rect", ink: "#c0262d", top: "PERÚ", word: "ENTRADA", sub: "MIGRACIONES" },
+    brasilien:  { shape: "rect", ink: "#1e7a46", top: "BRASIL", word: "ENTRADA", sub: "POLÍCIA FEDERAL" },
+    argentinien:{ shape: "rect", ink: "#1f5f99", top: "ARGENTINA", word: "ENTRADA", sub: "MIGRACIONES" },
+    chile:      { shape: "rect", ink: "#1f3f99", top: "CHILE", word: "ENTRADA", sub: "POLICÍA DE INVESTIGACIONES" },
+    kolumbien:  { shape: "rect", ink: "#1f3f99", top: "COLOMBIA", word: "ENTRADA", sub: "MIGRACIÓN" },
+    australien: { shape: "rect", ink: "#1e7a46", top: "AUSTRALIA", word: "ARRIVED", sub: "BORDER FORCE" },
+    neuseeland: { shape: "rect", ink: "#2b2b2b", top: "NEW ZEALAND", word: "ARRIVED", sub: "IMMIGRATION" },
+    albanien:   { shape: "rect", ink: "#c0262d", top: "SHQIPËRI", word: "HYRJE", sub: "POLICIA E KUFIRIT" },
+    kenia:      { shape: "round", ink: "#2c3e9e", top: "REPUBLIC OF KENYA", word: "ENTRY", sub: "IMMIGRATION" },
+    tansania:   { shape: "round", ink: "#1e7a46", top: "TANZANIA", word: "ENTRY", sub: "IMMIGRATION" },
+    südafrika:  { shape: "rect", ink: "#2c3e9e", top: "SOUTH AFRICA", word: "ADMITTED", sub: "HOME AFFAIRS" }
+  };
+  const MODE_ICON = { air: "✈", land: "🚗", sea: "⛴", rail: "🚆", bike: "🚲", foot: "🚶" };
+  function stampSpec(name, p){
+    const c = lookup(name), key = (c ? c.name : name || "").toLowerCase(), sch = SCHENGEN[key];
+    if (sch) return { schengen: sch, shape: "rect", ink: p.inkColor || "#1f3f99", key };
+    const r = REAL[key] || { shape: ["rect", "round", "oval"][hash(key) % 3], ink: ["#2c3e9e", "#c0262d", "#1e7a46", "#5a2f8a"][hash(key) % 4], top: "IMMIGRATION", word: "ARRIVAL", sub: (c ? c.name : name || "").toUpperCase() };
+    return Object.assign({ key }, r, p.inkColor ? { ink: p.inkColor } : {});
+  }
+  const realCache = new Map();
+  function realStampCanvas(name, p, R){
+    const sp = stampSpec(name, p), date = p.date || new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase().replace(/\./g, "");
+    const place = (p.place || "").toUpperCase(), mode = p.mode || "air", key = [name, sp.ink, Math.round(R), date, place, mode].join("|");
+    if (realCache.has(key)) return realCache.get(key);
+    const S = Math.ceil(R * 3), c = document.createElement("canvas"); c.width = c.height = S; const t = c.getContext("2d"), m = S / 2;
+    t.translate(m, m); t.strokeStyle = sp.ink; t.fillStyle = sp.ink; t.textAlign = "center"; t.textBaseline = "middle";
+    const mono = px => "700 " + Math.round(px) + "px 'Courier New',monospace", bold = px => "800 " + Math.round(px) + "px 'Arial Narrow','Helvetica Neue',Arial,sans-serif";
+    const fit = (txt, px, maxW, f = bold) => { t.font = f(px); const w = t.measureText(txt).width; if (w > maxW) t.font = f(px * maxW / w); };
+    const icon = (x, y, s) => { t.save(); t.font = Math.round(s) + "px 'Apple Color Emoji','Segoe UI Emoji',sans-serif"; t.globalCompositeOperation = "source-over"; t.fillText(MODE_ICON[mode] || "✈", x, y); t.restore(); };
+    if (sp.schengen){                                                                   // Schengen: Rechteck, Sternenkreis + Code, Ort, Datum, Piktogramm
+      const w = R * 2.1, h = R * 1.35; t.lineWidth = R * 0.05; t.strokeRect(-w / 2, -h / 2, w, h);
+      const sx = -w * 0.3, sy = -h * 0.12, sr = R * 0.32;
+      for (let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2; t.font = bold(R * 0.11); t.fillText("★", sx + Math.sin(a) * sr, sy - Math.cos(a) * sr); }
+      fit(sp.schengen, R * 0.24, sr * 1.3); t.fillText(sp.schengen, sx, sy);
+      fit(date, R * 0.2, w * 0.5, mono); t.fillText(date, w * 0.18, -h * 0.12);
+      fit(place || "GRENZÜBERGANG", R * 0.15, w * 0.85); t.fillText(place || "GRENZÜBERGANG", 0, h * 0.3);
+      icon(w * 0.36, -h * 0.34, R * 0.2);
+    } else if (sp.shape === "round" || sp.shape === "oval"){
+      const rx = sp.shape === "oval" ? R * 1.25 : R, ry = R * 0.95;
+      t.lineWidth = R * 0.05; t.beginPath(); t.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); t.stroke();
+      t.lineWidth = R * 0.02; t.beginPath(); t.ellipse(0, 0, rx * 0.8, ry * 0.78, 0, 0, Math.PI * 2); t.stroke();
+      const arc = (txt, rad, top) => { t.font = bold(R * 0.14); const tot = Math.min(t.measureText(txt).width / rad, Math.PI * 0.9); let a = top ? -tot / 2 : tot / 2;
+        const sc = tot / (t.measureText(txt).width / rad);
+        for (const ch of txt){ const cw = t.measureText(ch).width / rad * sc; t.save(); t.rotate(top ? a + cw / 2 : a - cw / 2); t.translate(0, top ? -rad : rad); t.fillText(ch, 0, 0); t.restore(); a += top ? cw : -cw; } };
+      arc(sp.top, (rx + ry) / 2 * 0.86, true); arc(place || sp.sub, (rx + ry) / 2 * 0.86, false);
+      fit(sp.word, R * 0.22, rx * 1.3); t.fillText(sp.word, 0, -R * 0.2);
+      fit(date, R * 0.2, rx * 1.3, mono); t.fillText(date, 0, R * 0.08);
+      icon(0, R * 0.36, R * 0.2);
+    } else if (sp.shape === "sticker"){                                                   // Japan/Korea: Aufkleber mit Code
+      const w = R * 2.2, h = R * 1.3; t.fillStyle = "rgba(255,255,255,.9)"; t.fillRect(-w / 2, -h / 2, w, h); t.fillStyle = sp.ink;
+      t.lineWidth = R * 0.02; t.strokeRect(-w / 2, -h / 2, w, h);
+      fit(sp.top, R * 0.14, w * 0.6); t.textAlign = "left"; t.fillText(sp.top, -w * 0.45, -h * 0.34);
+      fit(sp.word, R * 0.18, w * 0.6); t.fillText(sp.word, -w * 0.45, -h * 0.12);
+      fit(date, R * 0.16, w * 0.6, mono); t.fillText(date, -w * 0.45, h * 0.1); fit(place || sp.sub, R * 0.12, w * 0.6); t.fillText(place || sp.sub, -w * 0.45, h * 0.3);
+      let sd = hash(name) + 1; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647, q = R * 0.62, cs = q / 9;
+      for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) if (rnd() > 0.5 || (i < 3 && j < 3) || (i > 5 && j < 3) || (i < 3 && j > 5)) t.fillRect(w * 0.18 + i * cs, -q / 2 + j * cs, cs, cs);
+      t.textAlign = "center";
+    } else {                                                                              // Rechteck (die meisten Länder)
+      const w = R * 2.2, h = R * 1.45; t.lineWidth = R * 0.05; t.strokeRect(-w / 2, -h / 2, w, h); t.lineWidth = R * 0.02; t.strokeRect(-w / 2 + R * 0.07, -h / 2 + R * 0.07, w - R * 0.14, h - R * 0.14);
+      fit(sp.top, R * 0.15, w * 0.8); t.fillText(sp.top, 0, -h * 0.32);
+      t.fillRect(-w * 0.4, -h * 0.2, w * 0.8, R * 0.012);
+      if (sp.star){ t.font = bold(R * 0.16); t.fillText("★", -w * 0.38, h * 0.0); }
+      fit(sp.word, R * 0.24, w * 0.7); t.fillText(sp.word, 0, -h * 0.05);
+      fit(date, R * 0.2, w * 0.7, mono); t.fillText(date, 0, h * 0.14);
+      if (sp.until){ fit("UNTIL ____", R * 0.12, w * 0.5, mono); t.fillText("UNTIL " + (p.until || "______"), 0, h * 0.27); }
+      else { fit(place || sp.sub, R * 0.13, w * 0.7); t.fillText(place || sp.sub, 0, h * 0.29); }
+      icon(w * 0.36, h * 0.0, R * 0.2);
+    }
+    // Pikto einfärben (Emoji → Tinte), dann Druckfehlstellen
+    t.setTransform(1, 0, 0, 1, 0, 0);
+    const d = t.getImageData(0, 0, S, S), px = d.data, ic = parseInt(String(sp.ink).replace("#", ""), 16), ir = ic >> 16 & 255, ig = ic >> 8 & 255, ib = ic & 255;
+    let sd = hash(name + date) + 3; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < px.length; i += 4){
+      if (!px[i + 3]) continue;
+      const lum = (0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / 255;
+      const isWhite = lum > 0.92 && sp.shape === "sticker";
+      if (!isWhite){ const a = px[i + 3] / 255 * (sp.shape === "sticker" ? 1 : Math.min(1, 1.25 - lum * 0.3)); px[i] = ir; px[i + 1] = ig; px[i + 2] = ib; px[i + 3] = a * (rnd() < 0.16 ? 70 : 225); }
+    }
+    t.putImageData(d, 0, 0);
+    if (realCache.size > 120) realCache.clear(); realCache.set(key, c);
+    return c;
+  }
+  function realStamp(g, cx, cy, R, name, p, alpha, rot){
+    const c = realStampCanvas(name, p, R);
+    g.save(); g.globalAlpha *= alpha; g.globalCompositeOperation = "multiply"; g.translate(cx, cy); g.rotate(rot || 0); g.drawImage(c, -c.width / 2, -c.height / 2); g.restore();
   }
 
   /* ---------- Bausteine ---------- */
@@ -1061,7 +1190,7 @@ const ASSETS = (() => {
       const blob = zip(files);
       if (!opt.noDownload) download(blob, nameOf(variants[0]) + (variants.length > 1 ? "_und_weitere" : "") + "_png.zip");
       setStatus(tr("PNG-Sequenz fertig") + " · " + files.length + " " + tr("Bilder"));
-      return { blob, frames: files.length };
+      return { blob, frames: files.length, files, variants, W, H, fps, nameOf };
     }
     setStatus(tr("Greenscreen-MP4 fertig") + (blobs.length > 1 ? " · " + blobs.length + " " + tr("Dateien") : ""));
     return { blob: blobs[0], frames: Math.ceil(a.dur * fps) };
@@ -1077,7 +1206,7 @@ const ASSETS = (() => {
     clock: { text: "14:00", pos: "tl" },
     info: { text: "Thuốc lào ist eine traditionelle vietnamesische Art, Tabak durch eine Wasserpfeife zu rauchen.", pos: "bl" },
     medal: { place: 1, amount: "15.000 €, 10.000 €, 5.000 €", podium: true, word: "PLATZ" },
-    stamp: { country: "Thailand", team: "Hannes", color: "#b06ae8", prev: "Vietnam, Laos", headline: "NEUES LAND ERREICHT", confetti: true },
+    stamp: { country: "Thailand", team: "Hannes", color: "#b06ae8", prev: "Vietnam, Laos", headline: "NEUES LAND ERREICHT", confetti: true, stampStyle: "real", mode: "land", place: "", date: "" },
     teamcard: { color: "#9b59d0", label: "AKTUELLES BUDGET", value: "21,57 €", l1: "ZURÜCKGELEGT", v1: "1.186 KM", l2: "BIS ZUM ZIEL", v2: "2.936 KM", countries: "Vietnam, Laos", slots: 7, pos: "bl" },
     chapter: { text: "Was bisher geschah", color: "#f5c542", pos: "tl" },
     passintro: { surname: "Vincenz", given: "Hannes", nationality: "Weltenbummler", dob: "18 FEB / FEB 00", expiry: "31 DEZ / DEC 35", country0: "Republik der Weltenbummler",
@@ -1097,7 +1226,9 @@ const ASSETS = (() => {
     info: [["text", "Text", "textarea"]],
     medal: [["podium", "Podest (1–3)", "check"], ["place", "Platz (ohne Podest)", "number"], ["amount", "Beträge (Komma: 1., 2., 3.)", "text"], ["word", "Wort", "text"]],
     stamp: [["country", "Neues Land (mehrere mit Komma)", "text"], ["team", "Name im Pass", "text"], ["color", "Teamfarbe", "color"], ["prev", "Schon im Pass (Komma)", "text"], ["headline", "Titel", "text"],
-      ["icon", "Motiv (Emoji, leer = passend zum Land)", "text"], ["badgeColor", "Abzeichen-Farbe", "color"], ["title", "Name auf dem Abzeichen (leer = Land)", "text"], ["confetti", "Konfetti", "check"]],
+      ["icon", "Motiv (Emoji, leer = passend zum Land)", "text"], ["badgeColor", "Abzeichen-Farbe", "color"], ["title", "Name auf dem Abzeichen (leer = Land)", "text"], ["confetti", "Konfetti", "check"],
+      ["stampStyle", "Stempel im Pass", "select", [["real", "echter Einreisestempel"], ["badge", "Abzeichen als Tinte"]]], ["mode", "Einreise per", "select", [["land", "Land/Auto"], ["bike", "Fahrrad"], ["foot", "zu Fuß"], ["air", "Flugzeug"], ["sea", "Schiff"], ["rail", "Zug"]]],
+      ["place", "Grenzübergang (optional)", "text"], ["date", "Datum (leer = heute)", "text"]],
     teamcard: [["img", "Teamfoto", "image"], ["color", "Teamfarbe", "color"], ["label", "Überschrift", "text"], ["value", "Wert", "text"], ["l1", "Kasten 1", "text"], ["v1", "Wert 1", "text"], ["l2", "Kasten 2", "text"], ["v2", "Wert 2", "text"], ["countries", "Besuchte Länder (Komma)", "text"], ["slots", "Plätze gesamt", "number"]],
     chapter: [["text", "Text", "text"], ["color", "Farbe", "color"]],
     passintro: [["photo", "Passfoto", "image"], ["cutout", "Ausgeschnittene Figur (PNG mit transparentem Hintergrund)", "image"], ["stations", "Stationen (Länder oder Kontinente, Komma)", "text"],
@@ -1132,7 +1263,7 @@ const ASSETS = (() => {
         body.innerHTML = FIELDS[a.type].map(f => fld(...f)).join("") + fld("dur", "Dauer (s)", "number") + fld("pos", "Position", "select", POS) +
           `<div class="setting"><label>${tr("Größe")}</label><input type="range" data-k="size" min="0.3" max="2.5" step="0.05"></div>` +
           `<div class="hint">${tr("In der Vorschau ziehen = verschieben, Mausrad = Größe.")} <a href="#" data-a="center">${tr("Zur Mitte")}</a></div>` +
-          `<div class="insexp"><span>${tr("Exportieren")} (${val("asRes")}):</span><button type="button" class="btn" data-a="png">PNG transparent (ZIP)</button><button type="button" class="btn ghost" data-a="green">Greenscreen-MP4</button></div>`;
+          `<div class="insexp"><span>${tr("Exportieren")} (${val("asRes")}):</span><button type="button" class="btn" data-a="png">PNG transparent (ZIP)</button><button type="button" class="btn ghost" data-a="green">Greenscreen-MP4</button><button type="button" class="btn ghost" data-a="dvr">→ DaVinci-Titel</button></div>`;
         body.querySelectorAll("[data-k]").forEach(inp => {
           const k = inp.dataset.k;
           if (inp.type === "checkbox") inp.checked = !!a[k];
@@ -1156,6 +1287,7 @@ const ASSETS = (() => {
         ex("center").addEventListener("click", e => { e.preventDefault(); a.dx = 0; a.dy = 0; });
         ex("png").addEventListener("click", () => exportAsset(a, "png").catch(e => setStatus("Export-Fehler: " + e.message)));
         ex("green").addEventListener("click", () => exportAsset(a, "green").catch(e => setStatus("Export-Fehler: " + e.message)));
+        ex("dvr").addEventListener("click", () => DAVINCI.exportAsset(a).catch(e => setStatus("DaVinci-Export: " + e.message)));
       }
       el.querySelector(".inshead").addEventListener("click", e => { if (e.target.closest("button")) return; sel = sel === a.id ? null : a.id; start = performance.now(); render(); });
       el.querySelector('[data-a="del"]').addEventListener("click", () => { list = list.filter(x => x !== a); if (sel === a.id) sel = null; render(); });
@@ -1174,7 +1306,7 @@ const ASSETS = (() => {
     "Greenscreen-MP4 fertig": "Green-screen MP4 done", "Dateien": "files", "Links ein Asset wählen oder hinzufügen": "Pick or add an asset on the left", "Duplizieren": "Duplicate" });
 
   return {
-    add, list: () => list, ready, exportAsset, types: TYPES, draw: DRAW, select: id => { sel = id; start = performance.now(); render(); },
+    add, list: () => list, ready, exportAsset, types: TYPES, draw: DRAW, realStamp, countriesReady, zip, download, current: () => list.find(x => x.id === sel), select: id => { sel = id; start = performance.now(); render(); },
     get: () => list.map(x => Object.assign({}, x)),
     set: arr => { list = (arr || []).map(x => Object.assign({}, x)); counter = list.reduce((m, x) => Math.max(m, x.id), 0); sel = list.length ? list[0].id : null; render(); }
   };

@@ -228,6 +228,8 @@ try {
     const m = await ASSETS.exportAsset(ASSETS.list().find(a => a.type === "rules"), "green", { noDownload: true, size: "320x180", fps: 5 });
     if (z.frames < 30 || m.blob.size < 3000) throw new Error("Export unvollständig");
     if ((serializeProject().assets || []).length !== Object.keys(ASSETS.types).length) throw new Error("nicht gespeichert");
+    const tf = DAVINCI.textFiles(); if (tf.length !== 6 || !new TextDecoder().decode(tf[0].data).includes("MacroOperator")) throw new Error("DaVinci-Titel fehlen");
+    const lt = DAVINCI.loaderTitle("Test", 10, 1920, 1080); if (!lt.includes("Templates:Edit/Titles/Mapanimator/Test/Test_0000.png")) throw new Error("Loader-Pfad");
     ASSETS.set([]); document.querySelector('[data-tab="route"]').click();
     return Object.keys(ASSETS.types).length + " Typen, ZIP " + z.frames + " Bilder (2 Länder), MP4 " + Math.round(m.blob.size / 1024) + " KB";
   }));
