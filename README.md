@@ -12,7 +12,9 @@ Browser-based map animation tool for travel videos: draw routes on a map, animat
 - After-Effects-style keyframe timeline
 - Routing via OSRM, POIs from OpenStreetMap (Overpass API), place search via Nominatim
 - 3D terrain, several map themes
-- WebM export up to 4K
+- Frame-exact MP4 export (WebCodecs) up to 4K, 9:16 for Shorts, optional motion blur; realtime WebM as fallback
+- Relief theme (multidirectional hillshade, 3D terrain) and Atlas theme (flat world map, country shades)
+- Country highlight (Natural Earth), km/day counter overlay, snap-zoom camera preset
 - German / English UI
 
 ## Run locally
@@ -27,7 +29,7 @@ An optional [MapTiler](https://www.maptiler.com/) key can be entered in the app 
 
 ## Built with
 
-[MapLibre GL JS](https://maplibre.org/) 4.7.1 (BSD-3-Clause, inlined in `index.html`), OpenStreetMap, OpenFreeMap, MapTiler, Esri World Imagery, OSRM, Overpass API.
+[MapLibre GL JS](https://maplibre.org/) 5.24.1 (BSD-3-Clause, inlined in `index.html`), mp4-muxer 5.2.1 (MIT, inlined), Natural Earth (public domain), OpenStreetMap, OpenFreeMap, MapTiler, Esri World Imagery, OSRM, Overpass API.
 
 ## Data & attribution
 
