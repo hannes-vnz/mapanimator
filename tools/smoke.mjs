@@ -134,6 +134,17 @@ try {
     if (SIGNS.list().length !== saved.length || !SIGNS.list()[0].img) throw new Error("Laden verliert Schilder/Fotos");
     return SIGNS.list().length + " Schilder";
   }));
+  await step("Avatar an der Spitze", () => page.evaluate(async () => {
+    const c = document.createElement("canvas"); c.width = 120; c.height = 120; c.getContext("2d").fillRect(0, 0, 120, 120);
+    routes[0].tipPhoto = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = c.toDataURL(); });
+    document.getElementById("tipStyle").value = "avatar"; await drawStatic();
+    setPlayhead(timelineTotal() * 0.5, true);
+    if (!map.hasImage("tipavatar-" + routes[0].id)) throw new Error("Avatar-Bild fehlt");
+    if (map.getPaintProperty("tip-pin", "icon-opacity") !== 1) throw new Error("Avatar unsichtbar");
+    routes[0].tipPhoto = null; await updateTipPin();
+    document.getElementById("tipStyle").value = "model3d";
+    return "ok";
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     const a = CAM.at(0.05).c, b = CAM.at(0.6).c;

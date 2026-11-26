@@ -53,7 +53,7 @@ const EN = {
   // Labels
   "Linienfarbe":"Line color","Weiße Kontur":"White outline","Anreise per":"Arrive by","Standard":"Default",
   "Auto":"Car","Laufen":"Running","Reiten":"Horse riding","Ski":"Skiing","Wohnwagen":"Caravan","LKW":"Truck","Seilbahn":"Cable car","Sessellift":"Chairlift","Kreuzfahrt":"Cruise ship","Kajak":"Kayak","Ballon":"Hot-air balloon","Gleitschirm":"Paraglider","Zu Fuß":"On foot","Land":"Land","Schiene & Seil":"Rail & cable","Wasser":"Water","Luft":"Air","Alle Verkehrsmittel":"All transports","Camper":"Camper van","Motorrad":"Motorbike","Segelboot":"Sailboat","Heli":"Helicopter","Tempo dieser Etappe":"Speed of this leg",
-  "3D-Modell (Verkehrsmittel)":"3D model (transport)","Symbol (Verkehrsmittel)":"Icon (transport)","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
+  "3D-Modell (Verkehrsmittel)":"3D model (transport)","Avatar (rundes Foto)":"Avatar (round photo)","Foto/Avatar Spitze":"Tip photo / avatar","Name unter Avatar":"Name below avatar","Symbol (Verkehrsmittel)":"Icon (transport)","Fahrrad":"Bicycle","Zu Fuß":"On foot","Bus":"Bus","Zug":"Train","Fähre":"Ferry","Flug":"Flight",
   "Standard-Fortbewegung":"Default travel mode","Linienbreite":"Line width","Linienstil":"Line style","Fortbewegung":"Travel mode",
   "Sekunden pro Etappe":"Seconds per leg","Pause am Stopp (s)":"Pause at stop (s)",
   "Konstante Geschwindigkeit":"Constant speed","Tempo nach Bildschirm-Strecke":"Pace by on-screen distance","Kamera":"Camera","Kamera-Zoom":"Camera zoom",
@@ -752,11 +752,44 @@ async function makeModeIcon(rt, mode){
   if (map.hasImage(name)) map.removeImage(name);
   map.addImage(name, bmp, { pixelRatio: 2 });
 }
+/* Avatar an der Spitze (Kamelfamilie-Look): rundes Foto, dicker weißer Ring,
+   kleine Spitze nach unten, Schatten; optional Name-Tag darunter. Ohne Foto → Marker. */
+async function makeAvatarIcon(rt){
+  if (!rt.tipPhoto) return buildPinImage({ id: "tipav" + rt.id, name: "", color: rt.color, photo: null }, "marker");
+  const S = 220, R = 82, ring = 13, cx = S / 2, cy = 96;
+  const label = (rt.tipLabel || "").toUpperCase();
+  const c = document.createElement("canvas"); c.width = S; c.height = 214;   // Unterkante = Pin-Spitze = Position
+  const g = c.getContext("2d");
+  g.save();
+  g.shadowColor = "rgba(0,0,0,.42)"; g.shadowBlur = 18; g.shadowOffsetY = 7;
+  g.fillStyle = "#ffffff";
+  g.beginPath(); g.arc(cx, cy, R + ring, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.moveTo(cx - 20, cy + R + ring - 8); g.lineTo(cx + 20, cy + R + ring - 8); g.lineTo(cx, cy + R + ring + 22); g.closePath(); g.fill();
+  g.restore();
+  g.save(); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
+  const img = rt.tipPhoto, k = Math.max(R * 2 / img.width, R * 2 / img.height);
+  g.drawImage(img, cx - img.width * k / 2, cy - img.height * k / 2, img.width * k, img.height * k);
+  g.restore();
+  g.lineWidth = 4; g.strokeStyle = rt.color; g.beginPath(); g.arc(cx, cy, R + ring - 2, 0, Math.PI * 2); g.stroke();
+  if (label){
+    g.font = "800 26px " + (FONT_STACKS[val("pinFont")] || FONT_STACKS.system);
+    const tw = Math.min(g.measureText(label).width, 190), bw = tw + 30, bh = 38, by = cy + R - 22;   // Name über dem unteren Fotorand
+    g.fillStyle = rt.color; roundRect(g, cx - bw / 2, by, bw, bh, 12); g.fill();
+    g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(label, cx, by + bh / 2 + 1, 190);
+  }
+  const name = "tipavatar-" + rt.id;
+  const bmp = await createImageBitmap(c);
+  if (map.hasImage(name)) map.removeImage(name);
+  map.addImage(name, bmp, { pixelRatio: 1.25 });          // ≈ 16 % der kurzen Bildseite bei 1080 px
+  return name;
+}
 async function updateTipPin(){
   if (!map.getLayer("tip-pin")) return;
   const ts = val("tipStyle");
   for (const rt of routes){
-    if (ts === "stop"){
+    if (ts === "avatar"){
+      rt._tipIcon = await makeAvatarIcon(rt);
+    } else if (ts === "stop"){
       const style = val("pinStyle") === "dot" ? "photo" : val("pinStyle");
       rt._tipIcon = await buildPinImage(
         { id: "tip" + rt.id, name: rt.tipLabel || rt.name || "ON TOUR", color: rt.color, photo: rt.tipPhoto }, style);
@@ -767,7 +800,7 @@ async function updateTipPin(){
   }
   if (ts === "mode") for (const rt of routes) for (const k of Object.keys(MODES)) await makeModeIcon(rt, k);
   map.setLayoutProperty("tip-pin", "icon-anchor", ts === "mode" ? "center" : "bottom");
-  map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" || ts === "mode" ? [0, 0] : [0, -6]);
+  map.setLayoutProperty("tip-pin", "icon-offset", ts === "stop" || ts === "mode" || ts === "avatar" ? [0, 0] : [0, -6]);
   map.setLayoutProperty("tip-pin", "icon-size", num("tipScale"));
 }
 document.getElementById("tipPhoto").addEventListener("change", e => {
@@ -776,6 +809,7 @@ document.getElementById("tipPhoto").addEventListener("change", e => {
   const img = new Image();
   img.onload = () => {
     R().tipPhoto = img;
+    if (!["avatar", "stop"].includes(val("tipStyle"))) document.getElementById("tipStyle").value = "avatar";   // Foto gewählt → Avatar zeigen
     const lbl = document.getElementById("tipPhotoLbl");
     lbl.classList.add("has-photo");
     lbl.childNodes[0].textContent = "Foto ✓";
@@ -1671,7 +1705,7 @@ function renderAt(t, live){
   map.setPaintProperty("tip-dot", "circle-opacity", dotOn ? 1 : 0);
   map.setPaintProperty("tip-dot", "circle-stroke-opacity", dotOn ? 1 : 0);
   if (map.getLayer("tip-pin"))
-    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop" || tipStyle === "mode") && anyTip ? 1 : 0);
+    map.setPaintProperty("tip-pin", "icon-opacity", (tipStyle === "pin" || tipStyle === "stop" || tipStyle === "mode" || tipStyle === "avatar") && anyTip ? 1 : 0);
   M3D.update(models, t);
 
   // Stopps (pro Route, beim Überfahren)

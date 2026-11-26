@@ -88,7 +88,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
    - Freie Labels oder Fotokarten auf der Karte.
    - Anzeige: immer, wenn passiert, oder Zeitfenster; optional mit Pause.
    - Größenregler.
-8. **Avatar an der Spitze:** rundes Foto mit weißem Ring und Pin. Foto-Spitze gibt es schon, Look angleichen.
+8. **Avatar an der Spitze:** – erledigt (Spitzen-Stil `avatar`, `makeAvatarIcon()`; Foto wählen schaltet automatisch auf Avatar; ohne Foto → Marker). rundes Foto mit weißem Ring und Pin. Foto-Spitze gibt es schon, Look angleichen.
 9. **Gesperrte Regionslabels** („A L P E N“, „I R A N“) aus Natural Earth geography_regions (Gebirge, Wüsten, Meere).
 10. **Szenen:** mehrere Szenen pro Projekt, die nacheinander exportiert werden; Projekt als JSON-Datei.
 11. **Formate:** (erledigt: Buttons 9:16/4:5/1:1/16:9 und Safe-Zone in der Topbar)

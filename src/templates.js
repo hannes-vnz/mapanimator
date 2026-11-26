@@ -7,7 +7,7 @@
 const TEMPLATES = [
   { id: "vlog", name: "Vlog-Atlas", sub: "Kamelfamilie: Länder-Töne, rote Linie", icon: "🐪", bg: ["#e7b9a3", "#5b78c2"],
     set: { mapStyle: "atlas", lineColor: "#e3262b", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
-           tipStyle: "stop", pinStyle: "dot", popStyle: "pop", pinFont: "display" } },
+           tipStyle: "avatar", pinStyle: "dot", popStyle: "pop", pinFont: "display" } },
   { id: "relief", name: "3D-Relief", sub: "70 Sekunden Wiki: Berge, Snap-Look", icon: "⛰️", bg: ["#97a3b9", "#121d38"],
     set: { mapStyle: "relief", lineColor: "#dc2828", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: false,
            tipStyle: "dot", pinStyle: "dot", pinFont: "display", labelSize: 18 } },
