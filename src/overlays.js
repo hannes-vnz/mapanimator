@@ -289,8 +289,8 @@ const OVL = (() => {
     g.translate(x, y + big); g.scale(pop, pop);
     g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic";
     const num1 = String(k0 + n); g.fillText(num1, 0, 0);
-    const nw = g.measureText(num1).width;
-    g.font = font(small); g.fillText(word, nw + small * 0.4, -big * 0.12);
+    const nm = g.measureText(num1), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
+    g.font = font(small); g.fillText(word, nw + small * 0.75, 0);          // Wort auf der Grundlinie, deutlich neben der Zahl
     g.restore();
     // neuestes Land als Chip darunter (blendet nach 2 s aus)
     if (last && since < 2.2){

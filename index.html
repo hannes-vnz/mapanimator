@@ -8228,8 +8228,8 @@ const OVL = (() => {
     g.translate(x, y + big); g.scale(pop, pop);
     g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic";
     const num1 = String(k0 + n); g.fillText(num1, 0, 0);
-    const nw = g.measureText(num1).width;
-    g.font = font(small); g.fillText(word, nw + small * 0.4, -big * 0.12);
+    const nm = g.measureText(num1), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
+    g.font = font(small); g.fillText(word, nw + small * 0.75, 0);          // Wort auf der Grundlinie, deutlich neben der Zahl
     g.restore();
     // neuestes Land als Chip darunter (blendet nach 2 s aus)
     if (last && since < 2.2){
@@ -8429,7 +8429,9 @@ const ASSETS = (() => {
     clock:      { icon: "⏱", name: "Uhrzeit-Chip", dur: 3 },
     info:       { icon: "ⓘ", name: "Info-Box", dur: 5 },
     medal:      { icon: "🥇", name: "Platzierung", dur: 4 },
-    stamp:      { icon: "🛂", name: "Reisepass-Stempel", dur: 3.6 },
+    stamp:      { icon: "🛂", name: "Reisepass (Neues Land)", dur: 5 },
+    teamcard:   { icon: "👥", name: "Team-Status", dur: 5 },
+    chapter:    { icon: "⏩", name: "Kapitel-Chip", dur: 3 },
     flag:       { icon: "🏳️", name: "Flagge (weht)", dur: 3.2 },
     challenge:  { icon: "📣", name: "Challenge-Banner", dur: 4.5 },
     flags:      { icon: "🎌", name: "Flaggen-Sammlung", dur: 7 }
@@ -8546,68 +8548,103 @@ const ASSETS = (() => {
       g.restore();
     },
 
+    /* Reisepass wie THE RACE („Neues Land erreicht“): Titel wischt rein, Konfetti in Teamfarbe,
+       Länder-Abzeichen ploppt auf, aufgeklappter Pass mit Teamname + alten Stempeln kommt dazu,
+       Abzeichen fliegt auf die rechte Seite und wird zum Tintenstempel. */
     stamp(g, W, H, p, lt, dur){
-      const u = Math.min(W, H) * (p.size || 1), c = lookup(p.country), img = c && flagImg(c.a2);
-      const pw = Math.min(W * 0.84, u * 0.86), ph = Math.min(pw * 1.25, H * 0.78);
-      const inK = easeOut(clamp(lt / 0.45)), outK = easeIn(clamp((lt - (dur - 0.45)) / 0.45));
-      const shake = lt > 0.95 && lt < 1.2 ? Math.sin(lt * 90) * u * 0.008 * (1.2 - lt) / 0.25 : 0;
-      const x0 = (W - pw) / 2, y0 = anchorY(p, H, ph) + (1 - inK) * H * 0.9 + outK * H * 0.9 + shake;
-      g.save(); g.translate(W / 2, y0 + ph / 2); g.rotate((-2.5 + (1 - inK) * 6) * Math.PI / 180); g.translate(-W / 2, -(y0 + ph / 2));
-      // Seite
-      g.save(); g.shadowColor = "rgba(0,0,0,.4)"; g.shadowBlur = u * 0.04; g.shadowOffsetY = u * 0.01;
-      g.fillStyle = "#f2ead6"; rr(g, x0, y0, pw, ph, u * 0.018); g.fill(); g.restore();
-      g.save(); rr(g, x0, y0, pw, ph, u * 0.018); g.clip();
-      g.strokeStyle = "rgba(60,110,140,0.13)"; g.lineWidth = 1.2;                     // Guilloche-Muster
-      for (let k = 0; k < 26; k++){ g.beginPath(); for (let x = 0; x <= pw; x += 6){ const y = y0 + ph * (k + 0.5) / 26 + Math.sin(x / pw * Math.PI * 6 + k * 0.7) * ph * 0.012; x ? g.lineTo(x0 + x, y) : g.moveTo(x0 + x, y); } g.stroke(); }
-      g.fillStyle = "rgba(60,60,60,0.45)"; g.font = MONO(u * 0.022); g.textAlign = "left"; g.textBaseline = "top";
-      g.fillText("VISA · VISAS · ENTRIES", x0 + u * 0.035, y0 + u * 0.03); g.textAlign = "right"; g.fillText(String(p.page || 7), x0 + pw - u * 0.035, y0 + u * 0.03);
-      // alte Stempel (blass)
-      const seed = hash(p.country || "x");
-      for (let k = 0; k < 4; k++){
-        const hx = x0 + pw * (0.2 + ((seed >> (k * 3)) % 7) / 10), hy = y0 + ph * (0.18 + k * 0.2), r = u * (0.07 + ((seed >> k) % 3) * 0.015);
-        g.save(); g.translate(hx, hy); g.rotate(((seed >> (k * 2)) % 40 - 20) * Math.PI / 180); g.globalAlpha = 0.2;
-        g.strokeStyle = STAMP_INK[(seed + k) % STAMP_INK.length]; g.lineWidth = u * 0.005;
-        if (k % 2){ g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(0, 0, r * 0.8, 0, Math.PI * 2); g.stroke(); }
-        else { rr(g, -r * 1.3, -r * 0.7, r * 2.6, r * 1.4, r * 0.15); g.stroke(); }
+      const u = Math.min(W, H) * (p.size || 1), team = p.color || "#b06ae8";
+      const out = 1 - easeIn(clamp((lt - (dur - 0.45)) / 0.45));
+      const pw = Math.min(W * 0.66, u * 1.05), ph = pw * 0.6, px = (W - pw) / 2, py = H * 0.56 - ph / 2;
+      const shake = lt > 2.0 && lt < 2.25 ? Math.sin(lt * 120) * u * 0.006 * (2.25 - lt) / 0.25 : 0;
+      // Konfetti
+      if (p.confetti !== false) flakes(g, W, H, u, lt, team, out, hash(p.country || "x"));
+      // Titel (leicht gebogen, wischt von links rein)
+      const hk = clamp(lt / 0.5), hOut = 1 - clamp((lt - 2.0) / 0.4);
+      if (hk > 0 && hOut > 0){
+        const txt = (p.headline || "NEUES LAND ERREICHT").toUpperCase();
+        g.save(); g.globalAlpha = out * hOut; g.font = CF(u * 0.06, 900); g.textAlign = "center"; g.textBaseline = "middle";
+        const tw = g.measureText(txt).width + txt.length * u * 0.006, cx = W / 2, cy = py - u * 0.07, bend = u * 0.04;
+        g.beginPath(); g.rect(cx - tw / 2 - u * 0.05, cy - u * 0.2, (tw + u * 0.1) * easeOut(hk), u * 0.4); g.clip();
+        let x = cx - tw / 2;
+        for (const ch of txt){
+          const w = g.measureText(ch).width, f = (x + w / 2 - cx) / (tw / 2), y = cy + bend * f * f - bend * 0.5;
+          g.save(); g.translate(x + w / 2, y); g.rotate(f * 0.08);
+          g.fillStyle = team; g.fillText(ch, u * 0.004, u * 0.005); g.fillStyle = "#ffffff"; g.fillText(ch, 0, 0); g.restore();
+          x += w + u * 0.006;
+        }
+        g.restore();
+      }
+      // Pass
+      const pk = easeOut(clamp((lt - 1.05) / 0.4));
+      if (pk > 0){
+        g.save(); g.globalAlpha = pk * out; g.translate(W / 2 + shake, py + ph / 2); g.scale(0.92 + 0.08 * pk, 0.92 + 0.08 * pk); g.translate(-W / 2, -(py + ph / 2));
+        passport(g, px, py, pw, ph, u, p, team);
+        g.restore();
+      }
+      // Abzeichen: Mitte → rechte Seite, dann Tinte
+      const bk = clamp((lt - 0.25) / 0.4); if (bk <= 0) return;
+      const mk = easeInOut(clamp((lt - 1.5) / 0.5)), inked = clamp((lt - 2.0) / 0.2);
+      const R0 = u * 0.17, R1 = ph * 0.2, R = (R0 + (R1 - R0) * mk) * (mk > 0 ? 1 : backOut(bk));
+      const x0 = W / 2, y0 = py + ph * 0.45, x1 = px + pw * 0.76 + shake, y1 = py + ph * 0.52;
+      const cx = x0 + (x1 - x0) * mk, cy = y0 + (y1 - y0) * mk;
+      const c = lookup(firstCountry(p)), name = (p.title || (c ? c.name : firstCountry(p)) || "").toUpperCase();
+      g.save(); g.globalAlpha = out * Math.min(1, bk * 2.5);
+      if (inked < 1) badge(g, cx, cy, R, name, p, 1 - inked, false);
+      if (inked > 0) badge(g, cx, cy, R, name, p, inked, true);
+      g.restore();
+    },
+
+    teamcard(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#9b59d0";
+      const cw = u * 0.62, ch = u * 0.42, [x, y] = place(p, W, H, cw, ch, "bl");
+      const k = easeOut(clamp(lt / 0.4)), outK = easeIn(clamp((lt - (dur - 0.35)) / 0.35));
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate((1 - k) * -u * 0.2 - outK * u * 0.2, 0);
+      rcard(g, x, y, cw, ch, u * 0.03, u);
+      const r = ch * 0.2, ax = x + u * 0.03 + r, ay = y + u * 0.03 + r;          // Teamfoto
+      g.save(); g.beginPath(); g.arc(ax, ay, r, 0, Math.PI * 2); g.fillStyle = col; g.fill();
+      g.beginPath(); g.arc(ax, ay, r * 0.88, 0, Math.PI * 2); g.clip();
+      const img = userImg(p.img);
+      if (img){ const s = Math.max(2 * r / img.naturalWidth, 2 * r / img.naturalHeight); g.drawImage(img, ax - img.naturalWidth * s / 2, ay - img.naturalHeight * s / 2, img.naturalWidth * s, img.naturalHeight * s); }
+      else { g.fillStyle = "#2b2c31"; g.fillRect(ax - r, ay - r, 2 * r, 2 * r); picto(g, "👥", ax, ay, r * 1.1, "#ffffff"); }
+      g.restore();
+      const lx = ax + r + u * 0.03, lw = x + cw - u * 0.03 - lx;
+      g.fillStyle = "#fff"; g.font = CF(u * 0.03, 800); g.textAlign = "left"; g.textBaseline = "middle";
+      coins(g, lx + u * 0.012, ay - r * 0.45, u * 0.01, "#fff"); g.fillText((p.label || "AKTUELLES BUDGET").toUpperCase(), lx + u * 0.035, ay - r * 0.45);
+      const vk = backOut(clamp((lt - 0.35) / 0.35));
+      if (vk > 0){
+        g.save(); g.translate(lx + lw / 2, ay + r * 0.35); g.scale(vk, vk);
+        g.fillStyle = col; rr(g, -lw / 2, -u * 0.032, lw, u * 0.064, u * 0.032); g.fill();
+        g.fillStyle = "#fff"; g.font = CF(u * 0.045, 900); g.textAlign = "center"; g.fillText(p.value || "21,57 €", 0, u * 0.002); g.restore();
+      }
+      const by = ay + r + u * 0.02, bw = (cw - u * 0.08) / 2, bh = u * 0.1;        // zwei Werte-Kästen
+      [[p.l1 || "ZURÜCKGELEGT", p.v1 || "1.186 KM"], [p.l2 || "BIS ZUM ZIEL", p.v2 || "2.936 KM"]].forEach(([l, v], i) => {
+        const bx = x + u * 0.03 + i * (bw + u * 0.02), kk = easeOut(clamp((lt - 0.5 - i * 0.1) / 0.3)); if (kk <= 0) return;
+        g.save(); g.globalAlpha *= kk; g.fillStyle = hexA(col, 0.35); rr(g, bx, by, bw, bh, u * 0.018); g.fill();
+        g.fillStyle = "#fff"; g.font = CF(u * 0.022, 800); g.textAlign = "center"; g.fillText(l.toUpperCase(), bx + bw / 2, by + bh * 0.28);
+        g.fillStyle = hexA("#000000", 0.35); rr(g, bx + bw * 0.12, by + bh * 0.48, bw * 0.76, bh * 0.4, bh * 0.2); g.fill();
+        g.fillStyle = "#fff"; g.font = CF(u * 0.03, 900); g.fillText(v, bx + bw / 2, by + bh * 0.69); g.restore();
+      });
+      const list = String(p.countries || "").split(",").map(s => s.trim()).filter(Boolean), slots = Math.max(list.length, +p.slots || 7);
+      const fr = Math.min(u * 0.022, (cw - u * 0.08) / slots / 2.4), fy = y + ch - u * 0.045, fx0 = x + u * 0.04 + fr;
+      for (let i = 0; i < slots; i++){
+        const fx = fx0 + i * fr * 2.5, kk = backOut(clamp((lt - 0.7 - i * 0.08) / 0.3)); if (kk <= 0) continue;
+        g.save(); g.translate(fx, fy); g.scale(kk, kk);
+        if (i < list.length){ const cc = lookup(list[i]); flagCircle(g, cc && flagImg(cc.a2), 0, 0, fr, null); }
+        else { g.fillStyle = hexA(col, 0.45); g.beginPath(); g.arc(0, 0, fr * 0.85, 0, Math.PI * 2); g.fill(); }
         g.restore();
       }
       g.restore();
-      // neuer Stempel: schwebt groß und blass, knallt dann drauf
-      const sk = clamp((lt - 0.55) / 0.4);
-      if (sk > 0){
-        const ink = p.color || STAMP_INK[seed % STAMP_INK.length], R = u * 0.2;
-        const s = 1 + 1.6 * (1 - easeIn(sk)), a = sk < 1 ? 0.25 + 0.4 * sk : 1;
-        const sc = document.createElement("canvas"); sc.width = sc.height = Math.ceil(R * 2.8);
-        const sg = sc.getContext("2d"), m = sc.width / 2;
-        sg.translate(m, m); sg.rotate((((seed >> 5) % 24) - 12) * Math.PI / 180);
-        sg.strokeStyle = ink; sg.fillStyle = ink; sg.textAlign = "center"; sg.textBaseline = "middle";
-        const name = ((p.title || (c ? c.name : p.country)) || "").toUpperCase(), kind = (p.kind || "ENTRY").toUpperCase(), date = p.date || new Date().toLocaleDateString("de-DE");
-        const shape = p.shape || ["round", "rect", "oval"][seed % 3];
-        if (shape === "round"){
-          sg.lineWidth = R * 0.06; sg.beginPath(); sg.arc(0, 0, R, 0, Math.PI * 2); sg.stroke();
-          sg.lineWidth = R * 0.025; sg.beginPath(); sg.arc(0, 0, R * 0.72, 0, Math.PI * 2); sg.stroke();
-          const arcText = (txt, rad, top) => {                    // Text auf dem Bogen: oben im Uhrzeigersinn, unten lesbar von links nach rechts
-            sg.font = F(R * 0.16); const total = sg.measureText(txt).width / rad; let ang = top ? -total / 2 : total / 2;
-            for (const ch of txt){ const w = sg.measureText(ch).width / rad; sg.save(); sg.rotate(top ? ang + w / 2 : ang - w / 2); sg.translate(0, top ? -rad : rad); sg.fillText(ch, 0, 0); sg.restore(); ang += top ? w : -w; } };
-          arcText(name.length > 18 ? name.slice(0, 18) : name, R * 0.86, true); arcText("★ " + kind + " ★", R * 0.86, false);
-          if (img){ const fw = R * 0.62, fh = fw * img.naturalHeight / img.naturalWidth; sg.globalAlpha = 0.85; sg.drawImage(img, -fw / 2, -fh / 2 - R * 0.12, fw, fh); sg.globalAlpha = 1; }
-          sg.font = MONO(R * 0.14); sg.fillText(date, 0, R * 0.36);
-        } else {
-          const w = shape === "oval" ? R * 2.3 : R * 2.2, h = R * 1.3;
-          sg.lineWidth = R * 0.06;
-          if (shape === "oval"){ sg.beginPath(); sg.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2); sg.stroke(); sg.lineWidth = R * 0.025; sg.beginPath(); sg.ellipse(0, 0, w / 2 * 0.88, h / 2 * 0.82, 0, 0, Math.PI * 2); sg.stroke(); }
-          else { rr(sg, -w / 2, -h / 2, w, h, R * 0.08); sg.stroke(); sg.lineWidth = R * 0.025; rr(sg, -w / 2 + R * 0.08, -h / 2 + R * 0.08, w - R * 0.16, h - R * 0.16, R * 0.05); sg.stroke(); }
-          sg.font = F(R * 0.24); sg.fillText(name, 0, -h * 0.16, w * 0.8);
-          sg.font = MONO(R * 0.13); sg.fillText("✈ " + kind + " · " + date, 0, h * 0.17, w * 0.85);
-        }
-        sg.setTransform(1, 0, 0, 1, 0, 0);
-        sg.globalCompositeOperation = "destination-out";                  // Druckfehlstellen
-        let sd = seed; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-        for (let i = 0; i < 500; i++){ sg.globalAlpha = 0.2 + rnd() * 0.7; sg.beginPath(); sg.arc(rnd() * sc.width, rnd() * sc.height, 0.5 + rnd() * R * 0.02, 0, Math.PI * 2); sg.fill(); }
-        const cx = x0 + pw * 0.56, cy = y0 + ph * 0.52;
-        g.save(); g.globalAlpha = a; g.translate(cx, cy); g.scale(s, s); g.globalCompositeOperation = "multiply";
-        g.drawImage(sc, -m, -m); g.restore();
-      }
+    },
+
+    chapter(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), txt = p.text || "Was bisher geschah";
+      g.font = CF(u * 0.042, 800); const ph = u * 0.07, pw = g.measureText(txt).width + ph * 1.5, [x, y] = place(p, W, H, pw, ph, "tl");
+      const k = easeOut(clamp(lt / 0.35)), outK = easeIn(clamp((lt - (dur - 0.3)) / 0.3));
+      g.save(); g.globalAlpha = k * (1 - outK); g.translate((1 - k) * -u * 0.12, 0);
+      g.fillStyle = "rgba(14,15,18,.72)"; rr(g, x, y, pw, ph, ph / 2); g.fill();
+      const r = ph * 0.32, cx = x + ph * 0.5, cy = y + ph / 2; g.fillStyle = p.color || "#f5c542"; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "#15171c"; for (const dx of [-r * 0.42, r * 0.12]){ g.beginPath(); g.moveTo(cx + dx, cy - r * 0.4); g.lineTo(cx + dx + r * 0.5, cy); g.lineTo(cx + dx, cy + r * 0.4); g.closePath(); g.fill(); }
+      g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(txt, x + ph * 0.95, cy + u * 0.003);
       g.restore();
     },
 
@@ -8679,8 +8716,8 @@ const ASSETS = (() => {
       const pop = since < 0.4 ? 1 + 0.25 * Math.sin(since / 0.4 * Math.PI) : 1;
       g.save(); g.translate(W * 0.08, y0 - r - u * 0.04); g.scale(pop, pop);
       g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.02; g.fillStyle = "#fff"; g.textBaseline = "alphabetic";
-      g.font = F(u * 0.1); const ns = String(n); g.fillText(ns, 0, 0); const nw = g.measureText(ns).width;
-      g.font = F(u * 0.038); g.fillText((p.word || "LÄNDER").toUpperCase(), nw + u * 0.02, -u * 0.012);
+      g.font = F(u * 0.1); const ns = String(n); g.fillText(ns, 0, 0); const nm = g.measureText(ns), nw = Math.max(nm.width, nm.actualBoundingBoxRight || 0);
+      g.font = F(u * 0.038); g.fillText((p.word || "LÄNDER").toUpperCase(), nw + u * 0.03, 0);
       g.restore();
       shown.forEach((it, i) => {
         const k = backOut(clamp((lt - it.t) / 0.45)), row = Math.floor(i / perRow), col = i % perRow;
@@ -8883,6 +8920,120 @@ const ASSETS = (() => {
       });
     }
   };
+  /* ---------- Reisepass-Bausteine ---------- */
+  // Motiv + Farbe je Land für das Abzeichen (eigenes Motiv/Farbe über die Felder)
+  const COUNTRY_ART = {
+    vietnam: ["⛵", "#c8312f"], laos: ["🐘", "#6b4aa8"], thailand: ["👹", "#2f9a3f"], kambodscha: ["🛕", "#c46a1a"], malaysia: ["🌺", "#1f5fb5"],
+    singapur: ["🦁", "#d6262f"], indonesien: ["🌋", "#c0262d"], philippinen: ["🏝️", "#1d6fd1"], myanmar: ["🛕", "#d9a21b"], china: ["🐉", "#c8312f"],
+    japan: ["🗻", "#d22f3a"], südkorea: ["🏯", "#2e5aa8"], indien: ["🐅", "#e07b16"], nepal: ["🏔️", "#b8232f"], "sri lanka": ["🐘", "#a8322a"],
+    mongolei: ["🐎", "#2b62b5"], türkei: ["🕌", "#d0262d"], griechenland: ["🏛️", "#1f62b8"], italien: ["🍕", "#2f8f46"], frankreich: ["🥖", "#2a4fa0"],
+    spanien: ["💃", "#c8202c"], portugal: ["🐓", "#2f8f46"], deutschland: ["🥨", "#2b2b2b"], österreich: ["🏔️", "#c8202c"], schweiz: ["🧀", "#d0262d"],
+    niederlande: ["🌷", "#e06a12"], kroatien: ["⛵", "#1f56a8"], norwegen: ["🏔️", "#1d4e9c"], schweden: ["🫎", "#1f63b0"], island: ["🌋", "#2a5fb0"],
+    "vereinigtes königreich": ["💂", "#1f3f8c"], irland: ["🍀", "#2f8f46"], usa: ["🗽", "#2a4fa0"], "vereinigte staaten": ["🗽", "#2a4fa0"], kanada: ["🍁", "#c8202c"],
+    mexiko: ["🌵", "#2f8f46"], peru: ["🦙", "#c8202c"], brasilien: ["🦜", "#2f9a3f"], argentinien: ["🧉", "#3a8fd6"], chile: ["🗿", "#c8202c"], kolumbien: ["☕", "#d9a21b"],
+    marokko: ["🐪", "#c8312f"], ägypten: ["🐫", "#c9a227"], kenia: ["🦒", "#2f8f46"], südafrika: ["🦁", "#2f8f46"], tansania: ["🦓", "#2f9a3f"],
+    australien: ["🦘", "#1f3f8c"], neuseeland: ["🥝", "#1f3f8c"], georgien: ["🍇", "#c8202c"], albanien: ["🦅", "#c8202c"], polen: ["🥟", "#c8202c"], tschechien: ["🍺", "#2a4fa0"]
+  };
+  function artFor(p, name){
+    const c = lookup(name), key = (c ? c.name : name || "").toLowerCase(), d = COUNTRY_ART[key];
+    const pal = ["#c8312f", "#2f9a3f", "#2a5fb0", "#6b4aa8", "#c46a1a", "#0f6f78"];
+    return { icon: p.icon || (d && d[0]) || "", color: p.badgeColor || (d && d[1]) || pal[hash(key) % pal.length], a2: c && c.a2 };
+  }
+  const shade = (hex, f) => { const n = parseInt(String(hex).replace("#", ""), 16); const ch = s => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * f))); return "rgb(" + ch(16) + "," + ch(8) + "," + ch(0) + ")"; };
+  const hexA = (hex, a) => { const n = parseInt(String(hex).replace("#", ""), 16); return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")"; };
+  // Abzeichen in eigener Leinwand (Briefmarke hinten, farbige Scheibe, Motiv, Name); Tinten-Version = einfarbig mit Fehlstellen
+  const badgeCache = new Map();
+  function badgeCanvas(name, p, R, ink, inkColor){
+    const art = artFor(p, name), img = !art.icon && art.a2 ? flagImg(art.a2) : null;
+    const key = [name, art.icon, art.color, Math.round(R), ink ? inkColor : "", img ? 1 : 0].join("|");
+    if (badgeCache.has(key)) return badgeCache.get(key);
+    const S = Math.ceil(R * 2.9), c = document.createElement("canvas"); c.width = c.height = S; const t = c.getContext("2d"), m = S / 2;
+    // Briefmarke mit Zacken
+    t.save(); t.translate(m, m); t.rotate(-0.1);
+    const s = R * 1.05; t.fillStyle = ink ? "#ececec" : "#c9b48a"; t.fillRect(-s, -s, 2 * s, 2 * s);
+    t.strokeStyle = "#4a3b26"; t.lineWidth = R * 0.03; t.strokeRect(-s * 0.86, -s * 0.86, s * 1.72, s * 1.72);
+    t.globalCompositeOperation = "destination-out"; const n = 9, rr0 = s / n * 0.55;
+    for (let i = 0; i <= n; i++){ const q = -s + 2 * s * i / n; for (const [x, y] of [[q, -s], [q, s], [-s, q], [s, q]]){ t.beginPath(); t.arc(x, y, rr0, 0, Math.PI * 2); t.fill(); } }
+    t.restore();
+    // Scheibe
+    t.save(); t.translate(m, m);
+    const disc = ink ? "#f4f4f4" : art.color, dark = ink ? "#202020" : shade(art.color, 0.55);
+    t.fillStyle = disc; t.beginPath(); t.arc(0, 0, R, 0, Math.PI * 2); t.fill();
+    t.lineWidth = R * 0.09; t.strokeStyle = dark; t.stroke();
+    if (ink){ t.lineWidth = R * 0.03; t.beginPath(); t.arc(0, 0, R * 0.82, 0, Math.PI * 2); t.stroke(); }
+    t.lineWidth = R * 0.025; t.strokeStyle = "rgba(255,255,255,.35)"; t.beginPath(); t.arc(0, 0, R * 0.84, 0, Math.PI * 2); t.stroke();
+    t.beginPath(); t.arc(0, 0, R * 0.95, 0, Math.PI * 2); t.clip();
+    if (img){ const fh = R * 0.9, fw = fh * img.naturalWidth / img.naturalHeight; t.drawImage(img, -fw / 2, -R * 0.62, fw, fh); }
+    else if (art.icon){ if (ink) t.filter = "grayscale(1) contrast(1.6) brightness(0.9)"; t.font = Math.round(R * 0.95) + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; t.textAlign = "center"; t.textBaseline = "middle"; t.fillText(art.icon, 0, -R * 0.16); t.filter = "none"; }
+    if (!ink){ t.fillStyle = "rgba(255,255,255,.2)"; t.fillRect(-R, R * 0.36, 2 * R, R * 0.36); }   // helles Band unten
+    t.font = CF(R * 0.28, 900); t.textAlign = "center"; t.textBaseline = "middle"; t.fillStyle = ink ? "#202020" : shade(art.color, 0.38);
+    t.fillText(name, 0, R * 0.55, R * 1.6);
+    t.restore();
+    if (ink){                                                                                      // → Tintenstempel
+      const d = t.getImageData(0, 0, S, S), px = d.data, ic = parseInt(String(inkColor).replace("#", ""), 16), ir = ic >> 16 & 255, ig = ic >> 8 & 255, ib = ic & 255;
+      let sd = hash(name) + 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < px.length; i += 4){
+        const lum = (0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / 255, a = px[i + 3] / 255;
+        let al = Math.max(0, Math.min(1, (0.8 - lum) * 1.9)) * a;
+        if (rnd() < 0.18) al *= 0.35;
+        px[i] = ir; px[i + 1] = ig; px[i + 2] = ib; px[i + 3] = al * 230;
+      }
+      t.putImageData(d, 0, 0);
+    }
+    if (badgeCache.size > 120) badgeCache.clear(); badgeCache.set(key, c);
+    return c;
+  }
+  function badge(g, cx, cy, R, name, p, alpha, ink){
+    const art = artFor(p, name), c = badgeCanvas(name, p, R, ink, p.inkColor || art.color);
+    g.save(); g.globalAlpha *= alpha; if (ink) g.globalCompositeOperation = "multiply";
+    if (!ink){ g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = R * 0.25; g.shadowOffsetY = R * 0.06; }
+    g.drawImage(c, cx - c.width / 2, cy - c.height / 2); g.restore();
+  }
+  function passport(g, x, y, w, h, u, p, team){
+    g.save(); g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = u * 0.04; g.shadowOffsetY = u * 0.012;
+    g.fillStyle = "#e8e6e3"; rr(g, x, y, w, h, u * 0.025); g.fill(); g.restore();
+    g.save(); rr(g, x, y, w, h, u * 0.025); g.clip();
+    g.strokeStyle = "rgba(120,120,128,.16)"; g.lineWidth = Math.max(1, u * 0.0022);             // Wellenlinien
+    for (let k = 0; k < 34; k++){ const xx = x + w * (k + 0.5) / 34; g.beginPath(); for (let yy = 0; yy <= h; yy += 6){ const X = xx + Math.sin(yy / h * Math.PI * 7 + k * 0.6) * w * 0.006; yy ? g.lineTo(X, y + yy) : g.moveTo(X, y + yy); } g.stroke(); }
+    const fold = g.createLinearGradient(x + w / 2 - w * 0.06, 0, x + w / 2 + w * 0.06, 0);        // Falz
+    fold.addColorStop(0, "rgba(0,0,0,0)"); fold.addColorStop(0.48, "rgba(0,0,0,.16)"); fold.addColorStop(0.5, "rgba(0,0,0,.28)"); fold.addColorStop(0.52, "rgba(0,0,0,.16)"); fold.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = fold; g.fillRect(x + w / 2 - w * 0.06, y, w * 0.12, h);
+    const vig = g.createRadialGradient(x + w / 2, y + h / 2, h * 0.3, x + w / 2, y + h / 2, w * 0.62); vig.addColorStop(0, "rgba(0,0,0,0)"); vig.addColorStop(1, "rgba(0,0,0,.18)");
+    g.fillStyle = vig; g.fillRect(x, y, w, h);
+    g.restore();
+    if (p.team){                                                                                    // Teamname oben links
+      g.save(); g.font = CF(h * 0.075, 900); g.textAlign = "left"; g.textBaseline = "top";
+      g.lineWidth = h * 0.012; g.strokeStyle = shade(team, 0.55); g.strokeText(p.team.toUpperCase(), x + w * 0.04, y + h * 0.05);
+      g.fillStyle = team; g.fillText(p.team.toUpperCase(), x + w * 0.04, y + h * 0.05); g.restore();
+    }
+    const prev = String(p.prev || "").split(",").map(s => s.trim()).filter(Boolean);           // alte Stempel links
+    prev.slice(0, 4).forEach((nm, i) => {
+      const c = lookup(nm), name = (c ? c.name : nm).toUpperCase(), R = h * 0.17;
+      const sx = x + w * (0.13 + (i % 2) * 0.2), sy = y + h * (0.4 + Math.floor(i / 2) * 0.32 + (i % 2) * 0.12);
+      g.save(); g.translate(sx, sy); g.rotate(((hash(nm) % 24) - 12) * Math.PI / 180);
+      badge(g, 0, 0, R, name, Object.assign({}, p, { icon: "", badgeColor: "" }), 0.95, true); g.restore();
+    });
+  }
+  // Konfetti-Flocken in Teamfarbe
+  function flakes(g, W, H, u, lt, col, out, seed){
+    let sd = seed % 2147483646 + 3; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 90; i++){
+      const x0 = rnd() * W, t0 = rnd() * 0.6, sp = u * (0.12 + rnd() * 0.18), sw = rnd() * 6, s = u * (0.005 + rnd() * 0.008), rot = rnd() * 6, spin = 2 + rnd() * 5, light = rnd();
+      const t = lt - t0; if (t <= 0) continue;
+      const fade = clamp((3.4 - t) / 0.8) * out; if (fade <= 0) continue;
+      const x = x0 + Math.sin(t * 1.7 + sw) * u * 0.04, y = -u * 0.05 + t * sp + rnd() * H * 0.8;
+      g.save(); g.globalAlpha = fade * 0.9; g.translate(x, y); g.rotate(rot + t * spin); g.scale(1, Math.abs(Math.cos(t * 4 + sw)) + 0.2);
+      g.fillStyle = light > 0.6 ? shade(col, 1.35) : col; g.fillRect(-s, -s * 0.6, s * 2, s * 1.2); g.restore();
+    }
+  }
+  // eigene Bilder (Teamfoto) als Data-URL
+  const userImgs = new Map();
+  function userImg(src){
+    if (!src) return null;
+    if (!userImgs.has(src)){ const im = new Image(); im.src = src; userImgs.set(src, im); }
+    const im = userImgs.get(src); return im.complete && im.naturalWidth ? im : null;
+  }
+
   /* ---------- Bausteine ---------- */
   const CF = (px, w = 800) => w + " " + Math.round(px) + "px 'Avenir Next Condensed','Arial Narrow','Roboto Condensed','Helvetica Neue',sans-serif";
   const easeInOut = x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -8955,6 +9106,10 @@ const ASSETS = (() => {
     return out;
   }
 
+  function drawAsset(g, W, H, a, lt){
+    g.save(); g.translate((a.dx || 0) * W, (a.dy || 0) * H);
+    try { DRAW[a.type](g, W, H, a, Math.min(Math.max(lt, 0), a.dur), a.dur); } finally { g.restore(); }
+  }
   /* ---------- Vorschau (eigene Bühne ohne Karte) ---------- */
   const stageEl = $("assetStage"), cv = $("assetCanvas");
   function res(){ return (val("asRes") || "1920x1080").split("x").map(Number); }
@@ -8969,7 +9124,7 @@ const ASSETS = (() => {
     const g = cv.getContext("2d"), [W, H] = res(); g.clearRect(0, 0, W, H);
     const bg = val("asBg"); if (bg === "black"){ g.fillStyle = "#000"; g.fillRect(0, 0, W, H); } else if (bg === "green"){ g.fillStyle = "#00ff00"; g.fillRect(0, 0, W, H); }
     const a = list.find(x => x.id === sel);
-    if (a){ const lt = ((performance.now() - start) / 1000) % (a.dur + 0.8); try { DRAW[a.type](g, W, H, a, Math.min(lt, a.dur), a.dur); } catch (e) { console.warn("Asset:", e); } }
+    if (a){ const hold = drag ? drag.t : null, lt = ((performance.now() - start) / 1000) % (a.dur + 0.8); try { drawAsset(g, W, H, a, hold != null ? hold : lt); } catch (e) { console.warn("Asset:", e); } }
     else { g.fillStyle = "rgba(255,255,255,.55)"; g.font = FS(Math.min(W, H) * 0.035, 600); g.textAlign = "center"; g.fillText(tr("Links ein Asset wählen oder hinzufügen"), W / 2, H / 2); }
     requestAnimationFrame(frame);
   }
@@ -8977,6 +9132,28 @@ const ASSETS = (() => {
     stageEl.hidden = !on;
     if (on && !loopOn){ loopOn = true; requestAnimationFrame(frame); } else if (!on) loopOn = false;
   }
+  // Verschieben per Ziehen, Größe per Mausrad (Animation pausiert dabei im aktuellen Moment)
+  let drag = null;
+  const cur = () => list.find(x => x.id === sel);
+  const toCanvas = e => { const r = cv.getBoundingClientRect(), [W, H] = res(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
+  cv.addEventListener("pointerdown", e => {
+    const a = cur(); if (!a) return;
+    const [x, y] = toCanvas(e), [W, H] = res(), lt = ((performance.now() - start) / 1000) % (a.dur + 0.8);
+    drag = { x, y, dx: a.dx || 0, dy: a.dy || 0, t: Math.min(Math.max(lt, a.dur * 0.6), a.dur - 0.5), W, H };
+    cv.setPointerCapture(e.pointerId); cv.style.cursor = "grabbing";
+  });
+  cv.addEventListener("pointermove", e => {
+    const a = cur(); if (!drag || !a) return;
+    const [x, y] = toCanvas(e); a.dx = drag.dx + (x - drag.x) / drag.W; a.dy = drag.dy + (y - drag.y) / drag.H;
+    if (Math.abs(a.dx) < 0.012) a.dx = 0; if (Math.abs(a.dy) < 0.012) a.dy = 0;          // rastet in der Mitte ein
+  });
+  const endDrag = () => { if (!drag) return; drag = null; cv.style.cursor = ""; start = performance.now(); };
+  cv.addEventListener("pointerup", endDrag); cv.addEventListener("pointercancel", endDrag);
+  cv.addEventListener("wheel", e => {
+    const a = cur(); if (!a) return; e.preventDefault();
+    a.size = Math.min(2.5, Math.max(0.3, (a.size || 1) * (e.deltaY < 0 ? 1.06 : 1 / 1.06)));
+    const r = document.querySelector('#asList [data-k="size"]'); if (r) r.value = a.size;
+  }, { passive: false });
   document.addEventListener("ma:tab", e => setMode(e.detail === "assets"));
   setMode(document.body.classList.contains("assets-mode"));
 
@@ -8987,7 +9164,8 @@ const ASSETS = (() => {
     await countriesReady();
     const jobs = [];
     for (const a of arr){
-      const a2s = a.type === "flags" ? itemsFor(a).map(i => i.a2) : countriesOf(a).map(n => lookup(n) && lookup(n).a2);
+      const names = [...countriesOf(a), ...String(a.countries || "").split(","), ...String(a.prev || "").split(",")].map(s => s.trim()).filter(Boolean);
+      const a2s = a.type === "flags" ? itemsFor(a).map(i => i.a2) : names.map(n => lookup(n) && lookup(n).a2);
       for (const a2 of a2s) if (a2){ flagImg(a2); jobs.push(flags.get(a2).job); }
     }
     await Promise.all(jobs);
@@ -9021,7 +9199,7 @@ const ASSETS = (() => {
     const files = [], blobs = [];
     for (const v of variants){
       const n = Math.ceil(v.dur * fps), base = nameOf(v);
-      const draw = i => { g.clearRect(0, 0, W, H); if (fmt === "green"){ g.fillStyle = "#00ff00"; g.fillRect(0, 0, W, H); } DRAW[v.type](g, W, H, v, i / fps, v.dur); };
+      const draw = i => { g.clearRect(0, 0, W, H); if (fmt === "green"){ g.fillStyle = "#00ff00"; g.fillRect(0, 0, W, H); } drawAsset(g, W, H, v, i / fps); };
       if (fmt === "png"){
         for (let i = 0; i < n; i++){
           draw(i);
@@ -9065,7 +9243,9 @@ const ASSETS = (() => {
     clock: { text: "14:00", pos: "tl" },
     info: { text: "Thuốc lào ist eine traditionelle vietnamesische Art, Tabak durch eine Wasserpfeife zu rauchen.", pos: "bl" },
     medal: { place: 1, amount: "15.000 €, 10.000 €, 5.000 €", podium: true, word: "PLATZ" },
-    stamp: { country: "Thailand", kind: "ENTRY", date: today(), shape: "" },
+    stamp: { country: "Thailand", team: "Hannes", color: "#b06ae8", prev: "Vietnam, Laos", headline: "NEUES LAND ERREICHT", confetti: true },
+    teamcard: { color: "#9b59d0", label: "AKTUELLES BUDGET", value: "21,57 €", l1: "ZURÜCKGELEGT", v1: "1.186 KM", l2: "BIS ZUM ZIEL", v2: "2.936 KM", countries: "Vietnam, Laos", slots: 7, pos: "bl" },
+    chapter: { text: "Was bisher geschah", color: "#f5c542", pos: "tl" },
     flag: { country: "Laos", text: "WILLKOMMEN IN", sub: "" },
     challenge: { title: "CHALLENGE", text: "Mit 100 € in 3 Tagen nach Bangkok", goal: "💶 100 €", time: "⏱ 3 TAGE", status: "open" },
     flags: { auto: false, countries: "Vietnam, Laos, Thailand, Kambodscha", word: "LÄNDER", start: 0, pos: "top" }
@@ -9073,14 +9253,17 @@ const ASSETS = (() => {
   const POS = [["center", "Mitte"], ["top", "oben"], ["bottom", "unten"], ["tl", "oben links"], ["tr", "oben rechts"], ["bl", "unten links"], ["br", "unten rechts"]];
   const STATUS = [["open", "läuft"], ["done", "geschafft ✓"], ["fail", "gescheitert ✗"]];
   const FIELDS = {
-    hexflag: [["country", "Land (mehrere mit Komma = je ein Asset)", "text"], ["title", "Name (leer = Land)", "text"], ["sub", "Zeile darüber", "text"], ["lametta", "Lametta", "check"]],
+    hexflag: [["country", "Land (mehrere mit Komma = je ein Asset)", "text"], ["title", "Name (leer = Land)", "text"], ["sub", "Zeile darunter", "text"], ["color", "Farbe Zeile", "color"], ["lametta", "Lametta", "check"]],
     rchallenge: [["label", "Kopf", "text"], ["icon", "Icon (Emoji)", "text"], ["text", "Aufgabe", "text"], ["goal", "Chip 1", "text"], ["time", "Chip 2", "text"], ["status", "Status", "select", STATUS], ["color", "Farbe", "color"]],
     rules: [["items", "Karten: Icon | Text | x (verboten) / ok (erlaubt), je Zeile", "textarea"], ["pills", "VERBOTEN/ERLAUBT-Pillen", "check"]],
     money: [["from", "Von", "text"], ["to", "Auf", "text"], ["cur", "Währung", "text"]],
     clock: [["text", "Uhrzeit", "text"], ["color", "Farbe", "color"]],
     info: [["text", "Text", "textarea"]],
     medal: [["podium", "Podest (1–3)", "check"], ["place", "Platz (ohne Podest)", "number"], ["amount", "Beträge (Komma: 1., 2., 3.)", "text"], ["word", "Wort", "text"]],
-    stamp: [["country", "Land (mehrere mit Komma)", "text"], ["title", "Stempeltext (leer = Land)", "text"], ["kind", "Art", "select", [["ENTRY", "Einreise"], ["EXIT", "Ausreise"], ["VISA", "Visum"]]], ["date", "Datum", "text"], ["shape", "Form", "select", [["", "zufällig"], ["round", "rund"], ["rect", "eckig"], ["oval", "oval"]]]],
+    stamp: [["country", "Neues Land (mehrere mit Komma)", "text"], ["team", "Name im Pass", "text"], ["color", "Teamfarbe", "color"], ["prev", "Schon im Pass (Komma)", "text"], ["headline", "Titel", "text"],
+      ["icon", "Motiv (Emoji, leer = passend zum Land)", "text"], ["badgeColor", "Abzeichen-Farbe", "color"], ["title", "Name auf dem Abzeichen (leer = Land)", "text"], ["confetti", "Konfetti", "check"]],
+    teamcard: [["img", "Teamfoto", "image"], ["color", "Teamfarbe", "color"], ["label", "Überschrift", "text"], ["value", "Wert", "text"], ["l1", "Kasten 1", "text"], ["v1", "Wert 1", "text"], ["l2", "Kasten 2", "text"], ["v2", "Wert 2", "text"], ["countries", "Besuchte Länder (Komma)", "text"], ["slots", "Plätze gesamt", "number"]],
+    chapter: [["text", "Text", "text"], ["color", "Farbe", "color"]],
     flag: [["country", "Land (mehrere mit Komma)", "text"], ["text", "Zeile oben", "text"], ["title", "Name (leer = Land)", "text"], ["sub", "Unterzeile", "text"]],
     challenge: [["title", "Titel", "text"], ["text", "Aufgabe", "text"], ["goal", "Chip 1", "text"], ["time", "Chip 2", "text"], ["status", "Status", "select", STATUS]],
     flags: [["countries", "Länder (Komma)", "text"], ["auto", "+ Länder-Markierungen der Route", "check"], ["word", "Wort", "text"], ["start", "Zählt ab", "number"]]
@@ -9103,14 +9286,16 @@ const ASSETS = (() => {
         const fld = (k, lab, type, opts) => type === "select" ? `<div class="setting"><label>${tr(lab)}</label><select data-k="${k}">${opts.map(([v, l]) => `<option value="${v}"${String(a[k] ?? "") === v ? " selected" : ""}>${tr(l)}</option>`).join("")}</select></div>`
           : type === "check" ? `<div class="setting"><label>${tr(lab)}</label><input type="checkbox" data-k="${k}"></div>`
           : type === "textarea" ? `<div class="setting col"><label>${tr(lab)}</label><textarea data-k="${k}" rows="4"></textarea></div>`
+          : type === "image" ? `<div class="setting"><label>${tr(lab)}</label><label class="photo-label">${a[k] ? "✓ " : ""}${tr("Wählen")}<input type="file" accept="image/*" data-img="${k}" hidden></label></div>`
           : `<div class="setting"><label>${tr(lab)}</label><input type="${type}" data-k="${k}"></div>`;
         body.innerHTML = FIELDS[a.type].map(f => fld(...f)).join("") + fld("dur", "Dauer (s)", "number") + fld("pos", "Position", "select", POS) +
-          `<div class="setting"><label>${tr("Größe")}</label><input type="range" data-k="size" min="0.4" max="1.8" step="0.05"></div>` +
+          `<div class="setting"><label>${tr("Größe")}</label><input type="range" data-k="size" min="0.3" max="2.5" step="0.05"></div>` +
+          `<div class="hint">${tr("In der Vorschau ziehen = verschieben, Mausrad = Größe.")} <a href="#" data-a="center">${tr("Zur Mitte")}</a></div>` +
           `<div class="insexp"><span>${tr("Exportieren")} (${val("asRes")}):</span><button type="button" class="btn" data-a="png">PNG transparent (ZIP)</button><button type="button" class="btn ghost" data-a="green">Greenscreen-MP4</button></div>`;
         body.querySelectorAll("[data-k]").forEach(inp => {
           const k = inp.dataset.k;
           if (inp.type === "checkbox") inp.checked = !!a[k];
-          else if (inp.tagName !== "SELECT") inp.value = a[k] ?? (inp.type === "color" ? "#ff3b45" : "");
+          else if (inp.tagName !== "SELECT") inp.value = a[k] ?? (inp.type === "color" ? ({ stamp: "#b06ae8", teamcard: "#9b59d0", chapter: "#f5c542", hexflag: "#f5c542", clock: "#3ddc6f" }[a.type] || "#ff3b45") : "");
           if (k === "pos" && !a.pos) inp.value = { money: "top", clock: "tl", info: "bl", flags: "top" }[a.type] || "center";
           inp.addEventListener("input", () => {
             a[k] = inp.type === "checkbox" ? inp.checked : (inp.type === "number" || inp.type === "range") ? parseFloat(inp.value) || 0 : inp.value;
@@ -9119,8 +9304,14 @@ const ASSETS = (() => {
             if (k !== "size" && k !== "pos") start = performance.now();
           });
         });
+        body.querySelectorAll("[data-img]").forEach(inp => inp.addEventListener("change", () => {
+          const f = inp.files[0]; if (!f) return; const rd = new FileReader();
+          rd.onload = () => { const im = new Image(); im.onload = () => { const c = document.createElement("canvas"), s = Math.min(1, 512 / Math.max(im.width, im.height)); c.width = im.width * s; c.height = im.height * s; c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); a[inp.dataset.img] = c.toDataURL("image/jpeg", 0.88); render(); }; im.src = rd.result; };
+          rd.readAsDataURL(f);
+        }));
         el.appendChild(body);
         const ex = x => body.querySelector(`[data-a="${x}"]`);
+        ex("center").addEventListener("click", e => { e.preventDefault(); a.dx = 0; a.dy = 0; });
         ex("png").addEventListener("click", () => exportAsset(a, "png").catch(e => setStatus("Export-Fehler: " + e.message)));
         ex("green").addEventListener("click", () => exportAsset(a, "green").catch(e => setStatus("Export-Fehler: " + e.message)));
       }
