@@ -201,6 +201,20 @@ try {
     document.getElementById("outroHold").value = 0; document.getElementById("projGlobe").checked = false;
     return "rein " + z0.toFixed(1) + " → " + z1.toFixed(1) + ", raus → " + ze.toFixed(1);
   }));
+  await step("Ortsmarkierungen, Intros, Ländersammlung, Countdown", () => page.evaluate(async () => {
+    const $ = id => document.getElementById(id);
+    await MA.load({ name: "sea", route: { stops: [{ name: "Hanoi", c: [105.85, 21.03] }, { name: "Vientiane", c: [102.6, 17.97], mode: "bus" }, { name: "Bangkok", c: [100.5, 13.75], mode: "bus" }] } });
+    for (const ps of ["stamp", "ticket", "callout", "flag", "sticker", "neon", "rank"]){ $("pinStyle").value = ps; await drawStatic(); }
+    $("introOn").checked = true;
+    for (const st of INTRO.styles){ $("introStyle").value = st; setPlayhead(1, true); }
+    $("introOn").checked = false;
+    await CAM.applyShot(CAM.shots.find(s => s.id === "s_countries"));
+    const n = MARKS.list().filter(m => m.iso).length; if (n < 3) throw new Error("nur " + n + " Länder");
+    await CAM.applyShot(CAM.shots.find(s => s.id === "s_countdown"));
+    if ($("pinStyle").value !== "rank") throw new Error("Countdown ohne Rang-Pins");
+    $("cntOn").checked = false; $("pinStyle").value = "badge";
+    return n + " Länder, " + INTRO.styles.length + " Intros, 7 Pin-Stile";
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     document.getElementById("whipDir").value = "right";

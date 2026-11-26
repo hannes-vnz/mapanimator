@@ -179,6 +179,13 @@
               <option value="badge" selected>Foto-Badge + Name</option>
               <option value="dot">Farbpunkt</option>
               <option value="tag">Etikett (Ortsname)</option>
+              <option value="stamp">Reisepass-Stempel</option>
+              <option value="ticket">Koordinaten-Ticket</option>
+              <option value="callout">Leader-Linie (Doku)</option>
+              <option value="flag">Fähnchen</option>
+              <option value="sticker">Sticker</option>
+              <option value="neon">Neon (dunkle Karten)</option>
+              <option value="rank">Rang-Nummer (#3)</option>
             </select>
           </div>
           <div class="setting"><label>Linienspitze</label>
@@ -377,6 +384,31 @@
         </div>
 
         <div class="card">
+          <h2>Intro</h2>
+          <div class="setting"><label>Intro zeigen</label><input type="checkbox" id="introOn"></div>
+          <div class="setting"><label>Stil</label><select id="introStyle">
+            <option value="stamp" selected>Reisepass-Stempel</option>
+            <option value="boarding">Bordkarte (A → B)</option>
+            <option value="coords">Koordinaten tippen</option>
+            <option value="spaced">Gesperrter Titel</option>
+            <option value="chapter">Kapitel (Kinobalken)</option>
+          </select></div>
+          <div class="setting"><label>Titel</label><input type="text" id="introTitle" placeholder="leer = letzter Ort"></div>
+          <div class="setting"><label>Unterzeile</label><input type="text" id="introSub" placeholder="z. B. TAG 12 · 14.03.2027"></div>
+          <div class="setting"><label>Dauer (s)</label><input type="number" id="introDur" value="2.8" min="0.8" max="8" step="0.2"></div>
+          <button type="button" class="btn ghost full" id="introHoldBtn">Linie bis Intro-Ende warten lassen</button>
+        </div>
+
+        <div class="card">
+          <h2>Länderzähler</h2>
+          <div class="setting"><label>Zähler anzeigen</label><input type="checkbox" id="cntOn"></div>
+          <div class="setting"><label>Wort</label><input type="text" id="cntLabel" value="LÄNDER"></div>
+          <div class="setting"><label>Zählt ab</label><input type="number" id="cntStart" value="0" min="0" step="1"></div>
+          <div class="setting"><label>Position</label><select id="cntPos"><option value="top" selected>oben</option><option value="bottom">unten</option></select></div>
+          <div class="hint">Zählt Länder-Markierungen hoch, sobald die Route sie erreicht (Ebenen → „Länder der Route“). „Zählt ab“ = Länder, die du vorher schon bereist hast.</div>
+        </div>
+
+        <div class="card">
           <h2>Höhenprofil</h2>
           <div class="setting"><label>Profil anzeigen</label><input type="checkbox" id="profOn"></div>
           <div class="setting"><label>Position</label><select id="profPos"><option value="bottom" selected>unten</option><option value="top">oben</option></select></div>
@@ -474,6 +506,7 @@
 <script src="signs.js"></script>
 <script src="regions.js"></script>
 <script src="overlays.js"></script>
+<script src="intro.js"></script>
 <script src="scenes.js"></script>
 <script src="api.js"></script>
 <script src="ui.js"></script>

@@ -447,6 +447,14 @@ const CAM = (() => {
     { id: "s_earthout", name: "Erdzoom raus", sub: "Google-Earth-Stil · Etappe endet, Kamera steigt in einem Zug bis ins All – zeigt, wie weit weg man ist", icon: "🚀",
       look: "earthsat", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, introHold: 0, outroHold: 5 },
       shots: T => [F({ t: 0, zoom: 13, pitch: 50, up: "target", auto: false }), F({ t: Math.max(T - 5, 1), mode: "earth", dir: "out", zoom: 13, pitch: 50, spin: -60, swing: 40 })], tempo: { len: 15, feel: "normal" } },
+    { id: "s_countries", name: "Ländersammlung", sub: "Recap · Route zieht sich durch, jedes neue Land färbt sich ein, Zähler springt hoch („+ LAOS“)", icon: "🗺️",
+      look: "vlog", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, cntOn: true, introHold: 0, outroHold: 1.5 },
+      shots: () => [F({ t: 0, mode: "overview", pitch: 20, zoomAdj: -0.15, drift: 0.8, zoomDrift: 0.02 })], tempo: { len: 15, feel: "normal" },
+      extras: ["countriesSeq"] },
+    { id: "s_countdown", name: "Orte-Countdown", sub: "Top-Liste · springt von Ort zu Ort, große Rang-Nummern #5 … #1, an jedem Ort kurz halten", icon: "🏆",
+      look: "pastellvlog", set: { legFocus: "all", fxClouds: false, whipIn: false, whipOut: false, pinStyle: "rank", pinScale: 2, lineStyle: "dashed", lineColor: "#ff5a36", introHold: 0, outroHold: 1 },
+      after: { pauseDur: 2.2, legEase: "quadInOut" },
+      shots: () => [F({ t: 0, zoom: 9.5, pitch: 25, up: "north", auto: true })], tempo: { len: n => Math.round(1.5 + n * 3.2), feel: "rasant" } },
     { id: "s_globe", name: "Globus-Flug", sub: "THE RACE · 9 s: Crash-Zoom rein → Bogen zeichnet sich → Zielring → Crash-Zoom ins Ziel", icon: "🌍",
       look: "raceglobe", set: { legFocus: "last", fxClouds: false, whipIn: true, whipOut: true, whipDir: "zoom" },
       shots: () => [F({ t: 0, mode: "overview", pitch: 46, bearing: -14, zoomAdj: -0.7, drift: 2.4, zoomDrift: 0.07, pitchDrift: 0.6 })], tempo: { len: 9, feel: "gemuetlich" },
@@ -477,7 +485,9 @@ const CAM = (() => {
     if (sh.preset){ await applyPreset(PRESETS.find(p => p.id === sh.preset)); $("whipIn").checked = !!sh.set.whipIn; $("whipOut").checked = !!sh.set.whipOut; }
     else {
       shots = sh.shots(timelineTotal());
-      await MA_TEMPLATES.applyTempo(sh.tempo.len, sh.tempo.feel);
+      const len = typeof sh.tempo.len === "function" ? sh.tempo.len(routes[0] ? routes[0].waypoints.length : 3) : sh.tempo.len;
+      await MA_TEMPLATES.applyTempo(len, sh.tempo.feel);
+      if (sh.after){ for (const [k, v] of Object.entries(sh.after)) $(k).value = v; await MA_TEMPLATES.applyTempo(len); }
       await ensureAnim();
       const T = timelineTotal();
       shots = sh.shots(T);
@@ -498,6 +508,11 @@ const CAM = (() => {
       } else if (ex === "destPulse"){
         MARKS.add("Ziel", { type: "Point", coordinates: ls.c }, { shotExtra: true, color: "#ffffff", t0: Math.max(0, arrivalTime(ls.p) - 0.2),
           fx: { draw: false, glow: true, shadow: false, pulse: true, focus: false, extrude: false } });
+      } else if (ex === "countriesSeq"){
+        const before = new Set(MARKS.list());
+        await MARKS.routeCountries();
+        MARKS.list().filter(m => !before.has(m)).forEach(m => Object.assign(m, { shotExtra: true, fillOp: 0.8, stroke: "#ffffff", width: 2.5,
+          fx: { draw: true, glow: false, shadow: true, pulse: true, focus: false, extrude: false } }));
       } else if (ex === "countriesRed"){
         const before = new Set(MARKS.list());
         await MARKS.routeCountries();

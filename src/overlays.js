@@ -270,6 +270,39 @@ const OVL = (() => {
     g.restore();
   }
 
+  /* ---------- Länderzähler: „7 LÄNDER“ + Name des neuesten Landes ----------
+     Zählt Länder-Markierungen (MARKS mit ISO-Code), sobald ihre Startzeit erreicht ist. */
+  function drawCountries(g, W, H){
+    if (!checked("cntOn") || typeof MARKS === "undefined") return;
+    const ms = MARKS.list().filter(m => m.iso).sort((a, b) => a.t0 - b.t0);
+    if (!ms.length) return;
+    const t = lastT == null ? 1e9 : lastT, done = ms.filter(m => m.t0 <= t), n = done.length;
+    const u = Math.min(W, H), portrait = H > W * 1.2, k0 = num("cntStart") || 0;
+    const last = done[done.length - 1], since = last ? t - last.t0 : 99;
+    const pop = since < 0.5 ? 1 + 0.35 * Math.sin(Math.min(1, since / 0.5) * Math.PI) * (1 - since / 0.5) : 1;
+    const x = Math.round(W * (portrait ? 0.08 : 0.06)), y = val("cntPos") === "bottom" ? Math.round(H * (portrait ? 0.74 : 0.82)) : Math.round(H * (portrait ? 0.1 : 0.08));
+    const big = Math.round(u * 0.16), small = Math.round(u * 0.04);
+    const font = (px, w = 900) => w + " " + px + "px 'Archivo Black','Arial Black',Impact,sans-serif";
+    const word = (val("cntLabel") || "LÄNDER").toUpperCase();
+    g.save();
+    g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = u * 0.02; g.shadowOffsetY = u * 0.004;
+    g.translate(x, y + big); g.scale(pop, pop);
+    g.fillStyle = "#ffffff"; g.font = font(big); g.textBaseline = "alphabetic";
+    const num1 = String(k0 + n); g.fillText(num1, 0, 0);
+    const nw = g.measureText(num1).width;
+    g.font = font(small); g.fillText(word, nw + small * 0.4, -big * 0.12);
+    g.restore();
+    // neuestes Land als Chip darunter (blendet nach 2 s aus)
+    if (last && since < 2.2){
+      const a = Math.min(1, since / 0.25) * Math.min(1, (2.2 - since) / 0.4);
+      g.save(); g.globalAlpha = a; g.font = font(Math.round(small * 0.9), 800);
+      const txt = "+ " + (last.name || "").toUpperCase(), w = g.measureText(txt).width + small * 1.2, h = small * 1.5, yy = y + big * 1.25;
+      g.fillStyle = last.color || "#e3262b"; rr(g, x, yy, w, h, h / 2); g.fill();
+      g.fillStyle = "#ffffff"; g.textBaseline = "middle"; g.fillText(txt, x + small * 0.6, yy + h / 2 + 1);
+      g.restore();
+    }
+  }
+
   /* ---------- Einbinden ---------- */
   const baseRA = renderAt;
   window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); };
@@ -279,7 +312,7 @@ const OVL = (() => {
   window.drawOverlay = drawOverlay = function (){
     baseDO();
     const c = $("ovl"), g = c.getContext("2d");
-    try { drawMini(g, c.width, c.height); drawProfile(g, c.width, c.height); } catch (e) { console.warn("Overlay:", e); }
+    try { drawMini(g, c.width, c.height); drawProfile(g, c.width, c.height); drawCountries(g, c.width, c.height); } catch (e) { console.warn("Overlay:", e); }
   };
   // Export/Still: auf Profil- und Landdaten warten
   async function ready(){
@@ -289,7 +322,7 @@ const OVL = (() => {
   const baseWI = waitIdle;
   window.waitIdle = waitIdle = async function (...a){ await ready(); return baseWI(...a); };
 
-  ["profOn", "profPos", "profStyle", "profSize", "mmOn", "mmPos", "mmStyle", "mmSize", "mmAuto", "mmTheme"].forEach(id => {
+  ["cntOn", "cntPos", "cntLabel", "cntStart", "profOn", "profPos", "profStyle", "profSize", "mmOn", "mmPos", "mmStyle", "mmSize", "mmAuto", "mmTheme"].forEach(id => {
     const el = $(id); if (el) el.addEventListener("input", () => drawOverlay());
   });
   map.on("move", () => { if (!playing && !mp4Busy && checked("mmOn")) drawOverlay(); });

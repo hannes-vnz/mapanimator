@@ -669,6 +669,9 @@ async function buildPinImage(wp, styleOverride){
     g.beginPath(); g.arc(W / 2, 78, 10, 0, Math.PI * 2); g.fill(); g.stroke();
     // Anker unten: Punkt-Mitte liegt 14 px über der Unterkante → per Polsterung ausgleichen
   }
+  else if (PIN_ART[pinStyle]){
+    PIN_ART[pinStyle](c, wp, fontStack);
+  }
   else if (pinStyle === "marker"){
     // klassischer Karten-Marker (Tropfen) in Stoppfarbe mit weißem Punkt
     c.width = 100; c.height = 132; ctx.scale(100 / 72, 132 / 96);
@@ -768,6 +771,135 @@ async function buildPinImage(wp, styleOverride){
   map.addImage(name, bmp, { pixelRatio: 2 });
   return name;
 }
+/* ---------- Ortsmarkierungs-Stile (Anker = Mitte unten = Ort) ----------
+   Jeder Stil zeichnet in doppelter Auflösung (pixelRatio 2). */
+function pinRank(wp){
+  const rt = routes.find(r => r.waypoints.includes(wp)); if (!rt) return 1;
+  return rt.waypoints.length - rt.waypoints.indexOf(wp);           // Countdown: letzter Ort = #1
+}
+function pinDark(){ const th = THEMES[val("mapStyle")] || {}; return !!(th.raster || /^#(0|1|2)/.test(th.bg || "")); }
+function fmtCoord(wp){ const la = wp.lat, lo = wp.lng; return Math.abs(la).toFixed(4) + "° " + (la >= 0 ? "N" : "S") + "  " + Math.abs(lo).toFixed(4) + "° " + (lo >= 0 ? "E" : "W"); }
+function pinFit(c, W, H){ c.width = Math.ceil(W); c.height = Math.ceil(H); return c.getContext("2d"); }
+const PIN_ART = {
+  // Reisepass-Stempel: doppelter Rahmen, leicht gedreht, Druckfarbe mit Fehlstellen
+  stamp(c, wp, fs){
+    const name = (wp.name || "").toUpperCase(), col = wp.color || "#c0262d";
+    let g = c.getContext("2d"); g.font = "900 34px " + fs;
+    const tw = Math.min(g.measureText(name).width, 380), w = tw + 64, h = 104, S = Math.hypot(w, h) + 10;
+    g = pinFit(c, S, S + 30);
+    const rot = ((wp.id * 37) % 13 - 6) * Math.PI / 180;
+    g.save(); g.translate(S / 2, S / 2); g.rotate(rot);
+    g.strokeStyle = col; g.fillStyle = col;
+    g.lineWidth = 5; roundRect(g, -w / 2, -h / 2, w, h, 14); g.stroke();
+    g.lineWidth = 2; roundRect(g, -w / 2 + 8, -h / 2 + 8, w - 16, h - 16, 9); g.stroke();
+    g.textAlign = "center"; g.textBaseline = "middle"; g.font = "900 34px " + fs; g.fillText(name, 0, -8, 380);
+    g.font = "700 15px " + FONT_STACKS.mono; g.fillText("✦ " + (wp.sub || fmtCoord(wp)) + " ✦", 0, 26, w - 30);
+    g.restore();
+    g.globalCompositeOperation = "destination-out";                    // Stempel-Fehlstellen
+    let sd = wp.id * 9301 + 49297; const rnd = () => (sd = (sd * 9301 + 49297) % 233280) / 233280;
+    for (let i = 0; i < 260; i++){ g.globalAlpha = 0.25 + rnd() * 0.6; g.beginPath(); g.arc(rnd() * S, rnd() * S, 0.6 + rnd() * 1.8, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+    g.fillStyle = col; g.strokeStyle = "#fff"; g.lineWidth = 4;
+    g.beginPath(); g.arc(S / 2, S + 14, 10, 0, Math.PI * 2); g.fill(); g.stroke();
+  },
+  // Fähnchen an der Stange, Name auf dem Wimpel
+  flag(c, wp, fs){
+    const name = wp.name || "", col = wp.color || "#e3262b";
+    let g = c.getContext("2d"); g.font = "800 30px " + fs;
+    const tw = Math.min(g.measureText(name).width, 360), fw = tw + 46, H = 150;
+    g = pinFit(c, fw * 2 + 20, H);
+    const x = fw + 10;
+    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 8; g.shadowOffsetY = 3;
+    g.fillStyle = "#2a2a2a"; g.fillRect(x - 3, 10, 6, H - 18);
+    g.fillStyle = col; g.beginPath(); g.moveTo(x + 3, 12);
+    g.bezierCurveTo(x + fw * 0.35, 4, x + fw * 0.65, 22, x + fw, 12); g.lineTo(x + fw - 14, 37); g.lineTo(x + fw, 62);
+    g.bezierCurveTo(x + fw * 0.65, 72, x + fw * 0.35, 54, x + 3, 62); g.closePath(); g.fill(); g.restore();
+    g.fillStyle = "#fff"; g.font = "800 30px " + fs; g.textBaseline = "middle"; g.fillText(name, x + 16, 38, 360);
+    g.fillStyle = "#2a2a2a"; g.beginPath(); g.ellipse(x, H - 8, 12, 5, 0, 0, Math.PI * 2); g.fill();
+  },
+  // Leader-Linie: Punkt am Ort, dünne Linie nach oben, Karte mit gesperrtem Namen (Doku-/Erklär-Look)
+  callout(c, wp, fs){
+    const name = (wp.name || "").toUpperCase().split("").join("\u2009"), dark = pinDark();
+    let g = c.getContext("2d"); g.font = "800 26px " + fs;
+    const tw = Math.min(g.measureText(name).width, 420), W = tw + 40, H = 170;
+    g = pinFit(c, W, H);
+    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 10; g.shadowOffsetY = 3;
+    g.fillStyle = dark ? "#ffffff" : "#111317"; g.fillRect(0, 0, W, 52); g.restore();
+    g.fillStyle = wp.color || "#e3262b"; g.fillRect(0, 48, W, 4);
+    g.fillStyle = dark ? "#111317" : "#ffffff"; g.font = "800 26px " + fs; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(name, W / 2, 26, 420);
+    g.strokeStyle = dark ? "#ffffff" : "#111317"; g.lineWidth = 3; g.beginPath(); g.moveTo(W / 2, 52); g.lineTo(W / 2, H - 16); g.stroke();
+    g.fillStyle = wp.color || "#e3262b"; g.strokeStyle = "#fff"; g.lineWidth = 4; g.beginPath(); g.arc(W / 2, H - 12, 9, 0, Math.PI * 2); g.fill(); g.stroke();
+  },
+  // Neon: leuchtende Kontur, für dunkle Karten
+  neon(c, wp, fs){
+    const name = wp.name || "", col = wp.color || "#3fa9ff";
+    let g = c.getContext("2d"); g.font = "700 30px " + fs;
+    const tw = Math.min(g.measureText(name).width, 380), W = tw + 80, H = 128;
+    g = pinFit(c, W, H);
+    const glow = (blur, a) => { g.shadowColor = col; g.shadowBlur = blur; g.globalAlpha = a; };
+    g.lineWidth = 4; g.strokeStyle = col;
+    for (const [b, a] of [[28, 0.6], [12, 0.9], [0, 1]]){ glow(b, a); roundRect(g, 20, 14, W - 40, 54, 27); g.stroke(); }
+    g.globalAlpha = 1; g.fillStyle = "rgba(5,8,14,0.55)"; g.shadowBlur = 0; roundRect(g, 22, 16, W - 44, 50, 25); g.fill();
+    g.font = "700 30px " + fs; g.textAlign = "center"; g.textBaseline = "middle";
+    glow(16, 1); g.fillStyle = "#ffffff"; g.fillText(name, W / 2, 42, 380);
+    g.strokeStyle = col; g.lineWidth = 3; glow(10, 1); g.beginPath(); g.moveTo(W / 2, 68); g.lineTo(W / 2, H - 22); g.stroke();
+    glow(24, 1); g.fillStyle = col; g.beginPath(); g.arc(W / 2, H - 14, 9, 0, Math.PI * 2); g.fill();
+    g.shadowBlur = 0; g.fillStyle = "#fff"; g.beginPath(); g.arc(W / 2, H - 14, 4, 0, Math.PI * 2); g.fill();
+  },
+  // Sticker: dicker weißer Rand, leicht gedreht, kräftige Füllung (Stickerbuch-Look)
+  sticker(c, wp, fs){
+    const name = (wp.name || "").toUpperCase(), col = wp.color || "#ff5a5f";
+    let g = c.getContext("2d"); g.font = "900 36px " + fs;
+    const tw = Math.min(g.measureText(name).width, 380), w = tw + 50, h = 66, S = Math.hypot(w, h) + 30;
+    g = pinFit(c, S, S / 2 + h + 40);
+    const rot = ((wp.id * 53) % 11 - 5) * Math.PI / 180, cy = S / 4 + h / 2 + 6;
+    g.save(); g.translate(S / 2, cy); g.rotate(rot);
+    g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 12; g.shadowOffsetY = 5;
+    g.fillStyle = "#ffffff"; roundRect(g, -w / 2 - 10, -h / 2 - 10, w + 20, h + 20, (h + 20) / 2); g.fill();
+    g.shadowColor = "transparent"; g.fillStyle = col; roundRect(g, -w / 2, -h / 2, w, h, h / 2); g.fill();
+    g.fillStyle = "rgba(255,255,255,0.25)"; roundRect(g, -w / 2 + 8, -h / 2 + 6, w - 16, h * 0.32, h * 0.16); g.fill();
+    g.fillStyle = "#ffffff"; g.font = "900 36px " + fs; g.textAlign = "center"; g.textBaseline = "middle";
+    g.lineWidth = 6; g.strokeStyle = "rgba(0,0,0,0.18)"; g.strokeText(name, 0, 3, 380); g.fillText(name, 0, 2, 380);
+    g.restore();
+    g.fillStyle = "#ffffff"; g.beginPath(); g.moveTo(S / 2 - 14, cy + h / 2 + 4); g.lineTo(S / 2 + 14, cy + h / 2 + 4); g.lineTo(S / 2, g.canvas.height - 2); g.closePath(); g.fill();
+  },
+  // Koordinaten-Ticket: Name groß, Koordinaten in Mono, Lochung links (Reisetagebuch)
+  ticket(c, wp, fs){
+    const name = (wp.name || "").toUpperCase(), coord = wp.sub || fmtCoord(wp), dark = pinDark();
+    let g = c.getContext("2d"); g.font = "900 32px " + fs; const t1 = g.measureText(name).width;
+    g.font = "700 16px " + FONT_STACKS.mono; const t2 = g.measureText(coord).width;
+    const W = Math.min(Math.max(t1, t2), 420) + 80, H = 140;
+    g = pinFit(c, W, H);
+    const bg = dark ? "#f4efe3" : "#1d1f24", fg = dark ? "#1d1f24" : "#f4efe3", col = wp.color || "#e3262b";
+    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 10; g.shadowOffsetY = 4; g.fillStyle = bg; roundRect(g, 0, 0, W, 92, 10); g.fill(); g.restore();
+    g.globalCompositeOperation = "destination-out"; g.beginPath(); g.arc(0, 46, 11, 0, Math.PI * 2); g.arc(W, 46, 11, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = "source-over";
+    g.strokeStyle = fg; g.globalAlpha = 0.35; g.setLineDash([4, 5]); g.lineWidth = 2; g.beginPath(); g.moveTo(26, 12); g.lineTo(26, 80); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    g.fillStyle = col; g.fillRect(12, 30, 6, 32);
+    g.fillStyle = fg; g.textBaseline = "alphabetic"; g.font = "900 32px " + fs; g.fillText(name, 40, 46, 420);
+    g.font = "700 16px " + FONT_STACKS.mono; g.globalAlpha = 0.75; g.fillText(coord, 40, 74, 420); g.globalAlpha = 1;
+    g.fillStyle = bg; g.beginPath(); g.moveTo(W / 2 - 12, 90); g.lineTo(W / 2 + 12, 90); g.lineTo(W / 2, 108); g.closePath(); g.fill();
+    g.fillStyle = col; g.strokeStyle = "#fff"; g.lineWidth = 4; g.beginPath(); g.arc(W / 2, H - 16, 9, 0, Math.PI * 2); g.fill(); g.stroke();
+  },
+  // Rang-Nummer: großer Kreis „#3“ + Name (Countdown / Top-Listen)
+  rank(c, wp, fs){
+    const name = wp.name || "", n = pinRank(wp), col = wp.color || "#e3262b";
+    let g = c.getContext("2d"); g.font = "800 28px " + fs;
+    const tw = Math.min(g.measureText(name).width, 360), W = Math.max(150, tw + 150), H = 150;
+    g = pinFit(c, W, H);
+    const cx = 62, cy = 58;
+    g.save(); g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = 10; g.shadowOffsetY = 4;
+    g.fillStyle = "#ffffff"; roundRect(g, cx, cy - 26, tw + 76, 52, 26); g.fill();
+    g.fillStyle = col; g.beginPath(); g.arc(cx, cy, 46, 0, Math.PI * 2); g.fill(); g.restore();
+    g.strokeStyle = "#fff"; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, 46, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "900 46px " + FONT_STACKS.display; g.fillText("#" + n, cx, cy + 2, 80);
+    g.fillStyle = "#15171c"; g.textAlign = "left"; g.font = "800 28px " + fs; g.fillText(name, cx + 58, cy + 1, 360);
+    g.fillStyle = col; g.beginPath(); g.moveTo(cx - 14, cy + 40); g.lineTo(cx + 14, cy + 40); g.lineTo(cx, H - 4); g.closePath(); g.fill();
+    // Anker: Spitze liegt unter dem Kreis, nicht mittig → Leinwand symmetrisch erweitern
+    const img = g.getImageData(0, 0, W, H), off = Math.max(0, W - 2 * cx);
+    pinFit(c, W + off, H).putImageData(img, off, 0);
+  }
+};
 function roundRect(ctx, x, y, w, h, r){
   ctx.beginPath();
   ctx.moveTo(x + r, y);
@@ -883,7 +1015,7 @@ document.getElementById("tipPhoto").addEventListener("change", e => {
 });
 document.getElementById("tipLabel").addEventListener("change", () => { R().tipLabel = val("tipLabel"); updateTipPin(); });
 
-function labelFor(wp){ const ps = val("pinStyle"); return (ps === "badge" && wp.photo) || ps === "tag" ? "" : wp.name; }
+function labelFor(wp){ const ps = val("pinStyle"); return (ps === "badge" && wp.photo) || ps === "tag" || PIN_ART[ps] ? "" : wp.name; }
 
 /* ---------- Routen-UI ---------- */
 function renderRoutes(){
@@ -2540,7 +2672,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","cloudLayer","fxVignette","fxStars","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","profOn","profPos","profStyle","profSize","mmOn","mmPos","mmStyle","mmSize","mmAuto","mmTheme","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","introHold","outroHold","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","cloudLayer","fxVignette","fxStars","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","introOn","introStyle","introTitle","introSub","introDur","cntOn","cntLabel","cntStart","cntPos","profOn","profPos","profStyle","profSize","mmOn","mmPos","mmStyle","mmSize","mmAuto","mmTheme","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","introHold","outroHold","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {
