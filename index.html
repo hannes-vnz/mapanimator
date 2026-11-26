@@ -10041,6 +10041,50 @@ const ASSETS = (() => {
     x.addEventListener("click", () => { row.remove(); URL.revokeObjectURL(url); });
     setTimeout(() => { if (row.isConnected){ row.remove(); URL.revokeObjectURL(url); } }, 10 * 60 * 1000);
   }
+  // schneller, bildgenauer Weg (Chrome, Edge, neuere Safari)
+  async function encodeWebCodecs(draw, c, W, H, fps, n){
+    if (!window.VideoEncoder) throw new Error("WebCodecs fehlt");
+    let codec = null;
+    for (const cand of ["avc1.640028", "avc1.4d0028", "avc1.42001f", "avc1.640034", "avc1.4d0034", "avc1.42003e"]){ try { if ((await VideoEncoder.isConfigSupported({ codec: cand, width: W, height: H, bitrate: 12e6, framerate: fps })).supported){ codec = cand; break; } } catch (e) {} }
+    if (!codec) throw new Error("kein H.264-Profil für " + W + "×" + H);
+    const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: "avc", width: W, height: H, frameRate: fps }, fastStart: "in-memory" });
+    let err = null; const enc = new VideoEncoder({ output: (ch, m) => { try { muxer.addVideoChunk(ch, m); } catch (e){ err = e; } }, error: e => err = e });
+    enc.configure({ codec, width: W, height: H, bitrate: 12e6, framerate: fps });
+    for (let i = 0; i < n && !err; i++){
+      draw(i);
+      const vf = new VideoFrame(c, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+      enc.encode(vf, { keyFrame: i % fps === 0 }); vf.close();
+      while (enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 5));
+    }
+    await enc.flush(); if (err) throw err; muxer.finalize();
+    const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
+    if (blob.size < 2000) throw new Error("leere Videodatei");
+    return blob;
+  }
+  // Rückfall: eingebauter Rekorder (Safari nimmt direkt MP4 auf), läuft in Echtzeit
+  async function encodeRecorder(draw, c, fps, n, base){
+    if (!window.MediaRecorder || !c.captureStream) throw new Error("Dieser Browser kann keine Videos aufnehmen – bitte PNG exportieren oder Chrome nutzen");
+    const types = ["video/mp4;codecs=avc1.640028", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"];
+    const mime = types.find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e){ return false; } }) || "";
+    c.style.cssText = "position:fixed;left:-99999px;top:0;width:10px;height:10px;"; document.body.appendChild(c);   // manche Browser filmen nur Leinwände im Dokument
+    try {
+      draw(0);
+      const stream = c.captureStream(fps), rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 12e6 } : { videoBitsPerSecond: 12e6 }), chunks = [];
+      rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+      const stopped = new Promise(r => { rec.onstop = r; });
+      rec.start(250);
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++){
+        draw(i);
+        if (i % 10 === 0) setStatus(tr("Aufnahme") + " " + base + " " + Math.round(i / n * 100) + " %");
+        const wait = t0 + (i + 1) * 1000 / fps - performance.now(); await new Promise(r => setTimeout(r, Math.max(0, wait)));
+      }
+      await new Promise(r => setTimeout(r, 200)); rec.stop(); await stopped;
+      const type = (rec.mimeType || mime || "video/mp4").split(";")[0], blob = new Blob(chunks, { type });
+      if (blob.size < 2000) throw new Error("Aufnahme ist leer");
+      return { blob, ext: /mp4/.test(type) ? "mp4" : "webm" };
+    } finally { c.remove(); c.style.cssText = ""; }
+  }
   function fail(e){ const m = (e && e.message) || String(e); setStatus("Export-Fehler: " + m); alert(tr("Export hat nicht geklappt") + ":\n" + m + "\n\n" + tr("Tipp: PNG-Export probieren oder Chrome nutzen.")); }
   async function exportAsset(a, fmt, opt = {}){
     const [W, H] = (opt.size || val("asRes") || "1920x1080").split("x").map(Number), fps = opt.fps || parseInt(val("expFps")) || 30;
@@ -10062,22 +10106,11 @@ const ASSETS = (() => {
         }
         continue;
       }
-      if (!window.VideoEncoder){ setStatus(tr("Dieser Browser kann kein MP4 erzeugen – bitte Safari 17+, Chrome oder Edge nutzen, oder PNG exportieren.")); throw new Error("WebCodecs fehlt"); }
-      let codec = null;
-      for (const cand of ["avc1.640034", "avc1.640028", "avc1.4d0034", "avc1.4d0028", "avc1.42003e", "avc1.42001f"]){ try { if ((await VideoEncoder.isConfigSupported({ codec: cand, width: W, height: H, bitrate: 16e6, framerate: fps })).supported){ codec = cand; break; } } catch (e) {} }
-      if (!codec) throw new Error("kein H.264-Profil für " + W + "×" + H);
-      const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: "avc", width: W, height: H, frameRate: fps }, fastStart: "in-memory" });
-      let err = null; const enc = new VideoEncoder({ output: (ch, m) => muxer.addVideoChunk(ch, m), error: e => err = e });
-      enc.configure({ codec, width: W, height: H, bitrate: 16e6, framerate: fps });
-      for (let i = 0; i < n && !err; i++){
-        draw(i);
-        const vf = new VideoFrame(c, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
-        enc.encode(vf, { keyFrame: i % fps === 0 }); vf.close();
-        while (enc.encodeQueueSize > 6) await new Promise(r => setTimeout(r, 5));
-      }
-      await enc.flush(); if (err) throw err; muxer.finalize();
-      const blob = new Blob([muxer.target.buffer], { type: "video/mp4" }); blobs.push(blob);
-      if (!opt.noDownload) download(blob, base + "_" + ({ "#00ff00": "greenscreen", "#0000ff": "bluescreen", "#ff00ff": "magenta", "#000000": "schwarz" }[val("asKey")] || "key") + ".mp4");
+      let blob = null, ext = "mp4";
+      try { if (window.MA_FORCE_RECORDER) throw new Error("Rekorder erzwungen"); blob = await encodeWebCodecs(draw, c, W, H, fps, n); }
+      catch (e){ console.warn("WebCodecs-Export ging nicht, nehme Rekorder:", e); setStatus(tr("Nehme MP4 in Echtzeit auf …")); const r = await encodeRecorder(draw, c, fps, n, base); blob = r.blob; ext = r.ext; }
+      blobs.push(blob);
+      if (!opt.noDownload) download(blob, base + "_" + ({ "#00ff00": "greenscreen", "#0000ff": "bluescreen", "#ff00ff": "magenta", "#000000": "schwarz" }[val("asKey")] || "key") + "." + ext);
     }
     if (fmt === "png"){
       const blob = zip(files);
@@ -10197,7 +10230,7 @@ const ASSETS = (() => {
         body.innerHTML = FIELDS[a.type].map(f => fld(...f)).join("") + fld("dur", "Dauer (s)", "number") + fld("pos", "Position", "select", POS) +
           `<div class="setting"><label>${tr("Größe")}</label><input type="range" data-k="size" min="0.3" max="2.5" step="0.05"></div>` +
           `<div class="hint">${tr("In der Vorschau ziehen = verschieben, Mausrad = Größe.")} <a href="#" data-a="center">${tr("Zur Mitte")}</a>${BRANDED.has(a.type) ? ` · <a href="#" data-a="brand">${tr("Hausfarbe nutzen")}</a>` : ""}</div>` +
-          `<div class="insexp"><span>${tr("Exportieren")} (${val("asRes")}):</span><button type="button" class="btn" data-a="png">PNG transparent (ZIP)</button><button type="button" class="btn ghost" data-a="green">MP4 (${({ "#00ff00": "Grün", "#0000ff": "Blau", "#ff00ff": "Magenta", "#000000": "Schwarz" }[val("asKey")] || "Key")})</button><button type="button" class="btn ghost" data-a="dvr">→ DaVinci-Titel</button></div>`;
+          `<div class="insexp"><span>${tr("Exportieren")} (${val("asRes")}):</span><button type="button" class="btn" data-a="green">MP4 (${({ "#00ff00": "Grün", "#0000ff": "Blau", "#ff00ff": "Magenta", "#000000": "Schwarz" }[val("asKey")] || "Key")})</button><button type="button" class="btn ghost" data-a="png">PNG transparent (ZIP)</button><button type="button" class="btn ghost" data-a="dvr">→ DaVinci-Titel</button></div>`;
         body.querySelectorAll("[data-k]").forEach(inp => {
           const k = inp.dataset.k;
           if (inp.type === "checkbox") inp.checked = !!a[k];
