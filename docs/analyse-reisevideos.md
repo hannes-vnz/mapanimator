@@ -163,6 +163,58 @@ Für den Anfang eine KI-Erzählstimme für das Off-Skript; später schrittweise 
 
 ---
 
+## 7b. Vor der Kamera sprechen lernen – was die beiden Videos wirklich tun
+
+Ziel: selbst vor der Kamera reden. Die gute Nachricht aus den Transkripten: **Fast nichts davon sind Monologe.**
+
+**Was in Island tatsächlich in die Kamera gesagt wird:**
+- Ein einziger vorbereiteter Block: das Intro vor dem LKW (~45 s, 0:30–1:15) – *„Dieser riesige Expeditions-LKW ist unser Zuhause für die nächste Woche … also kommt mit.“* Klar erkennbar vorher überlegt, in mehreren Teilen gedreht und zusammengeschnitten.
+- Sonst **kurze Sätze im Moment**: *„Yo! I think that broke.“* – *„How is this real?!“* – *„I literally almost blew away!“* – *„Okay, I just had one of the grossest things ever happen to me.“*
+- **Ankündigungen beim Losfahren**: *„All right, from here we have 45 kilometers until we get to camp.“* (das ist genau der Satz, der unter der Karte läuft).
+- Der Rest ist **Gespräch** mit den anderen – die Kamera hört nur zu.
+
+**The Race:** Die Kandidaten reden ununterbrochen, aber zueinander und zu Passanten, fast nie an die Kamera gerichtet. Die Kamera ist Zeuge, nicht Publikum.
+
+### Die vier Satzarten, die du brauchst
+| Satzart | Wann | Beispiel für die Radreise |
+|---|---|---|
+| **Anmoderation** (einmal pro Video, vorbereitet) | Anfang | „Ich fahre mit dem Rad von München ans Mittelmeer. 900 km, 12 Tage, ein Zelt. Heute geht's los.“ |
+| **Ansage** (vor jeder Etappe) | Abfahrt, Pause | „Noch 60 km bis zum Zeltplatz, und es soll ab drei regnen.“ |
+| **Reaktion** (spontan, 1 Satz) | im Moment | „Das ist der steilste Anstieg meines Lebens.“ / „Okay, das war ein Fehler.“ |
+| **Tagesfazit** (abends, 30–60 s) | am Zelt | „Heute: 84 km, ein Platten, beste Pizza der Reise. Morgen: der Pass.“ |
+
+### Training (30 Tage, je 10 Minuten)
+1. **Woche 1 – nur Ton:** jeden Tag ein Sprachmemo mit den vier Satzarten. Anhören, nicht löschen.
+2. **Woche 2 – Kamera, aber nicht ins Gesicht:** Handy auf den Lenker oder neben dich, beim Tun reden (Kochen, Packen, Fahren). Bewegung nimmt die Nervosität.
+3. **Woche 3 – Selfie, ein Satz:** jeden Satz dreimal sprechen, den besten nehmen. Erlaubt ist, nur den letzten Versuch zu verwenden.
+4. **Woche 4 – Anmoderation:** 30 s am Stück, in 3 Teile zerlegt (Wo? Was? Warum?), jeden Teil einzeln drehen und hintereinander schneiden – genau so ist das Island-Intro gebaut.
+
+**Tricks, die beide Videos nutzen:** in Bewegung sprechen statt stillstehen · zu jemandem sprechen (Mitfahrer, Passant, Zuschauer „du“) statt zu „allen“ · Sprechpausen wegschneiden (Schnitt alle ~2,4 s ist normal, man sieht keine Lücken) · Pointen als Untertitel hervorheben statt sie zu betonen.
+
+---
+
+## 7c. Radreise – Setup und Ablauf
+
+**Kameras (nach Nutzen sortiert):**
+1. **Lenkerhalterung** (Action-Cam, nach vorn *und* drehbar zu dir) – Fahrt-POV + Selfie-Ansagen während der Fahrt; das Pendant zur Cab-Cam aus Island.
+2. **Handy/Kamera am kleinen Stativ** für **Vorbeifahr-Shots** (Kamera aufstellen, vorbeifahren, zurück holen) – das wichtigste Bild jeder Rad-Doku.
+3. **Brust- oder Helmhalterung** für Anstiege, Abfahrten, Städte (wie die Brustkameras bei The Race).
+4. **Drohne** (optional) für Landschaft und Übergänge – in Island das Bild unter jeder Etappe.
+5. **Funkmikro mit Windschutz** (Ansteckmikro): auf dem Rad wichtiger als jede Kamera – ohne gutes Mikro ist die Stimme im Wind nicht brauchbar.
+
+**Pro Tag drehen (Minimum):** Morgen-Ansage mit Tagesziel · 3 Vorbeifahr-Shots · 1 Anstieg oder Highlight · Reaktionen im Moment · Ankunft · Tagesfazit am Zelt · GPX-Datei sichern.
+
+**Mit Mapanimator:**
+- **GPX importieren** (Komoot, Strava, Garmin) unter *Route → GPX-Track importieren* – die Linie folgt exakt deiner Fahrt.
+- **Look:** „Radreise“ (hell, blaue Linie mit Kontur), „Sport-Track“ (Strava-Look) oder „Reise-Vlog Pastell“ (Island-Look). Spitze: **Avatar** (dein Foto) oder **3D-Fahrrad**.
+- **Zähler-Overlay** (*Ebenen → Zähler*): „1.240 KM · TAG #12“ zählt mit – der Kamelfamilie-Effekt.
+- **Kamera:** „Vlog-Einschub“ für die kurze Karte pro Etappe, „Folgen“ oder „3D-Flyover“ für den großen Tagesrückblick, „Feste Karte“ für die Gesamtstrecke im Intro.
+- **Fotos mit GPS** (*Ebenen → Schilder & Fotos*) landen automatisch an ihrem Ort und poppen auf, wenn die Linie vorbeikommt.
+- **Szenen:** eine Szene pro Tag; „Alle Szenen in einem Video“ ergibt den Gesamt-Rückblick.
+- **Skript-API:** Für viele Tage einen Plan mit allen Etappen schreiben und mit `node tools/render.mjs` alle Karten auf einmal rendern.
+
+---
+
 ## 8. Produktions-Workflow mit Mapanimator
 
 1. **Vor der Reise:** Prämisse festlegen (Ort × Einschränkung × Frage), Karten-Look wählen (Pastell oder Race-Look) – im ganzen Video gleich lassen.
