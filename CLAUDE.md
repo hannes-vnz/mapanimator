@@ -65,6 +65,11 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
 - Atlas-Stil, Highlight, Zähler, Snap-Preset und MP4 mit Unschärfe laufen ohne JS-Fehler.
 - Auf dem Mac geprüft (26.11.): alle Themes mit echten Kacheln, MP4 (auch mit Unschärfe), WebM, Speichern/Laden. Behoben: Pin-Bild-Race („image already exists“), 3D-Terrain blieb nach Relief an.
 
+## Videoanalyse (26.11.2026)
+- `docs/analyse-reisevideos.md`: Kara & Nate „Overlanding Iceland“ + „THE RACE S3E01“ – Kartentypen, Schnitt, Format, Ideen, Formate ohne vor der Kamera zu sprechen.
+- Daraus: Themes `pastell`, `nacht` (mit `streets`), Globus (`projGlobe`, `style.projection`), Pin-Stil `tag`, Übergang Crash-Zoom (`whipDir: "zoom"`), Looks `pastellvlog`/`racegps`/`raceglobe`/`raceborder`, Presets `vloginsert`/`tracker`/`globeflight`.
+- Werkzeug: `tools/video-analyse.sh <video>` (Schnitte, Kontaktbögen, Whisper-Transkript, PANNs-Tonklassen + Beats via uv).
+
 ## Roadmap (Priorität von oben)
 1. **Entwicklungs-Setup:** – erledigt (`src/`, `tools/build.py` → `index.html`, `npm test`).
    - `src/` (app.js, style.css, index.html) plus Build-Skript, das wieder eine einzelne `mapanimator.html` erzeugt (Bibliotheken inline).
