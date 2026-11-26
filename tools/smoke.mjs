@@ -174,6 +174,17 @@ try {
     if (CAM.whipBlurPx(0.05, 30) < 20) throw new Error("keine Unschärfe");
     return "ok";
   }));
+  await step("Skript-API (Reliefkarte-Plan + eigener Plan)", () => page.evaluate(async () => {
+    await MA.load({ name: "rk", dur: 1, fps: 25, keys: [{ t: 0, c: [10.35, 51.05], z: 5.4, b: -4, p: 50 }, { t: 1, z: 5.6, e: "linear" }], highlight: ["DEU"], points: { Berlin: [13.4, 52.52] } });
+    const r1 = await MA.render({ base64: true });
+    if (r1.n !== 25 || !r1.pos[0].Berlin) throw new Error("RK-Plan: " + r1.n + " Frames");
+    await MA.load({ name: "ma", w: 1080, h: 1080, fps: 25, look: "vlog", camera: "navi", tempo: { len: 1, feel: "rasant" },
+      route: { stops: [{ name: "München", c: [11.575, 48.137] }, { name: "Wien", c: [16.372, 48.208], mode: "train" }] },
+      labels: [{ text: "Hallo", c: [13, 48], style: "pill" }] });
+    const r2 = await MA.render({ base64: true });
+    if (r2.n < 20 || r2.w !== 1080 || r2.h !== 1080) throw new Error("MA-Plan: " + r2.n + " Frames " + r2.w + "x" + r2.h);
+    return r1.n + " + " + r2.n + " Frames";
+  }));
   await step("MP4 1 s rendern", () => page.evaluate(async () => {
     let got = null;
     window.dl = (b, n) => { if (!got) got = { n, size: b.size }; };

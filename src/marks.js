@@ -126,8 +126,9 @@ const MARKS = (() => {
         const t1 = m.t1 == null ? T + 99 : m.t1;
         life = t - m.t0;
         const out = clamp((t1 - t) / FADE_OUT);
-        draw = m.fx.draw ? clamp(life / DRAW) : (life >= 0 ? 1 : 0);
-        fillK = m.fx.draw ? clamp((life - DRAW * 0.45) / FADE_IN) : clamp(life / FADE_IN);
+        const dd = m.drawDur || DRAW;
+        draw = m.fx.draw ? clamp(life / dd) : (life >= 0 ? 1 : 0);
+        fillK = m.fx.draw ? clamp((life - dd * 0.45) / FADE_IN) : clamp(life / FADE_IN);
         vis = (life >= 0 ? 1 : 0) * out;
         fillK = eo(fillK) * out; draw = eo(draw);
       }
@@ -368,9 +369,15 @@ const MARKS = (() => {
     "Markierung(en) importiert.": "highlight(s) imported.", "Land anklicken": "Click country", "Länder der Route": "Route countries",
     "Land, Region, Stadt, See, Gebirge …": "Country, region, city, lake, mountains …" });
 
+  async function addCountry(iso, opt = {}){
+    const j = await countries();
+    const f = j.features.find(f => f.properties.ADM0_A3 === iso || f.properties.ISO_A3 === iso);
+    if (!f) return null;
+    return add(countryName(f.properties), f.geometry, Object.assign({ iso: f.properties.ADM0_A3 }, opt));
+  }
   return {
-    add, render, search, routeCountries, pickAt,
-    get: () => list.map(m => ({ name: m.name, geom: m.geom, color: m.color, fillOp: m.fillOp, stroke: m.stroke, width: m.width, t0: m.t0, t1: m.t1, fx: m.fx, iso: m.iso })),
+    add, addCountry, countries, inGeom, render, search, routeCountries, pickAt,
+    get: () => list.map(m => ({ name: m.name, geom: m.geom, color: m.color, fillOp: m.fillOp, stroke: m.stroke, width: m.width, t0: m.t0, t1: m.t1, fx: m.fx, iso: m.iso, drawDur: m.drawDur })),
     set(arr){ list.forEach(removeLayersFor); list = []; sel = null; (arr || []).forEach(o => add(o.name, o.geom, Object.assign({}, o))); changed(); },
     list: () => list
   };

@@ -71,6 +71,9 @@ const REGIONS = (() => {
     const any = on.mtn || on.land || on.sea;
     if (!any){ ids().forEach(id => map.getLayer(id) && map.setLayoutProperty(id, "visibility", "none")); return; }
     let d; try { d = await load(); } catch { setStatus(tr("Regionsdaten konnten nicht geladen werden.")); return; }
+    // Häkchen nach dem Laden neu lesen (könnten sich währenddessen geändert haben)
+    on.mtn = checked("rgMtn"); on.land = checked("rgLand"); on.sea = checked("rgSea");
+    if (!(on.mtn || on.land || on.sea)){ ids().forEach(id => map.getLayer(id) && map.setLayoutProperty(id, "visibility", "none")); return; }
     try {
       if (!map.getSource("regions")) map.addSource("regions", { type: "geojson", data: d });
       const c = colors(), sz = num("rgSize") || 1, en = lang === "en";

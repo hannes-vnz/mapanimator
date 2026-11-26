@@ -2623,6 +2623,7 @@ body:not(.pro) #tlPlayhead{margin-left:12px;}
           <div class="setting"><label>Wälder</label><input type="checkbox" id="dtWood"></div>
           <div class="setting"><label>Siedlungsflächen</label><input type="checkbox" id="dtUrban"></div>
           <div class="setting"><label>Parks</label><input type="checkbox" id="dtParks"></div>
+          <div class="setting"><label>Ortsnamen</label><input type="checkbox" id="dtLabels" checked></div>
           <div class="setting"><label>Dörfer anzeigen</label><input type="checkbox" id="dtTowns"></div>
           <div class="setting"><label>MapTiler-Key (optional)</label><input type="text" id="mtKey" placeholder="für HQ-Tiles" autocomplete="off"></div>
         </details>
@@ -3204,7 +3205,7 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets",
+  "Kamera-Presets":"Camera presets","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
   "Fotos werden an ihren Aufnahmeort gesetzt (GPS aus dem Foto) und poppen als Polaroid auf, wenn die Linie vorbeikommt. Ohne GPS: zwischen zeitlich benachbarten Fotos oder per Klick. iPhone-Fotos (HEIC) vorher als JPEG exportieren, mit Ortsangabe.":"Photos are placed where they were taken (GPS from the photo) and pop up as instant prints when the line passes. Without GPS: between photos taken before/after, or by click. Export iPhone photos (HEIC) as JPEG with location first.",
   "Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.":"Your own labels on the map: pill, callout with a line to the point, marker with name, spaced title (“I T A L Y”). With pop, fade or typewriter animation and their own time window in the timeline.","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
   "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
@@ -3491,7 +3492,9 @@ function buildBaseStyle(name){
     filter: ["all", ["has", "admin_level"], ["<=", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]],
     paint: bPaint });
 
-  style.layers.push({ id: "place-city", type: "symbol", source: "omt", "source-layer": "place",
+  const noLabels = document.getElementById("dtLabels") && !document.getElementById("dtLabels").checked;
+  if (noLabels) style.layers = style.layers.filter(l => l.type !== "symbol");
+  if (!noLabels) style.layers.push({ id: "place-city", type: "symbol", source: "omt", "source-layer": "place",
     minzoom: 4.5,
     filter: ["in", ["get", "class"], ["literal", dt("dtTowns") ? ["city", "town", "village"] : ["city", "town"]]],
     layout: {
@@ -3502,7 +3505,7 @@ function buildBaseStyle(name){
     },
     paint: { "text-color": C("label", t.city.color), "text-halo-color": C("land", t.city.halo), "text-halo-width": 1.2 } });
 
-  style.layers.push({ id: "place-country", type: "symbol", source: "omt", "source-layer": "place",
+  if (!noLabels) style.layers.push({ id: "place-country", type: "symbol", source: "omt", "source-layer": "place",
     filter: ["==", ["get", "class"], "country"],
     layout: {
       "text-field": ["coalesce", ["get", "name:de"], ["get", "name"]],
@@ -3521,6 +3524,7 @@ const map = new maplibregl.Map({
   container: "map",
   style: buildBaseStyle("hell"),
   center: [10.5, 51.2], zoom: 5, maxPitch: 85,
+  maxTileCacheSize: 1500,                 // genug Kacheln behalten, damit Vorschau-Wiederholungen nicht neu laden
   attributionControl: false,
   canvasContextAttributes: { preserveDrawingBuffer: true, antialias: true },
   fadeDuration: 0
@@ -4435,7 +4439,7 @@ function readCustomColors(){
   document.getElementById(id).addEventListener("change", () => { readCustomColors(); rebuildStyle(); }));
 document.getElementById("ccReset").addEventListener("click", () => { customColors = null; rebuildStyle(); });
 document.getElementById("mtKey").addEventListener("change", rebuildStyle);
-["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns"].forEach(id =>
+["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns", "dtLabels"].forEach(id =>
   document.getElementById(id).addEventListener("change", rebuildStyle));
 /* Stil wechseln: Terrain vorher aus (sonst rendert MapLibre Terrain ohne DEM-Quelle),
    Laufzeit-Ebenen neu anlegen, neu zeichnen. styleBusy = Promise bis alles fertig ist. */
@@ -4716,7 +4720,17 @@ async function prepareAnim(){
     const legs = r.legs && r.legs.length ? r.legs : [{ from: 0, to: coords.length - 1, mode: "car" }];
     per.push({ ri, rt, coords, cum, totalKm, segs, legs, natural: tt, stops: stopMeta, _tipIdx: 0 });
   }
-  if (!per.length){ anim = null; return null; }
+  if (!per.length){
+    // ohne Route: reine Kamera-/Ebenen-Animation, wenn eine feste Dauer gesetzt ist
+    const td = num("totalDur");
+    if (td > 0){
+      const c = map.getCenter();
+      anim = { per: [], natural: td, ovCam: { center: [c.lng, c.lat], zoom: map.getZoom() }, allCoords: [[c.lng, c.lat]],
+               stopsData: { type: "FeatureCollection", features: [] } };
+      return anim;
+    }
+    anim = null; return null;
+  }
   const allCoords = per.flatMap(p => p.coords);
   const natural = Math.max(...per.map(p => p.natural));
   const ovCam = map.cameraForBounds(boundsOf(allCoords), { padding: 90 });
@@ -5308,20 +5322,61 @@ document.getElementById("camPreset").addEventListener("change", async () => {
 
 /* ---------- Playback ---------- */
 let animFrame = null;
+/* Vorschau: Kacheln entlang des Kamerapfads vorladen (einmal je Projektzustand) */
+let prefetchSig = "", prefetching = false;
+// Nur echte Kartenkacheln prüfen (Vektor/Raster/Höhen) – GeoJSON-Ebenen werden jedes Frame neu gesetzt und „laden“ ständig
+function baseTilesLoaded(){
+  const st = map.style, tm = st && (st.tileManagers || st.sourceCaches);
+  if (!tm) return true;
+  for (const id in tm){
+    const c = tm[id], src = c._source || (c.getSource && c.getSource());
+    if (src && src.type === "geojson") continue;
+    if (c.loaded && !c.loaded()) return false;
+  }
+  return true;
+}
+async function waitTiles(ms){
+  const t0 = performance.now();
+  while (performance.now() - t0 < ms){ if (baseTilesLoaded()) return true; await new Promise(r => setTimeout(r, 30)); }
+  return false;
+}
+async function prefetchPath(fromT){
+  const total = timelineTotal();
+  const sig = JSON.stringify([total, val("resolution"), val("mapStyle"), checked("terrain3d"), tracks.pos, tracks.zoom, tracks.bearing, tracks.pitch,
+    typeof CAM !== "undefined" ? CAM.get() : 0, anim.per.map(p => p.coords.length + ":" + p.natural.toFixed(2))]);
+  if (sig === prefetchSig) return;
+  prefetching = true;
+  document.getElementById("tlPlay").textContent = "⏳";
+  const N = Math.min(48, Math.max(6, Math.ceil(total / 0.35)));
+  for (let k = 0; k <= N; k++){
+    renderAt(total * k / N, false);
+    await waitTiles(1500);
+    if (k % 3 === 0) setStatus(tr("Lade Karte vor …") + " " + Math.round(k / N * 100) + " %");
+  }
+  prefetchSig = sig; prefetching = false;
+  renderAt(fromT, false);
+  await waitTiles(1500);
+}
 async function play(fromT, onDone){
+  if (prefetching) return;
   const a = await ensureAnim();
   if (!a){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); onDone && onDone(false); return; }
   applyStyleSettings();
+  const total = timelineTotal();
+  if (fromT >= total - 0.05) fromT = 0;
+  await prefetchPath(fromT);
   playing = true;
   document.getElementById("tlPlay").textContent = "⏸";
   popT = {};
   camPos = null;
-  const total = timelineTotal();
-  if (fromT >= total - 0.05) fromT = 0;
-  const start = performance.now() - fromT * 1000;
+  let start = performance.now() - fromT * 1000, last = performance.now(), held = 0;
 
   function frame(now){
     if (!playing) return;
+    // fehlen Kacheln, Zeit kurz anhalten (max. 0,6 s am Stück) statt leere Karte zu zeigen
+    const dt = now - last; last = now;
+    if (!baseTilesLoaded() && held < 0.6){ start += dt; held += dt / 1000; }
+    else held = Math.max(0, held - dt / 4000);
     const t = (now - start) / 1000;
     setPlayheadOnly(t);
     renderAt(t, true);
@@ -5419,13 +5474,16 @@ async function waitIdle(ms = 25000){
 }
 function dl(blob, name){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
 let mp4Busy = false;
-document.getElementById("mp4Btn").addEventListener("click", async () => {
-  if (playing || mp4Busy) return;
+document.getElementById("mp4Btn").addEventListener("click", () => exportMP4({ download: true }));
+/* Framegenauer MP4-Export. opts: download (Datei speichern), points ({Name:[lng,lat]} → Positionen je Frame),
+   wantPos (Positionen sammeln), allScenes (überschreibt Häkchen). Rückgabe: { blob, pos, frames, fps, w, h, err } */
+async function exportMP4(opts = {}){
+  if (playing || mp4Busy) return null;
   if (!window.VideoEncoder || !window.Mp4Muxer){ setStatus("Dieser Browser kann kein MP4 kodieren (WebCodecs fehlt) – bitte aktuelles Chrome/Edge nutzen."); return; }
-  const allScenes = typeof SCENES !== "undefined" && checked("expAllScenes") && SCENES.count() > 1;
+  const allScenes = typeof SCENES !== "undefined" && (opts.allScenes ?? checked("expAllScenes")) && SCENES.count() > 1;
   const startScene = allScenes ? SCENES.active() : 0;
   const sceneList = allScenes ? [...Array(SCENES.count()).keys()] : [null];
-  if (!(await ensureAnim()) && !allScenes){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); return; }
+  if (!(await ensureAnim()) && !allScenes){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); return null; }
   mp4Busy = true;
   const [W, H] = val("resolution").split("x").map(Number);
   const fps = parseInt(val("expFps")) || 30;
@@ -5437,7 +5495,7 @@ document.getElementById("mp4Btn").addEventListener("click", async () => {
   const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => err = e });
   enc.configure({ codec, width: W, height: H, bitrate: W * H > 4e6 ? 60e6 : 24e6, framerate: fps, latencyMode: "quality" });
   const out = document.createElement("canvas"); out.width = W; out.height = H; const g = out.getContext("2d");
-  const pos = [], wantPos = checked("expPos"), t0 = performance.now();
+  const pos = [], wantPos = opts.wantPos ?? (checked("expPos") || !!opts.points), t0 = performance.now();
   let fi = 0, skipped = 0;
   for (const sc of sceneList){
     if (err) break;
@@ -5471,6 +5529,7 @@ document.getElementById("mp4Btn").addEventListener("click", async () => {
         const o = {};
         a.stopsData.features.forEach((f, k) => { const p = map.project(f.geometry.coordinates);
           o[(f.properties.label || f.properties.name || "stopp") + "#" + k] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; });
+        for (const [k, ll] of Object.entries(opts.points || {})){ const p = map.project(ll); o[k] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; }
         pos.push(o);
       }
       const vf = new VideoFrame(out, { timestamp: Math.round(fi * 1e6 / fps), duration: Math.round(1e6 / fps) });
@@ -5481,21 +5540,24 @@ document.getElementById("mp4Btn").addEventListener("click", async () => {
   }
   await enc.flush(); muxer.finalize();
   const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
-  if (fi) dl(blob, "map-animation.mp4");
-  if (wantPos && fi) setTimeout(() => dl(new Blob([JSON.stringify({ fps, w: W, h: H, pos })], { type: "application/json" }), "map-animation_punkte.json"), 800);
+  const base = opts.name || "map-animation";
+  if (fi && opts.download !== false) dl(blob, base + ".mp4");
+  if (wantPos && fi && opts.download !== false) setTimeout(() => dl(new Blob([JSON.stringify({ fps, w: W, h: H, pos })], { type: "application/json" }), base + "_punkte.json"), 800);
   if (allScenes) await SCENES.switchTo(startScene);
   map.setPixelRatio(pr); sizeStage(null);
   mp4Busy = false;
   setStatus(err ? "Fehler beim Kodieren: " + err.message
     : !fi ? tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")
     : "MP4 gespeichert: " + fi + " Frames" + (allScenes ? ", " + (sceneList.length - skipped) + " " + tr("Szenen") : "") + ", " + ((performance.now() - t0) / 1000).toFixed(0) + " s Renderzeit, " + (blob.size / 1e6).toFixed(1) + " MB.");
-});
+  return { blob, pos, frames: fi, fps, w: W, h: H, err: err ? err.message : null };
+}
 document.getElementById("recordBtn").addEventListener("click", async () => {
   if (playing) return;
   await ensureAnim();
   const [w, h] = val("resolution").split("x").map(Number);
   sizeStage(w, h); drawOverlay();
   await new Promise(r => setTimeout(r, 600));
+  if (anim) await prefetchPath(0);        // Vorladen nicht mit aufnehmen
 
   const canvas = map.getCanvas();
   const stream = canvas.captureStream(60);
@@ -5573,7 +5635,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {
@@ -5900,21 +5962,43 @@ const CAM = (() => {
     return { ll: [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f], idx };
   }
   // geglättete Spitze: gewichtetes Mittel über ein Zeitfenster (+ Vorausschau)
+  const erf = x => { const s = Math.sign(x), a = Math.abs(x), t = 1 / (1 + 0.3275911 * a);
+    return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a)); };
+  const Phi = x => 0.5 * (1 + erf(x / Math.SQRT2));
+  // Etappen mit Zeitfenster (Grenze = Mitte der Pause am Stopp) und Richtung Start → Ziel
+  function legSpans(p){
+    const sc = timelineTotal() / (anim.natural || 1), out = [];
+    const segs = p.segs, legsIdx = [];
+    segs.forEach((s, i) => { if (s.type === "leg" && !(s.whole && segs.findIndex(x => x.whole === s.whole) !== i)) legsIdx.push(i); });
+    legsIdx.forEach((i, k) => {
+      const s = segs[i], whole = s.whole, last = whole ? segs.filter(x => x.whole === whole).pop() : s;
+      const pb = segs[i - 1], pa = segs[segs.indexOf(last) + 1];
+      const a = k === 0 ? -1e9 : ((pb && pb.type === "pause" ? (pb.t0 + pb.t1) / 2 : s.t0) * sc);
+      const b = k === legsIdx.length - 1 ? 1e9 : ((pa && pa.type === "pause" ? (pa.t0 + pa.t1) / 2 : last.t1) * sc);
+      const lg = legAt(p, (s.from + (whole ? whole.to : s.to)) / 2);
+      const A = merc(p.coords[lg.from]), B = merc(p.coords[lg.to]);
+      out.push({ a, b, ang: Math.atan2(B.y - A.y, B.x - A.x), mode: lg.mode });
+    });
+    return out;
+  }
   function smoothTip(p, t, look, win){
-    let sx = 0, sy = 0, sw = 0, hx = 0, hy = 0, zo = 0;
-    const N = 6;
-    for (let k = -N; k <= N; k++){
-      const w = Math.exp(-(k * k) / (N * N * 0.5));
-      const tt = t + look + (k / N) * win;
-      const tp = tipAt(p, tt), m = merc(tp.ll);
-      sx += m.x * w; sy += m.y * w; sw += w;
-      const lg = legAt(p, tp.idx);
-      zo += ((MODES[lg.mode] || {}).zoom || 0) * w;
-      const h = headingAt(p, tp.idx); hx += Math.cos(h) * w; hy += Math.sin(h) * w;
+    const tc = t + look, sig = Math.max(win / 2, 0.2);
+    const spans = legSpans(p);
+    // stufenlose Mischung der Etappen (Gewicht = Anteil der Glockenkurve im Etappenfenster)
+    let cur = spans.find(s => tc >= s.a && tc < s.b) || spans[spans.length - 1];
+    let sw = 0, sa = 0, zo = 0;
+    for (const s of spans){
+      const w = Phi((s.b - tc) / sig) - Phi((s.a - tc) / sig);
+      if (w < 1e-4) continue;
+      let d = s.ang - cur.ang; d = Math.atan2(Math.sin(d), Math.cos(d));
+      sa += d * w; sw += w; zo += ((MODES[s.mode] || {}).zoom || 0) * w;
     }
-    // Bildmitte = exakte Fahrzeugposition (Kamera hängt am Fahrzeug); geglättet werden nur Zoom und Richtung
-    const exact = tipAt(p, t + look).ll;
-    return { ll: exact, modeZoom: zo / sw, heading: Math.atan2(hy, hx) };
+    const target = cur.ang + (sw ? sa / sw : 0);
+    // Fahrtrichtung: Sehne von (t − win) bis (t + win) – glättet Kurven natürlich
+    const A = merc(tipAt(p, tc - win).ll), B = merc(tipAt(p, tc + win).ll);
+    const heading = (A.x === B.x && A.y === B.y) ? target : Math.atan2(B.y - A.y, B.x - A.x);
+    // Bildmitte = exakte Fahrzeugposition (Kamera hängt am Fahrzeug)
+    return { ll: tipAt(p, tc).ll, modeZoom: sw ? zo / sw : 0, heading, target };
   }
   function legFitZoom(p, lg){
     const key = p.ri + ":" + lg.from + ":" + lg.to + ":" + map.getCanvas().width + "x" + map.getCanvas().height;
@@ -5946,11 +6030,13 @@ const CAM = (() => {
       return { c: s.center, z: zoom, b: s.bearing || 0, p: pitch };
     }
     const look = s.mode === "follow" ? (s.look || 0) : 0;
-    const st = smoothTip(p, t, look, 1.2);
+    const st = smoothTip(p, t, look, s.up === "travel" ? 3 : s.up === "target" ? 1.6 : 1.2);
     let z = zoom + st.modeZoom;
     if (s.auto !== false) z = Math.min(z, autoZoom(p, t) + 0.35);
     if (s.mode === "follow"){
-      const b = s.up === "travel" ? headingToBearing(st.heading) + (s.bearing || 0) : (s.bearing || 0);
+      const b = s.up === "travel" ? headingToBearing(st.heading) + (s.bearing || 0)
+              : s.up === "target" ? headingToBearing(st.target) + (s.bearing || 0)
+              : (s.bearing || 0);
       return { c: st.ll, z, b, p: pitch };
     }
     if (s.mode === "orbit"){
@@ -6046,7 +6132,7 @@ const CAM = (() => {
       const b = document.createElement("div");
       b.className = "shot sh-" + s.mode + (shots.indexOf(s) === sel ? " sel" : "");
       b.style.left = t2x(s.t) + "px"; b.style.width = Math.max(t2x(t1) - t2x(s.t) - 2, 6) + "px";
-      b.innerHTML = `<span>${CAM_MODES[s.mode].icon} ${tr(CAM_MODES[s.mode].label)}${s.mode === "follow" && s.up === "travel" ? " ↑" : ""}</span>` + (k > 0 ? '<i class="edge"></i>' : "");
+      b.innerHTML = `<span>${CAM_MODES[s.mode].icon} ${tr(CAM_MODES[s.mode].label)}${s.mode === "follow" && s.up === "travel" ? " ↑" : s.mode === "follow" && s.up === "target" ? " ➜" : ""}</span>` + (k > 0 ? '<i class="edge"></i>' : "");
       b.addEventListener("pointerdown", e => {
         if (e.target.classList.contains("edge")) return;
         sel = shots.indexOf(s); renderRow(); renderEditor();
@@ -6094,7 +6180,7 @@ const CAM = (() => {
       `<div class="shothead"><b>${tr("Abschnitt")} ${idx + 1}/${S.length}</b><span>${s.t.toFixed(1)}–${t1.toFixed(1)} s</span>` +
       (S.length > 1 && idx > 0 ? `<button type="button" class="del" data-a="del" title="${tr("Abschnitt löschen")}">✕</button>` : "") + `</div>` +
       `<div class="modes">${Object.entries(CAM_MODES).map(([k, m]) => `<button type="button" data-mode="${k}" class="${s.mode === k ? "active" : ""}"><em>${m.icon}</em>${tr(m.label)}</button>`).join("")}</div>` +
-      (s.mode === "follow" ? `<div class="tempo-row"><span>${tr("Oben")}</span>${seg([["north", tr("Norden")], ["travel", tr("Fahrtrichtung")]], s.up || "north")}</div>` : "") +
+      (s.mode === "follow" ? `<div class="tempo-row"><span>${tr("Oben")}</span>${seg([["north", tr("Norden")], ["target", tr("Ziel")], ["travel", tr("Fahrtrichtung")]], s.up || "north")}</div>` : "") +
       (s.mode === "still" ? `<button type="button" class="btn ghost full" data-a="cap">${tr("Aktuelle Kartenansicht übernehmen")}</button>` : "") +
       (s.mode !== "overview" && s.mode !== "still" ? rng("zoom", "Zoom", 2, 16, 0.1, s.zoom == null ? num("zoom") : s.zoom) : "") +
       rng("pitch", "Neigung", 0, 80, 1, s.pitch || 0) +
@@ -6123,10 +6209,10 @@ const CAM = (() => {
   const PRESETS = [
     { id: "classic", name: "Folgen", sub: "Standard: Übersicht → folgen → Übersicht", icon: "🎯",
       shots: T => [F({ t: 0, mode: "overview" }), F({ t: 1.4, zoom: 7 }), F({ t: Math.max(T - 2, 2), mode: "overview" })], tempo: { len: 0, feel: "normal" } },
-    { id: "navi", name: "Navi", sub: "Fahrtrichtung oben, geneigt", icon: "🧭",
-      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "travel" })], tempo: { len: 0, feel: "normal" } },
-    { id: "flyover", name: "3D-Flyover", sub: "Relive-Stil: tief, schräg, Fahrtrichtung", icon: "🏔️",
-      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "travel" }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
+    { id: "navi", name: "Richtung Ziel", sub: "Hinter der Figur, Blick zum nächsten Ziel – ruhig", icon: "🧭",
+      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "target" })], tempo: { len: 0, feel: "normal" } },
+    { id: "flyover", name: "3D-Flyover", sub: "Relive-Stil: tief, schräg, Blick zum Ziel", icon: "🏔️",
+      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "target" }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
       tempo: { len: 30, feel: "gemuetlich" }, terrain: true },
     { id: "recap", name: "Vlog-Recap", sub: "Whip-Pan rein/raus, weit folgen · flott", icon: "🎬",
       shots: T => [F({ t: 0, zoom: 4.6 }), F({ t: Math.max(T - 1.8, 2), mode: "overview" })], tempo: { len: 30, feel: "rasant" }, whip: true },
@@ -6169,7 +6255,7 @@ const CAM = (() => {
   });
 
   Object.assign(EN, { "Folgen": "Follow", "Still": "Still", "Übersicht": "Overview", "Stativ": "Tripod", "Orbit": "Orbit",
-    "Kamera": "Camera", "Abschnitt": "Shot", "Oben": "Up", "Norden": "North", "Fahrtrichtung": "Direction of travel",
+    "Kamera": "Camera", "Abschnitt": "Shot", "Oben": "Up", "Norden": "North", "Ziel": "Destination", "Fahrtrichtung": "Direction of travel",
     "Aktuelle Kartenansicht übernehmen": "Use current map view", "Neigung": "Tilt", "Drehung": "Rotation", "Startwinkel": "Start angle",
     "Vorausschau (s)": "Look-ahead (s)", "Umdrehungen": "Turns", "Lange Etappen: rauszoomen": "Long legs: zoom out",
     "Neuer Abschnitt am Playhead": "New shot at playhead", "Abschnitt löschen": "Delete shot", "Ansicht übernommen.": "View captured.",
@@ -6320,8 +6406,9 @@ const MARKS = (() => {
         const t1 = m.t1 == null ? T + 99 : m.t1;
         life = t - m.t0;
         const out = clamp((t1 - t) / FADE_OUT);
-        draw = m.fx.draw ? clamp(life / DRAW) : (life >= 0 ? 1 : 0);
-        fillK = m.fx.draw ? clamp((life - DRAW * 0.45) / FADE_IN) : clamp(life / FADE_IN);
+        const dd = m.drawDur || DRAW;
+        draw = m.fx.draw ? clamp(life / dd) : (life >= 0 ? 1 : 0);
+        fillK = m.fx.draw ? clamp((life - dd * 0.45) / FADE_IN) : clamp(life / FADE_IN);
         vis = (life >= 0 ? 1 : 0) * out;
         fillK = eo(fillK) * out; draw = eo(draw);
       }
@@ -6562,9 +6649,15 @@ const MARKS = (() => {
     "Markierung(en) importiert.": "highlight(s) imported.", "Land anklicken": "Click country", "Länder der Route": "Route countries",
     "Land, Region, Stadt, See, Gebirge …": "Country, region, city, lake, mountains …" });
 
+  async function addCountry(iso, opt = {}){
+    const j = await countries();
+    const f = j.features.find(f => f.properties.ADM0_A3 === iso || f.properties.ISO_A3 === iso);
+    if (!f) return null;
+    return add(countryName(f.properties), f.geometry, Object.assign({ iso: f.properties.ADM0_A3 }, opt));
+  }
   return {
-    add, render, search, routeCountries, pickAt,
-    get: () => list.map(m => ({ name: m.name, geom: m.geom, color: m.color, fillOp: m.fillOp, stroke: m.stroke, width: m.width, t0: m.t0, t1: m.t1, fx: m.fx, iso: m.iso })),
+    add, addCountry, countries, inGeom, render, search, routeCountries, pickAt,
+    get: () => list.map(m => ({ name: m.name, geom: m.geom, color: m.color, fillOp: m.fillOp, stroke: m.stroke, width: m.width, t0: m.t0, t1: m.t1, fx: m.fx, iso: m.iso, drawDur: m.drawDur })),
     set(arr){ list.forEach(removeLayersFor); list = []; sel = null; (arr || []).forEach(o => add(o.name, o.geom, Object.assign({}, o))); changed(); },
     list: () => list
   };
@@ -7240,6 +7333,9 @@ const REGIONS = (() => {
     const any = on.mtn || on.land || on.sea;
     if (!any){ ids().forEach(id => map.getLayer(id) && map.setLayoutProperty(id, "visibility", "none")); return; }
     let d; try { d = await load(); } catch { setStatus(tr("Regionsdaten konnten nicht geladen werden.")); return; }
+    // Häkchen nach dem Laden neu lesen (könnten sich währenddessen geändert haben)
+    on.mtn = checked("rgMtn"); on.land = checked("rgLand"); on.sea = checked("rgSea");
+    if (!(on.mtn || on.land || on.sea)){ ids().forEach(id => map.getLayer(id) && map.setLayoutProperty(id, "visibility", "none")); return; }
     try {
       if (!map.getSource("regions")) map.addSource("regions", { type: "geojson", data: d });
       const c = colors(), sz = num("rgSize") || 1, en = lang === "en";
@@ -7391,6 +7487,201 @@ const SCENES = (() => {
   render();
 
   return { switchTo, addScene, loadAll, serializeAll, count: () => scenes.length, active: () => active, list: () => scenes };
+})();
+</script>
+<script>
+"use strict";
+/* =========================================================
+   Skript-API: window.MA  (kompatibel zu window.RK aus reliefkarte.html)
+     await MA.load(plan)          Plan anwenden (ersetzt das Projekt)
+     await MA.render(opts)        framegenaues MP4; opts.bundle → <name>_bundle.json (MP4 base64 + Positionen),
+                                  opts.base64 → { mp4: base64, pos, … } zurückgeben (für tools/render.mjs)
+     await MA.still(t)            Einzelbild (JPEG-DataURL) inkl. Overlay
+     MA.applyAt(t), MA.camAt(t), MA.points(t), MA.state(), MA.plan, MA.map
+   Plan-Felder (alle optional):
+     name, w, h, fps, dur
+     look: "relief" (Look-ID) | style: "atlas" (Kartenstil) | settings: { <Einstellungs-ID>: Wert }
+     route: { color, stops: [{ name, c:[lon,lat], mode, speed }] }   oder routes: [ … ]
+     camera: "flyover" (Preset-ID) | shots: [ … ] | keys: [{ t, c, z, b, p, e }] (wie Reliefkarte)
+     tempo: { len, feel }, exaggeration (3D-Terrain)
+     highlight: ["DEU"], hlIn: [t0, t1], marks: [{ iso | search | geom, name, color, fx, t0, t1 }]
+     layers: [{ id, url | data, bbox, where, clipTo, width, color, appear:[t0,t1], hiWhere, hiAt, hiColor }]
+     labels: [{ text, c, style, … }], signs: [{ type, text, c, show, pause, photo }]
+     points: { Name: [lon, lat] }  → Bildschirmposition je Frame im Export
+     scenes: [plan, plan, …]       → mehrere Szenen, gerendert in ein Video
+   ========================================================= */
+(() => {
+  const $ = id => document.getElementById(id);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let PLAN = null, defaults = null;
+  const EASE = { snap: "snap", out: "easeOut", in: "easeIn", linear: "linear", smooth: "quadInOut" };
+
+  const ready = () => new Promise(r => { const k = () => (typeof mapReady !== "undefined" && mapReady) ? r() : setTimeout(k, 100); k(); });
+  ready().then(() => { defaults = JSON.stringify(serializeProject()); });
+
+  function setv(id, v){
+    const el = $(id); if (!el) return;
+    if (el.tagName === "SELECT" && ![...el.options].some(o => o.value === String(v))){
+      const o = document.createElement("option"); o.value = v; o.textContent = String(v).replace("x", " × "); el.appendChild(o);
+    }
+    if (el.type === "checkbox") el.checked = !!v; else el.value = v;
+  }
+  const ll = o => Array.isArray(o) ? o : o && o.c ? o.c : o && o.lng != null ? [o.lng, o.lat] : o && o.lon != null ? [o.lon, o.lat] : null;
+
+  /* ---------- Reliefkarte-Linienebenen → Markierungen ---------- */
+  async function lineLayer(ly){
+    let fc = ly.data;
+    if (!fc && ly.url) fc = await (await fetch(ly.url)).json();
+    if (!fc) return;
+    let feats = fc.features || [];
+    if (ly.bbox){ const [x0, y0, x1, y1] = ly.bbox; feats = feats.filter(f => { const b = geomBounds(f.geometry); return b && b[1][0] >= x0 && b[0][0] <= x1 && b[1][1] >= y0 && b[0][1] <= y1; }); }
+    if (ly.where){ const fn = new Function("p", "return (" + ly.where + ");"); feats = feats.filter(f => { try { return fn(f.properties || {}); } catch { return false; } }); }
+    if (ly.clipTo){
+      const j = await MARKS.countries(), c = j.features.find(f => f.properties.ADM0_A3 === ly.clipTo);
+      if (c) feats = feats.filter(f => { const g = f.geometry, cs = g.type === "LineString" ? g.coordinates : g.type === "MultiLineString" ? g.coordinates.flat() : [];
+        return cs.length && MARKS.inGeom(cs[Math.floor(cs.length / 2)], c.geometry, c._bb); });
+    }
+    const multi = fs => ({ type: "MultiLineString", coordinates: fs.flatMap(f => f.geometry.type === "LineString" ? [f.geometry.coordinates] : f.geometry.type === "MultiLineString" ? f.geometry.coordinates : []) });
+    const [a0, a1] = ly.appear || [0, 0];
+    MARKS.add(ly.id || "Linien", multi(feats), { color: ly.color || "#0a56c8", stroke: ly.color || "#0a56c8", width: ly.width || 3.4, t0: a0, drawDur: Math.max(a1 - a0, 0.05),
+      t1: ly.show ? ly.show[1] : null, fx: { draw: a1 > a0, glow: false, shadow: ly.casing !== false, pulse: false, focus: false, extrude: false } });
+    if (ly.hiWhere){
+      const [k, v] = ly.hiWhere, hi = feats.filter(f => (f.properties || {})[k] === v);
+      for (const [x, y] of ly.hiAt || [[a0, null]])
+        MARKS.add((ly.id || "Linien") + " " + v, multi(hi), { color: ly.hiColor || "#dc2828", stroke: ly.hiColor || "#dc2828", width: (ly.width || 3.4) * 1.4, t0: x, t1: y,
+          fx: { draw: false, glow: true, shadow: false, pulse: false, focus: false, extrude: false } });
+    }
+  }
+
+  /* ---------- Plan anwenden ---------- */
+  async function applyPlan(P){
+    PLAN = P;
+    // Format
+    if (P.w && P.h) setv("resolution", P.w + "x" + P.h);
+    else if (P.keys) setv("resolution", "1080x1920");          // Reliefkarte-Standard
+    if (P.fps) setv("expFps", P.fps);
+    $("resolution").dispatchEvent(new Event("change"));
+    // Look / Stil
+    const rkPlan = P.keys && typeof P.look !== "string" && !P.style;          // Plan aus reliefkarte.html
+    const lookId = typeof P.look === "string" ? P.look : (rkPlan ? "relief" : null);
+    if (rkPlan){ setv("dtLabels", false); }
+    if (lookId){ const t = MA_TEMPLATES.list.find(x => x.id === lookId); if (t) await MA_TEMPLATES.applyTemplate(t); }
+    if (rkPlan){ ["rgMtn", "rgLand", "rgSea"].forEach(id => setv(id, false)); await swapStyle(); }   // ohne Beschriftung neu aufbauen
+    if (P.style && P.style !== val("mapStyle")){ setv("mapStyle", P.style); $("mapStyle").dispatchEvent(new Event("change")); await sleep(30); await styleBusy; }
+    for (const [k, v] of Object.entries(P.settings || {})) setv(k, v);
+    if (P.exaggeration != null){ setv("terrain3d", P.exaggeration > 0); setv("terrainEx", P.exaggeration); applyTerrain(); }
+    if (P.dur) setv("totalDur", P.dur);
+    // Routen
+    const rs = P.routes || (P.route ? [P.route] : []);
+    routes = [];
+    rs.forEach((r, i) => {
+      const rt = newRoute(r.name || "Route " + (i + 1), r.color || PALETTE[i % PALETTE.length]);
+      rt.tipLabel = r.tipLabel || "";
+      for (const s of r.stops || []){ const c = ll(s); if (!c) continue;
+        rt.waypoints.push({ id: ++wpCounter, name: s.name || "", lat: c[1], lng: c[0], color: s.color || rt.color, mode: s.mode || "", speed: s.speed || 1, photo: null }); }
+      routes.push(rt);
+    });
+    if (!routes.length) routes.push(newRoute("Route 1", PALETTE[0]));
+    activeRoute = 0;
+    syncRouteInputs(); renderRoutes(); renderWpList();
+    if (P.tempo) await MA_TEMPLATES.applyTempo(P.tempo.len ?? 0, P.tempo.feel || "normal"); else await drawStatic();
+    if (P.dur){ setv("totalDur", P.dur); await drawStatic(); }
+    // Markierungen
+    const hlOp = P.look && typeof P.look === "object" && P.look.hlOpacity != null ? P.look.hlOpacity : 0.66;   // Reliefkarte-Standard
+    const hlIn = P.hlIn || [0, 0];
+    for (const iso of P.highlight || [])
+      await MARKS.addCountry(iso, { color: (P.look && P.look.hlFill) || "#86ccff", fillOp: hlOp, width: 6, t0: hlIn[0], drawDur: Math.max(hlIn[1] - hlIn[0], 0.05),
+        fx: { draw: hlIn[1] > hlIn[0], glow: false, shadow: true, pulse: false, focus: false, extrude: false } });
+    for (const m of P.marks || []){
+      const opt = Object.assign({}, m, { fx: Object.assign({ draw: true, glow: true, shadow: true, pulse: false, focus: false, extrude: false }, m.fx || {}) });
+      if (m.iso) await MARKS.addCountry(m.iso, opt);
+      else if (m.geom) MARKS.add(m.name || "Markierung", m.geom, opt);
+      else if (m.search){ const r = await (await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&polygon_geojson=1&polygon_threshold=0.003&accept-language=de&q=" + encodeURIComponent(m.search))).json();
+        if (r[0] && r[0].geojson) MARKS.add(m.name || r[0].display_name.split(",")[0], r[0].geojson, opt); }
+    }
+    for (const ly of P.layers || []) await lineLayer(ly);
+    // Labels & Schilder
+    for (const l of P.labels || []){ const c = ll(l); if (c) LABELS.add(l.text || "", c, Object.assign({}, l, { lngLat: c })); }
+    for (const sg of P.signs || []){
+      const c = ll(sg); if (!c) continue;
+      let img = null, src = null;
+      if (sg.photo){ img = await new Promise(r => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.onerror = () => r(null); i.src = sg.photo; }); src = img ? sg.photo : null; }
+      SIGNS.add(Object.assign({ type: img ? "photo" : "pin" }, sg, { lngLat: c, img, src }));
+    }
+    await drawStatic();
+    // Kamera
+    tracks.pos = []; tracks.zoom = []; tracks.bearing = []; tracks.pitch = [];
+    if (P.keys && P.keys.length){
+      let last = { c: [10, 51], z: 5, b: 0, p: 45 };
+      for (const k of P.keys){
+        const n = Object.assign({}, last, k), e = EASE[k.e] || (k === P.keys[0] ? "linear" : "quadInOut");
+        tracks.pos.push({ t: n.t, lng: n.c[0], lat: n.c[1], follow: false, ease: e });
+        tracks.zoom.push({ t: n.t, v: n.z, ease: e }); tracks.bearing.push({ t: n.t, v: n.b, ease: e }); tracks.pitch.push({ t: n.t, v: n.p, ease: e });
+        last = n;
+      }
+    } else if (P.shots) CAM.set(P.shots);
+    else if (P.camera){ const pr = CAM.presets.find(x => x.id === P.camera); if (pr) await CAM.applyPreset(pr); if (P.dur){ setv("totalDur", P.dur); await drawStatic(); } }
+    if (P.whip){ setv("whipIn", P.whip === true || P.whip === "in" || P.whip === "both"); setv("whipOut", P.whip === true || P.whip === "out" || P.whip === "both"); }
+    renderTimeline();
+    await ensureAnim();
+    setPlayhead(0, true);
+    await waitIdle(20000);
+  }
+
+  async function load(plan){
+    await ready();
+    if (typeof plan === "string") plan = JSON.parse(plan);
+    await SCENES.loadAll(JSON.parse(defaults));          // sauberer Ausgangszustand
+    const list = Array.isArray(plan.scenes) && plan.scenes.length ? plan.scenes.map(s => Object.assign({}, plan, { scenes: undefined }, s)) : [plan];
+    for (let i = 0; i < list.length; i++){
+      if (i > 0) await SCENES.addScene(false);
+      await applyPlan(list[i]);
+    }
+    if (list.length > 1) await SCENES.switchTo(0);
+    PLAN = plan;
+    setStatus("Plan „" + (plan.name || "ohne Namen") + "“ geladen (" + list.length + " " + (list.length > 1 ? "Szenen" : "Szene") + ").");
+    return true;
+  }
+
+  function points(){
+    const o = {};
+    for (const [k, c] of Object.entries((PLAN && PLAN.points) || {})){ const p = map.project(c); o[k] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; }
+    return o;
+  }
+  const b64 = blob => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(blob); });
+  async function render(opts = {}){
+    const name = (PLAN && PLAN.name) || "karte";
+    const res = await exportMP4({ download: !opts.bundle && !opts.base64, points: (PLAN && PLAN.points) || {}, wantPos: true, allScenes: true, name });
+    if (!res) throw new Error("Nichts zu rendern (Route oder Dauer fehlt).");
+    const meta = { name, fps: res.fps, w: res.w, h: res.h, n: res.frames, pos: res.pos, err: res.err };
+    if (opts.base64) return Object.assign(meta, { mp4: await b64(res.blob) });
+    if (opts.bundle){
+      const j = new Blob([JSON.stringify(Object.assign(meta, { mp4: await b64(res.blob) }))], { type: "application/json" });
+      dl(j, name + "_bundle.json");
+    }
+    return `Fertig: ${res.frames} Frames, ${(res.blob.size / 1e6).toFixed(1)} MB` + (res.err ? " FEHLER " + res.err : "");
+  }
+  async function still(t){
+    setPlayhead(t, true); await waitIdle();
+    const mc = map.getCanvas(), c = document.createElement("canvas"); c.width = mc.width; c.height = mc.height;
+    const g = c.getContext("2d"); g.drawImage(mc, 0, 0); g.drawImage($("ovl"), 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.85);
+  }
+  function camAt(t){ setPlayhead(t, true); const c = map.getCenter(); return { c: [c.lng, c.lat], z: map.getZoom(), b: map.getBearing(), p: map.getPitch() }; }
+
+  window.MA = {
+    load, render, still, points, camAt,
+    applyAt: t => setPlayhead(t, true),
+    state: () => SCENES.serializeAll(),
+    loadProject: p => SCENES.loadAll(p),
+    run: s => (0, eval)(s),
+    get map(){ return map; }, get plan(){ return PLAN; }, ready
+  };
+  window.RK = window.RK || window.MA;          // alte Skripte für reliefkarte.html laufen weiter
+
+  // index.html?plan=<URL> lädt einen Plan direkt
+  const q = new URLSearchParams(location.search).get("plan");
+  if (q) ready().then(() => fetch(q)).then(r => r.json()).then(load).catch(e => setStatus("Plan-Fehler: " + e.message));
 })();
 </script>
 <script>

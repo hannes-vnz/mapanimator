@@ -32,7 +32,7 @@ const EN = {
   "Routen & Orte":"Routes & Places","Features (Regionen & GeoJSON)":"Features (regions & GeoJSON)",
   "Kartendetails":"Map details","POIs entlang der Route":"POIs along the route",
   "Route & Kamera":"Route & camera","Stil":"Style","Farben (Style-Editor)":"Colors (style editor)",
-  "Kamera-Presets":"Camera presets",
+  "Kamera-Presets":"Camera presets","Lade Karte vor …":"Preloading map …","Ortsnamen":"Place names",
   "Fotos werden an ihren Aufnahmeort gesetzt (GPS aus dem Foto) und poppen als Polaroid auf, wenn die Linie vorbeikommt. Ohne GPS: zwischen zeitlich benachbarten Fotos oder per Klick. iPhone-Fotos (HEIC) vorher als JPEG exportieren, mit Ortsangabe.":"Photos are placed where they were taken (GPS from the photo) and pop up as instant prints when the line passes. Without GPS: between photos taken before/after, or by click. Export iPhone photos (HEIC) as JPEG with location first.",
   "Eigene Beschriftungen auf der Karte: Pille, Callout mit Linie zum Punkt, Marker mit Name, gesperrter Großtext („I T A L I E N“). Mit Pop-, Fade- oder Schreibmaschinen-Animation und eigenem Zeitfenster in der Timeline.":"Your own labels on the map: pill, callout with a line to the point, marker with name, spaced title (“I T A L Y”). With pop, fade or typewriter animation and their own time window in the timeline.","👆 Land anklicken":"👆 Click country","🧭 Länder der Route":"🧭 Route countries",
   "Hebt Länder, Regionen, Städte oder Seen hervor – die Kontur zeichnet sich, die Fläche leuchtet auf. „Länder der Route“ markiert alle durchquerten Länder, jedes erscheint, wenn die Route es erreicht. Jede Markierung ist ein Balken in der Timeline.":"Highlights countries, regions, cities or lakes – the outline draws itself, the area lights up. “Route countries” highlights every country the route crosses, each appearing when the route reaches it. Each highlight is a bar in the timeline.","Looks":"Looks","Kamera-Abschnitte":"Camera shots","Keyframe-Kamera (Profi)":"Keyframe camera (pro)","Abenteuer (Vintage)":"Adventure (vintage)",
@@ -319,7 +319,9 @@ function buildBaseStyle(name){
     filter: ["all", ["has", "admin_level"], ["<=", ["get", "admin_level"], 2], ["!=", ["get", "maritime"], 1]],
     paint: bPaint });
 
-  style.layers.push({ id: "place-city", type: "symbol", source: "omt", "source-layer": "place",
+  const noLabels = document.getElementById("dtLabels") && !document.getElementById("dtLabels").checked;
+  if (noLabels) style.layers = style.layers.filter(l => l.type !== "symbol");
+  if (!noLabels) style.layers.push({ id: "place-city", type: "symbol", source: "omt", "source-layer": "place",
     minzoom: 4.5,
     filter: ["in", ["get", "class"], ["literal", dt("dtTowns") ? ["city", "town", "village"] : ["city", "town"]]],
     layout: {
@@ -330,7 +332,7 @@ function buildBaseStyle(name){
     },
     paint: { "text-color": C("label", t.city.color), "text-halo-color": C("land", t.city.halo), "text-halo-width": 1.2 } });
 
-  style.layers.push({ id: "place-country", type: "symbol", source: "omt", "source-layer": "place",
+  if (!noLabels) style.layers.push({ id: "place-country", type: "symbol", source: "omt", "source-layer": "place",
     filter: ["==", ["get", "class"], "country"],
     layout: {
       "text-field": ["coalesce", ["get", "name:de"], ["get", "name"]],
@@ -349,6 +351,7 @@ const map = new maplibregl.Map({
   container: "map",
   style: buildBaseStyle("hell"),
   center: [10.5, 51.2], zoom: 5, maxPitch: 85,
+  maxTileCacheSize: 1500,                 // genug Kacheln behalten, damit Vorschau-Wiederholungen nicht neu laden
   attributionControl: false,
   canvasContextAttributes: { preserveDrawingBuffer: true, antialias: true },
   fadeDuration: 0
@@ -1263,7 +1266,7 @@ function readCustomColors(){
   document.getElementById(id).addEventListener("change", () => { readCustomColors(); rebuildStyle(); }));
 document.getElementById("ccReset").addEventListener("click", () => { customColors = null; rebuildStyle(); });
 document.getElementById("mtKey").addEventListener("change", rebuildStyle);
-["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns"].forEach(id =>
+["dtStates", "dtRoads", "dtRail", "dtWood", "dtUrban", "dtParks", "dtTowns", "dtLabels"].forEach(id =>
   document.getElementById(id).addEventListener("change", rebuildStyle));
 /* Stil wechseln: Terrain vorher aus (sonst rendert MapLibre Terrain ohne DEM-Quelle),
    Laufzeit-Ebenen neu anlegen, neu zeichnen. styleBusy = Promise bis alles fertig ist. */
@@ -1544,7 +1547,17 @@ async function prepareAnim(){
     const legs = r.legs && r.legs.length ? r.legs : [{ from: 0, to: coords.length - 1, mode: "car" }];
     per.push({ ri, rt, coords, cum, totalKm, segs, legs, natural: tt, stops: stopMeta, _tipIdx: 0 });
   }
-  if (!per.length){ anim = null; return null; }
+  if (!per.length){
+    // ohne Route: reine Kamera-/Ebenen-Animation, wenn eine feste Dauer gesetzt ist
+    const td = num("totalDur");
+    if (td > 0){
+      const c = map.getCenter();
+      anim = { per: [], natural: td, ovCam: { center: [c.lng, c.lat], zoom: map.getZoom() }, allCoords: [[c.lng, c.lat]],
+               stopsData: { type: "FeatureCollection", features: [] } };
+      return anim;
+    }
+    anim = null; return null;
+  }
   const allCoords = per.flatMap(p => p.coords);
   const natural = Math.max(...per.map(p => p.natural));
   const ovCam = map.cameraForBounds(boundsOf(allCoords), { padding: 90 });
@@ -2136,20 +2149,61 @@ document.getElementById("camPreset").addEventListener("change", async () => {
 
 /* ---------- Playback ---------- */
 let animFrame = null;
+/* Vorschau: Kacheln entlang des Kamerapfads vorladen (einmal je Projektzustand) */
+let prefetchSig = "", prefetching = false;
+// Nur echte Kartenkacheln prüfen (Vektor/Raster/Höhen) – GeoJSON-Ebenen werden jedes Frame neu gesetzt und „laden“ ständig
+function baseTilesLoaded(){
+  const st = map.style, tm = st && (st.tileManagers || st.sourceCaches);
+  if (!tm) return true;
+  for (const id in tm){
+    const c = tm[id], src = c._source || (c.getSource && c.getSource());
+    if (src && src.type === "geojson") continue;
+    if (c.loaded && !c.loaded()) return false;
+  }
+  return true;
+}
+async function waitTiles(ms){
+  const t0 = performance.now();
+  while (performance.now() - t0 < ms){ if (baseTilesLoaded()) return true; await new Promise(r => setTimeout(r, 30)); }
+  return false;
+}
+async function prefetchPath(fromT){
+  const total = timelineTotal();
+  const sig = JSON.stringify([total, val("resolution"), val("mapStyle"), checked("terrain3d"), tracks.pos, tracks.zoom, tracks.bearing, tracks.pitch,
+    typeof CAM !== "undefined" ? CAM.get() : 0, anim.per.map(p => p.coords.length + ":" + p.natural.toFixed(2))]);
+  if (sig === prefetchSig) return;
+  prefetching = true;
+  document.getElementById("tlPlay").textContent = "⏳";
+  const N = Math.min(48, Math.max(6, Math.ceil(total / 0.35)));
+  for (let k = 0; k <= N; k++){
+    renderAt(total * k / N, false);
+    await waitTiles(1500);
+    if (k % 3 === 0) setStatus(tr("Lade Karte vor …") + " " + Math.round(k / N * 100) + " %");
+  }
+  prefetchSig = sig; prefetching = false;
+  renderAt(fromT, false);
+  await waitTiles(1500);
+}
 async function play(fromT, onDone){
+  if (prefetching) return;
   const a = await ensureAnim();
   if (!a){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); onDone && onDone(false); return; }
   applyStyleSettings();
+  const total = timelineTotal();
+  if (fromT >= total - 0.05) fromT = 0;
+  await prefetchPath(fromT);
   playing = true;
   document.getElementById("tlPlay").textContent = "⏸";
   popT = {};
   camPos = null;
-  const total = timelineTotal();
-  if (fromT >= total - 0.05) fromT = 0;
-  const start = performance.now() - fromT * 1000;
+  let start = performance.now() - fromT * 1000, last = performance.now(), held = 0;
 
   function frame(now){
     if (!playing) return;
+    // fehlen Kacheln, Zeit kurz anhalten (max. 0,6 s am Stück) statt leere Karte zu zeigen
+    const dt = now - last; last = now;
+    if (!baseTilesLoaded() && held < 0.6){ start += dt; held += dt / 1000; }
+    else held = Math.max(0, held - dt / 4000);
     const t = (now - start) / 1000;
     setPlayheadOnly(t);
     renderAt(t, true);
@@ -2247,13 +2301,16 @@ async function waitIdle(ms = 25000){
 }
 function dl(blob, name){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
 let mp4Busy = false;
-document.getElementById("mp4Btn").addEventListener("click", async () => {
-  if (playing || mp4Busy) return;
+document.getElementById("mp4Btn").addEventListener("click", () => exportMP4({ download: true }));
+/* Framegenauer MP4-Export. opts: download (Datei speichern), points ({Name:[lng,lat]} → Positionen je Frame),
+   wantPos (Positionen sammeln), allScenes (überschreibt Häkchen). Rückgabe: { blob, pos, frames, fps, w, h, err } */
+async function exportMP4(opts = {}){
+  if (playing || mp4Busy) return null;
   if (!window.VideoEncoder || !window.Mp4Muxer){ setStatus("Dieser Browser kann kein MP4 kodieren (WebCodecs fehlt) – bitte aktuelles Chrome/Edge nutzen."); return; }
-  const allScenes = typeof SCENES !== "undefined" && checked("expAllScenes") && SCENES.count() > 1;
+  const allScenes = typeof SCENES !== "undefined" && (opts.allScenes ?? checked("expAllScenes")) && SCENES.count() > 1;
   const startScene = allScenes ? SCENES.active() : 0;
   const sceneList = allScenes ? [...Array(SCENES.count()).keys()] : [null];
-  if (!(await ensureAnim()) && !allScenes){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); return; }
+  if (!(await ensureAnim()) && !allScenes){ setStatus(tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")); return null; }
   mp4Busy = true;
   const [W, H] = val("resolution").split("x").map(Number);
   const fps = parseInt(val("expFps")) || 30;
@@ -2265,7 +2322,7 @@ document.getElementById("mp4Btn").addEventListener("click", async () => {
   const enc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => err = e });
   enc.configure({ codec, width: W, height: H, bitrate: W * H > 4e6 ? 60e6 : 24e6, framerate: fps, latencyMode: "quality" });
   const out = document.createElement("canvas"); out.width = W; out.height = H; const g = out.getContext("2d");
-  const pos = [], wantPos = checked("expPos"), t0 = performance.now();
+  const pos = [], wantPos = opts.wantPos ?? (checked("expPos") || !!opts.points), t0 = performance.now();
   let fi = 0, skipped = 0;
   for (const sc of sceneList){
     if (err) break;
@@ -2299,6 +2356,7 @@ document.getElementById("mp4Btn").addEventListener("click", async () => {
         const o = {};
         a.stopsData.features.forEach((f, k) => { const p = map.project(f.geometry.coordinates);
           o[(f.properties.label || f.properties.name || "stopp") + "#" + k] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; });
+        for (const [k, ll] of Object.entries(opts.points || {})){ const p = map.project(ll); o[k] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; }
         pos.push(o);
       }
       const vf = new VideoFrame(out, { timestamp: Math.round(fi * 1e6 / fps), duration: Math.round(1e6 / fps) });
@@ -2309,21 +2367,24 @@ document.getElementById("mp4Btn").addEventListener("click", async () => {
   }
   await enc.flush(); muxer.finalize();
   const blob = new Blob([muxer.target.buffer], { type: "video/mp4" });
-  if (fi) dl(blob, "map-animation.mp4");
-  if (wantPos && fi) setTimeout(() => dl(new Blob([JSON.stringify({ fps, w: W, h: H, pos })], { type: "application/json" }), "map-animation_punkte.json"), 800);
+  const base = opts.name || "map-animation";
+  if (fi && opts.download !== false) dl(blob, base + ".mp4");
+  if (wantPos && fi && opts.download !== false) setTimeout(() => dl(new Blob([JSON.stringify({ fps, w: W, h: H, pos })], { type: "application/json" }), base + "_punkte.json"), 800);
   if (allScenes) await SCENES.switchTo(startScene);
   map.setPixelRatio(pr); sizeStage(null);
   mp4Busy = false;
   setStatus(err ? "Fehler beim Kodieren: " + err.message
     : !fi ? tr("Mindestens zwei Orte (oder ein GPX-Track) nötig.")
     : "MP4 gespeichert: " + fi + " Frames" + (allScenes ? ", " + (sceneList.length - skipped) + " " + tr("Szenen") : "") + ", " + ((performance.now() - t0) / 1000).toFixed(0) + " s Renderzeit, " + (blob.size / 1e6).toFixed(1) + " MB.");
-});
+  return { blob, pos, frames: fi, fps, w: W, h: H, err: err ? err.message : null };
+}
 document.getElementById("recordBtn").addEventListener("click", async () => {
   if (playing) return;
   await ensureAnim();
   const [w, h] = val("resolution").split("x").map(Number);
   sizeStage(w, h); drawOverlay();
   await new Promise(r => setTimeout(r, 600));
+  if (anim) await prefetchPath(0);        // Vorladen nicht mit aufnehmen
 
   const canvas = map.getCanvas();
   const stream = canvas.captureStream(60);
@@ -2401,7 +2462,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {

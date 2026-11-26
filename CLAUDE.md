@@ -19,6 +19,7 @@ Sprache im Tool und in der Kommunikation: Deutsch.
   - Stopp-Pins ohne Foto werden automatisch als Marker gezeichnet (`buildPinImage`, Stil `marker`).
   - `src/regions.js`: Regionslabels (`REGIONS`, Natural Earth 50m regions + marine, NAME_DE, Ebenen `rg-0…4` nach MIN_LABEL-Rang; wichtigste zuletzt = Vorrang).
   - `src/scenes.js`: Szenen (`SCENES`; Leiste über der Karte; Zustand je Szene = `serializeProject()`, Laden über `loadProject()` → Event `ma:loaded`; Projekt-JSON v6 `{scenes:[{name,data}], active}`, alte Dateien = 1 Szene). MP4 „Alle Szenen in einem Video“.
+  - `src/api.js`: Skript-API `window.MA` (= `window.RK`-kompatibel): `load(plan)`, `render({bundle|base64})`, `still(t)`; Plan-Format siehe Kopfkommentar/README. `exportMP4(opts)` in app.js ist die gemeinsame Render-Funktion. `tools/render.mjs` rendert Pläne headless.
   - `src/templates.js`: Looks (`TEMPLATES`, nur Aussehen) und Tempo (`FEELS`, Ziel-Länge `tplLen` → passt `speedMult` an). Serialisiert `drawStatic`.
   - `src/ui.js`: Oberfläche (Einfach/Profi-Modus über `body.pro`, `.adv` = nur Profi), (Schritte 1–5, Bottom-Sheet mobil, Format-Buttons, Safe-Zone, Theme-Kacheln, Tastenkürzel).
   - Vorschau = Export-Ausschnitt: `sizeStage(null)` skaliert die Karte in Export-Größe in die Bühne (pixelRatio angepasst), `sizeStage(W,H)` = Exportmodus (pixelRatio 1).
@@ -96,7 +97,7 @@ Getestet ist das nur in headless Chrome (SwiftShader, ohne OpenFreeMap-Kacheln):
 11. **Formate:** (erledigt: Buttons 9:16/4:5/1:1/16:9 und Safe-Zone in der Topbar)
    - 9:16, 4:5, 1:1, 16:9 als Buttons.
    - Safe-Zone-Overlay für Shorts/TikTok-UI (nur Vorschau).
-12. **Skript-API** für automatisches Rendern, wie im Tool `~/Kartenvideos/reliefkarte/reliefkarte.html`:
+12. **Skript-API** – erledigt (`api.js`, `tools/render.mjs`; Reliefkarte-Pläne laufen unverändert, Animation auch ohne Route bei fester Dauer) für automatisches Rendern, wie im Tool `~/Kartenvideos/reliefkarte/reliefkarte.html`:
     - `window.MA.load(plan)` / `render()`.
     - Plan-JSON mit Keyframes, Layern und Punkten.
     - Export als ein Bundle (MP4 + Positionen).

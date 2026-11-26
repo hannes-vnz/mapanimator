@@ -37,21 +37,43 @@ const CAM = (() => {
     return { ll: [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f], idx };
   }
   // geglättete Spitze: gewichtetes Mittel über ein Zeitfenster (+ Vorausschau)
+  const erf = x => { const s = Math.sign(x), a = Math.abs(x), t = 1 / (1 + 0.3275911 * a);
+    return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a)); };
+  const Phi = x => 0.5 * (1 + erf(x / Math.SQRT2));
+  // Etappen mit Zeitfenster (Grenze = Mitte der Pause am Stopp) und Richtung Start → Ziel
+  function legSpans(p){
+    const sc = timelineTotal() / (anim.natural || 1), out = [];
+    const segs = p.segs, legsIdx = [];
+    segs.forEach((s, i) => { if (s.type === "leg" && !(s.whole && segs.findIndex(x => x.whole === s.whole) !== i)) legsIdx.push(i); });
+    legsIdx.forEach((i, k) => {
+      const s = segs[i], whole = s.whole, last = whole ? segs.filter(x => x.whole === whole).pop() : s;
+      const pb = segs[i - 1], pa = segs[segs.indexOf(last) + 1];
+      const a = k === 0 ? -1e9 : ((pb && pb.type === "pause" ? (pb.t0 + pb.t1) / 2 : s.t0) * sc);
+      const b = k === legsIdx.length - 1 ? 1e9 : ((pa && pa.type === "pause" ? (pa.t0 + pa.t1) / 2 : last.t1) * sc);
+      const lg = legAt(p, (s.from + (whole ? whole.to : s.to)) / 2);
+      const A = merc(p.coords[lg.from]), B = merc(p.coords[lg.to]);
+      out.push({ a, b, ang: Math.atan2(B.y - A.y, B.x - A.x), mode: lg.mode });
+    });
+    return out;
+  }
   function smoothTip(p, t, look, win){
-    let sx = 0, sy = 0, sw = 0, hx = 0, hy = 0, zo = 0;
-    const N = 6;
-    for (let k = -N; k <= N; k++){
-      const w = Math.exp(-(k * k) / (N * N * 0.5));
-      const tt = t + look + (k / N) * win;
-      const tp = tipAt(p, tt), m = merc(tp.ll);
-      sx += m.x * w; sy += m.y * w; sw += w;
-      const lg = legAt(p, tp.idx);
-      zo += ((MODES[lg.mode] || {}).zoom || 0) * w;
-      const h = headingAt(p, tp.idx); hx += Math.cos(h) * w; hy += Math.sin(h) * w;
+    const tc = t + look, sig = Math.max(win / 2, 0.2);
+    const spans = legSpans(p);
+    // stufenlose Mischung der Etappen (Gewicht = Anteil der Glockenkurve im Etappenfenster)
+    let cur = spans.find(s => tc >= s.a && tc < s.b) || spans[spans.length - 1];
+    let sw = 0, sa = 0, zo = 0;
+    for (const s of spans){
+      const w = Phi((s.b - tc) / sig) - Phi((s.a - tc) / sig);
+      if (w < 1e-4) continue;
+      let d = s.ang - cur.ang; d = Math.atan2(Math.sin(d), Math.cos(d));
+      sa += d * w; sw += w; zo += ((MODES[s.mode] || {}).zoom || 0) * w;
     }
-    // Bildmitte = exakte Fahrzeugposition (Kamera hängt am Fahrzeug); geglättet werden nur Zoom und Richtung
-    const exact = tipAt(p, t + look).ll;
-    return { ll: exact, modeZoom: zo / sw, heading: Math.atan2(hy, hx) };
+    const target = cur.ang + (sw ? sa / sw : 0);
+    // Fahrtrichtung: Sehne von (t − win) bis (t + win) – glättet Kurven natürlich
+    const A = merc(tipAt(p, tc - win).ll), B = merc(tipAt(p, tc + win).ll);
+    const heading = (A.x === B.x && A.y === B.y) ? target : Math.atan2(B.y - A.y, B.x - A.x);
+    // Bildmitte = exakte Fahrzeugposition (Kamera hängt am Fahrzeug)
+    return { ll: tipAt(p, tc).ll, modeZoom: sw ? zo / sw : 0, heading, target };
   }
   function legFitZoom(p, lg){
     const key = p.ri + ":" + lg.from + ":" + lg.to + ":" + map.getCanvas().width + "x" + map.getCanvas().height;
@@ -83,11 +105,13 @@ const CAM = (() => {
       return { c: s.center, z: zoom, b: s.bearing || 0, p: pitch };
     }
     const look = s.mode === "follow" ? (s.look || 0) : 0;
-    const st = smoothTip(p, t, look, 1.2);
+    const st = smoothTip(p, t, look, s.up === "travel" ? 3 : s.up === "target" ? 1.6 : 1.2);
     let z = zoom + st.modeZoom;
     if (s.auto !== false) z = Math.min(z, autoZoom(p, t) + 0.35);
     if (s.mode === "follow"){
-      const b = s.up === "travel" ? headingToBearing(st.heading) + (s.bearing || 0) : (s.bearing || 0);
+      const b = s.up === "travel" ? headingToBearing(st.heading) + (s.bearing || 0)
+              : s.up === "target" ? headingToBearing(st.target) + (s.bearing || 0)
+              : (s.bearing || 0);
       return { c: st.ll, z, b, p: pitch };
     }
     if (s.mode === "orbit"){
@@ -183,7 +207,7 @@ const CAM = (() => {
       const b = document.createElement("div");
       b.className = "shot sh-" + s.mode + (shots.indexOf(s) === sel ? " sel" : "");
       b.style.left = t2x(s.t) + "px"; b.style.width = Math.max(t2x(t1) - t2x(s.t) - 2, 6) + "px";
-      b.innerHTML = `<span>${CAM_MODES[s.mode].icon} ${tr(CAM_MODES[s.mode].label)}${s.mode === "follow" && s.up === "travel" ? " ↑" : ""}</span>` + (k > 0 ? '<i class="edge"></i>' : "");
+      b.innerHTML = `<span>${CAM_MODES[s.mode].icon} ${tr(CAM_MODES[s.mode].label)}${s.mode === "follow" && s.up === "travel" ? " ↑" : s.mode === "follow" && s.up === "target" ? " ➜" : ""}</span>` + (k > 0 ? '<i class="edge"></i>' : "");
       b.addEventListener("pointerdown", e => {
         if (e.target.classList.contains("edge")) return;
         sel = shots.indexOf(s); renderRow(); renderEditor();
@@ -231,7 +255,7 @@ const CAM = (() => {
       `<div class="shothead"><b>${tr("Abschnitt")} ${idx + 1}/${S.length}</b><span>${s.t.toFixed(1)}–${t1.toFixed(1)} s</span>` +
       (S.length > 1 && idx > 0 ? `<button type="button" class="del" data-a="del" title="${tr("Abschnitt löschen")}">✕</button>` : "") + `</div>` +
       `<div class="modes">${Object.entries(CAM_MODES).map(([k, m]) => `<button type="button" data-mode="${k}" class="${s.mode === k ? "active" : ""}"><em>${m.icon}</em>${tr(m.label)}</button>`).join("")}</div>` +
-      (s.mode === "follow" ? `<div class="tempo-row"><span>${tr("Oben")}</span>${seg([["north", tr("Norden")], ["travel", tr("Fahrtrichtung")]], s.up || "north")}</div>` : "") +
+      (s.mode === "follow" ? `<div class="tempo-row"><span>${tr("Oben")}</span>${seg([["north", tr("Norden")], ["target", tr("Ziel")], ["travel", tr("Fahrtrichtung")]], s.up || "north")}</div>` : "") +
       (s.mode === "still" ? `<button type="button" class="btn ghost full" data-a="cap">${tr("Aktuelle Kartenansicht übernehmen")}</button>` : "") +
       (s.mode !== "overview" && s.mode !== "still" ? rng("zoom", "Zoom", 2, 16, 0.1, s.zoom == null ? num("zoom") : s.zoom) : "") +
       rng("pitch", "Neigung", 0, 80, 1, s.pitch || 0) +
@@ -260,10 +284,10 @@ const CAM = (() => {
   const PRESETS = [
     { id: "classic", name: "Folgen", sub: "Standard: Übersicht → folgen → Übersicht", icon: "🎯",
       shots: T => [F({ t: 0, mode: "overview" }), F({ t: 1.4, zoom: 7 }), F({ t: Math.max(T - 2, 2), mode: "overview" })], tempo: { len: 0, feel: "normal" } },
-    { id: "navi", name: "Navi", sub: "Fahrtrichtung oben, geneigt", icon: "🧭",
-      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "travel" })], tempo: { len: 0, feel: "normal" } },
-    { id: "flyover", name: "3D-Flyover", sub: "Relive-Stil: tief, schräg, Fahrtrichtung", icon: "🏔️",
-      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "travel" }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
+    { id: "navi", name: "Richtung Ziel", sub: "Hinter der Figur, Blick zum nächsten Ziel – ruhig", icon: "🧭",
+      shots: () => [F({ t: 0, zoom: 10, pitch: 50, up: "target" })], tempo: { len: 0, feel: "normal" } },
+    { id: "flyover", name: "3D-Flyover", sub: "Relive-Stil: tief, schräg, Blick zum Ziel", icon: "🏔️",
+      shots: T => [F({ t: 0, mode: "overview", pitch: 45 }), F({ t: 1.6, zoom: 11.5, pitch: 65, up: "target" }), F({ t: Math.max(T - 2.2, 2), mode: "overview", pitch: 40 })],
       tempo: { len: 30, feel: "gemuetlich" }, terrain: true },
     { id: "recap", name: "Vlog-Recap", sub: "Whip-Pan rein/raus, weit folgen · flott", icon: "🎬",
       shots: T => [F({ t: 0, zoom: 4.6 }), F({ t: Math.max(T - 1.8, 2), mode: "overview" })], tempo: { len: 30, feel: "rasant" }, whip: true },
@@ -306,7 +330,7 @@ const CAM = (() => {
   });
 
   Object.assign(EN, { "Folgen": "Follow", "Still": "Still", "Übersicht": "Overview", "Stativ": "Tripod", "Orbit": "Orbit",
-    "Kamera": "Camera", "Abschnitt": "Shot", "Oben": "Up", "Norden": "North", "Fahrtrichtung": "Direction of travel",
+    "Kamera": "Camera", "Abschnitt": "Shot", "Oben": "Up", "Norden": "North", "Ziel": "Destination", "Fahrtrichtung": "Direction of travel",
     "Aktuelle Kartenansicht übernehmen": "Use current map view", "Neigung": "Tilt", "Drehung": "Rotation", "Startwinkel": "Start angle",
     "Vorausschau (s)": "Look-ahead (s)", "Umdrehungen": "Turns", "Lange Etappen: rauszoomen": "Long legs: zoom out",
     "Neuer Abschnitt am Playhead": "New shot at playhead", "Abschnitt löschen": "Delete shot", "Ansicht übernommen.": "View captured.",
