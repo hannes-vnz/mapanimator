@@ -1346,7 +1346,7 @@ const ASSETS = (() => {
   }
   // Checkliste: Kopf mit Fortschritt, Zeilen erscheinen, markierte Aufgaben haken sich nacheinander ab
   function checklist(g, W, H, p, lt, dur, opt){
-    const u = Math.min(W, H) * (p.size || 1), col = p.color || (opt.xp ? "#a855f7" : "#3ddc6f");
+    const u = Math.min(W, H) * (p.size || 1), col = p.color || brand();
     const rows = String(p.items || "").split("\n").map(l => l.split("|").map(s => s.trim())).filter(r => r[0]).slice(0, 7).map(parts => {
       const r = { text: parts[0], done: false, xp: 0, w: "" };
       parts.slice(1).forEach(x => { if (/^(x|✓|✔|ok|ja|done)$/i.test(x)) r.done = true; else if (/kg|\bg\b/i.test(x)) r.w = x; else if (/^\+?\d+\s*(xp)?$/i.test(x)) r.xp = parseInt(x.replace(/\D/g, "")); });
@@ -1505,7 +1505,10 @@ const ASSETS = (() => {
     return out;
   }
 
+  const BRANDED = new Set(["kmintro", "quests", "gearlist", "stamp", "teamcard", "elevation", "progress", "daystats", "rchallenge", "challenge", "flats", "miniglobe", "speedo", "food", "border", "follow", "chapter", "hexflag"]);
+  const brand = () => { const el = $("asBrand"); return (el && el.value) || "#ff5a36"; };
   function drawAsset(g, W, H, a, lt){
+    if (BRANDED.has(a.type) && !a.color) a = Object.assign({}, a, { color: brand() });   // Hausfarbe, solange das Asset keine eigene hat
     g.save();
     // gleicher Ausgangszustand für jedes Bild (Vorschau-Leinwand behält sonst Textausrichtung & Co. vom letzten Bild)
     g.setTransform(1, 0, 0, 1, 0, 0); g.textAlign = "left"; g.textBaseline = "alphabetic"; g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
@@ -1648,32 +1651,32 @@ const ASSETS = (() => {
     clock: { text: "14:00", pos: "tl" },
     info: { text: "Thuốc lào ist eine traditionelle vietnamesische Art, Tabak durch eine Wasserpfeife zu rauchen.", pos: "bl" },
     medal: { place: 1, amount: "15.000 €, 10.000 €, 5.000 €", podium: true, word: "PLATZ" },
-    stamp: { country: "Thailand", team: "Hannes", color: "#b06ae8", prev: "Vietnam, Laos", headline: "NEUES LAND ERREICHT", confetti: true, stampStyle: "real", mode: "land", place: "", date: "" },
-    teamcard: { color: "#9b59d0", label: "AKTUELLES BUDGET", value: "21,57 €", l1: "ZURÜCKGELEGT", v1: "1.186 KM", l2: "BIS ZUM ZIEL", v2: "2.936 KM", countries: "Vietnam, Laos", slots: 7, pos: "bl" },
-    chapter: { text: "Was bisher geschah", color: "#f5c542", pos: "tl" },
+    stamp: { country: "Thailand", team: "Hannes", prev: "Vietnam, Laos", headline: "NEUES LAND ERREICHT", confetti: true, stampStyle: "real", mode: "land", place: "", date: "" },
+    teamcard: { label: "AKTUELLES BUDGET", value: "21,57 €", l1: "ZURÜCKGELEGT", v1: "1.186 KM", l2: "BIS ZUM ZIEL", v2: "2.936 KM", countries: "Vietnam, Laos", slots: 7, pos: "bl" },
+    chapter: { text: "Was bisher geschah", pos: "tl" },
     daystamp: { day: "8", label: "TAG", text: "Thailand", icon: "🛕", color: "#2f63c8" },
     countdown: { start: "30:09:18", text: "bis zum Flug", rate: 1, color: "#3fd8ff", pos: "top" },
     flapboard: { label: "ABFLUG · DEPARTURES", text: "VIENTIANE   09:00", pos: "bottom" },
     itempop: { amount: "+1", text: "Wasserflasche", icon: "💧", color: "#3fd8ff" },
     nametag: { text: "Kambon", color: "#ffffff", arrow: "right" },
-    quests: { title: "Daily Quests", items: "100 km fahren | x | 50\nKokosnuss trinken | x | 20\nEinen Mönch grüßen | x | 30\nVor Sonnenuntergang zelten | 40", step: 0.8, color: "#a855f7", doneText: "" },
-    gearlist: { title: "Packliste", items: "Zelt | 1,2 kg | x\nSchlafsack | 0,8 kg | x\nKocher | 350 g | x\nFlickzeug | 120 g | x\nKamera | 0,9 kg | x", step: 0.6, color: "#3ddc6f", doneText: "" },
-    flats: { count: "4", text: "Platten", icon: "🛞", color: "#ff5a36", pos: "tl" },
+    quests: { title: "Daily Quests", items: "100 km fahren | x | 50\nKokosnuss trinken | x | 20\nEinen Mönch grüßen | x | 30\nVor Sonnenuntergang zelten | 40", step: 0.8, doneText: "" },
+    gearlist: { title: "Packliste", items: "Zelt | 1,2 kg | x\nSchlafsack | 0,8 kg | x\nKocher | 350 g | x\nFlickzeug | 120 g | x\nKamera | 0,9 kg | x", step: 0.6, doneText: "" },
+    flats: { count: "4", text: "Platten", icon: "🛞", pos: "tl" },
     suntime: { rise: "06:12", set: "18:34", now: "16:50", label: "noch", pos: "tr" },
-    border: { from: "Thailand", to: "Laos", head: "Grenze überquert", place: "Freundschaftsbrücke · Nong Khai", color: "#ffcc33" },
-    food: { text: "Khao Soi", price: "35.000 Kip", eur: "≈ 1,60 €", icon: "🍜", color: "#ffcc33", pos: "br" },
+    border: { from: "Thailand", to: "Laos", head: "Grenze überquert", place: "Freundschaftsbrücke · Nong Khai" },
+    food: { text: "Khao Soi", price: "35.000 Kip", eur: "≈ 1,60 €", icon: "🍜", pos: "br" },
     phrase: { country: "Laos", de: "Danke", local: "ຂອບໃຈ", roman: "khop chai", color: "#3fd8ff" },
-    follow: { text: "Folg der Reise", handle: "@hannes.radelt", btn: "FOLGEN", done: "GEFOLGT", color: "#ff3b45", pos: "bottom" },
-    elevation: { source: "manuell", heights: "520, 610, 780, 1050, 1381, 1200, 900", km: "37", peak: "Brenner", color: "#ff5a36", pos: "bottom" },
-    miniglobe: { to: "Laos", from: "Deutschland", label: "", color: "#ff3b45", pos: "tr" },
-    daystats: { title: "Tag 23 · Etappe 12", route: "Luang Prabang → Vang Vieng", color: "#fc5200", v1: "112", v2: "1.840", v3: "6:12", v4: "18,1" },
+    follow: { text: "Folg der Reise", handle: "@hannes.radelt", btn: "FOLGEN", done: "GEFOLGT", pos: "bottom" },
+    elevation: { source: "manuell", heights: "520, 610, 780, 1050, 1381, 1200, 900", km: "37", peak: "Brenner", pos: "bottom" },
+    miniglobe: { to: "Laos", from: "Deutschland", label: "", pos: "tr" },
+    daystats: { title: "Tag 23 · Etappe 12", route: "Luang Prabang → Vang Vieng", v1: "112", v2: "1.840", v3: "6:12", v4: "18,1" },
     weather: { icon: "☀️", temp: "31", wind: "Gegenwind 25 km/h", windDir: "gegen", place: "", pos: "tr" },
-    speedo: { value: "54", max: 80, unit: "km/h", label: "Abfahrt", color: "#ff3b45", pos: "br" },
+    speedo: { value: "54", max: 80, unit: "km/h", label: "Abfahrt", pos: "br" },
     gradesign: { value: "12", dir: "up", text: "die nächsten 8 km", pos: "tl" },
-    progress: { from: "Berlin", to: "Singapur", done: "1840", total: "12000", unit: "km", icon: "🚴", color: "#ff5a36", pos: "bottom" },
+    progress: { from: "Berlin", to: "Singapur", done: "1840", total: "12000", unit: "km", icon: "🚴", pos: "bottom" },
     signpost: { style: "grün", text: "↑ Vientiane | 120 km\n→ Bangkok | 650 km\n← Hanoi | 890 km", pos: "tr" },
     lodging: { icon: "⛺", text: "Wildcampen", price: "0 €", color: "#3ddc6f", pos: "bl" },
-    kmintro: { from: "0", to: "1840", unit: "KM", sub: "Tag 23 · Laos", country: "Laos", hm: "↗ 12.340 HM", color: "#ff5a36" },
+    kmintro: { from: "0", to: "1840", unit: "KM", sub: "Tag 23 · Laos", country: "Laos", hm: "↗ 12.340 HM" },
     flag: { country: "Laos", text: "WILLKOMMEN IN", sub: "" },
     challenge: { title: "CHALLENGE", text: "Mit 100 € in 3 Tagen nach Bangkok", goal: "💶 100 €", time: "⏱ 3 TAGE", status: "open" },
     flags: { auto: false, countries: "Vietnam, Laos, Thailand, Kambodscha", word: "LÄNDER", start: 0, pos: "top" }
@@ -1745,12 +1748,12 @@ const ASSETS = (() => {
           : `<div class="setting"><label>${tr(lab)}</label><input type="${type}" data-k="${k}"></div>`;
         body.innerHTML = FIELDS[a.type].map(f => fld(...f)).join("") + fld("dur", "Dauer (s)", "number") + fld("pos", "Position", "select", POS) +
           `<div class="setting"><label>${tr("Größe")}</label><input type="range" data-k="size" min="0.3" max="2.5" step="0.05"></div>` +
-          `<div class="hint">${tr("In der Vorschau ziehen = verschieben, Mausrad = Größe.")} <a href="#" data-a="center">${tr("Zur Mitte")}</a></div>` +
+          `<div class="hint">${tr("In der Vorschau ziehen = verschieben, Mausrad = Größe.")} <a href="#" data-a="center">${tr("Zur Mitte")}</a>${BRANDED.has(a.type) ? ` · <a href="#" data-a="brand">${tr("Hausfarbe nutzen")}</a>` : ""}</div>` +
           `<div class="insexp"><span>${tr("Exportieren")} (${val("asRes")}):</span><button type="button" class="btn" data-a="png">PNG transparent (ZIP)</button><button type="button" class="btn ghost" data-a="green">Greenscreen-MP4</button><button type="button" class="btn ghost" data-a="dvr">→ DaVinci-Titel</button></div>`;
         body.querySelectorAll("[data-k]").forEach(inp => {
           const k = inp.dataset.k;
           if (inp.type === "checkbox") inp.checked = !!a[k];
-          else if (inp.tagName !== "SELECT") inp.value = a[k] ?? (inp.type === "color" ? ({ kmintro: "#ff5a36", stamp: "#b06ae8", teamcard: "#9b59d0", chapter: "#f5c542", hexflag: "#f5c542", clock: "#3ddc6f" }[a.type] || "#ff3b45") : "");
+          else if (inp.tagName !== "SELECT") inp.value = a[k] ?? (inp.type === "color" ? (k === "color" && BRANDED.has(a.type) ? brand() : null) || ({ kmintro: "#ff5a36", stamp: "#b06ae8", teamcard: "#9b59d0", chapter: "#f5c542", hexflag: "#f5c542", clock: "#3ddc6f" }[a.type] || "#ff3b45") : "");
           if (k === "pos" && !a.pos) inp.value = { money: "top", clock: "tl", info: "bl", flags: "top" }[a.type] || "center";
           inp.addEventListener("input", () => {
             a[k] = inp.type === "checkbox" ? inp.checked : (inp.type === "number" || inp.type === "range") ? parseFloat(inp.value) || 0 : inp.value;
@@ -1767,6 +1770,7 @@ const ASSETS = (() => {
         el.appendChild(body);
         const ex = x => body.querySelector(`[data-a="${x}"]`);
         ex("center").addEventListener("click", e => { e.preventDefault(); a.dx = 0; a.dy = 0; });
+        if (ex("brand")) ex("brand").addEventListener("click", e => { e.preventDefault(); delete a.color; render(); });
         ex("png").addEventListener("click", () => exportAsset(a, "png").catch(e => setStatus("Export-Fehler: " + e.message)));
         ex("green").addEventListener("click", () => exportAsset(a, "green").catch(e => setStatus("Export-Fehler: " + e.message)));
         ex("dvr").addEventListener("click", () => DAVINCI.exportAsset(a).catch(e => setStatus("DaVinci-Export: " + e.message)));
@@ -1780,7 +1784,7 @@ const ASSETS = (() => {
   const addBox = $("asAdd");
   if (addBox) addBox.innerHTML = Object.entries(TYPES).map(([k, t]) => `<button type="button" class="btn ghost" data-as="${k}"><b>${t.icon}</b> ${tr(t.name)}</button>`).join("");
   document.querySelectorAll("[data-as]").forEach(b => b.addEventListener("click", () => add(b.dataset.as)));
-  ["asRes", "asBg"].forEach(id => $(id).addEventListener("input", () => { start = performance.now(); render(); }));
+  ["asRes", "asBg", "asBrand"].forEach(id => $(id).addEventListener("input", () => { start = performance.now(); render(); }));
 
   Object.assign(EN, { "Asset": "Asset", "Hexagon-Flagge + Lametta": "Hexagon flag + tinsel", "Challenge-Karte": "Challenge card", "Regel-Karten": "Rule cards", "Geld-Zähler": "Money counter",
     "Uhrzeit-Chip": "Time chip", "Info-Box": "Info box", "Platzierung": "Placement", "Reisepass-Stempel": "Passport stamp", "Flagge (weht)": "Waving flag",
