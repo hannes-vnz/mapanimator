@@ -10,6 +10,7 @@
 const ASSETS = (() => {
   const $ = id => document.getElementById(id);
   const TYPES = {
+    kmintro:    { icon: "🚴", name: "Kilometer-Intro", dur: 4 },
     hexflag:    { icon: "⬢", name: "Hexagon-Flagge + Lametta", dur: 3.6 },
     rchallenge: { icon: "🎯", name: "Challenge-Karte", dur: 4.5 },
     rules:      { icon: "🚫", name: "Regel-Karten", dur: 4.5 },
@@ -252,6 +253,66 @@ const ASSETS = (() => {
         g.save(); g.translate(W / 2, H / 2 + (1 - Math.min(k, 1)) * H * 0.5); g.rotate((1 - Math.min(k, 1)) * -0.4 + 0.03);
         cover(g, -cw / 2, -chh / 2, cw, chh, u, p, ld);
         g.restore();
+      }
+      g.restore();
+    },
+
+    /* Kilometer-Intro: Zähler rast hoch (Zählwerk-Unschärfe), Ruck + Akzentstrich am Ziel,
+       darunter tippt sich „TAG 23 · LAOS“ mit Flagge, optional Höhenmeter-Chip. */
+    kmintro(g, W, H, p, lt, dur){
+      const u = Math.min(W, H) * (p.size || 1), col = p.color || "#ff5a36", from = num0(p.from), to = num0(p.to), unit = (p.unit || "KM").toUpperCase();
+      const T1 = Math.min(2.0, dur * 0.5), ck = clamp((lt - 0.15) / (T1 - 0.15)), e = 1 - Math.pow(1 - ck, 4);          // schnell los, weich ankommen
+      const v = from + (to - from) * e, speed = ck < 1 ? 4 * Math.pow(1 - ck, 3) * Math.abs(to - from) / (T1 - 0.15) : 0;
+      const outK = easeIn(clamp((lt - (dur - 0.4)) / 0.4)), inK = easeOut(clamp(lt / 0.25));
+      const punch = lt > T1 && lt < T1 + 0.35 ? 1 + 0.07 * Math.sin((lt - T1) / 0.35 * Math.PI) : 1;
+      const txt = Math.round(v).toLocaleString("de-DE"), fs = u * 0.26;
+      g.save(); g.font = CF(fs, 900); const digitW = g.measureText("0").width, sepW = g.measureText(".").width;
+      g.font = CF(fs * 0.34, 900); const unitW = g.measureText(unit).width;
+      const finalTxt = Math.round(to).toLocaleString("de-DE"); let numW = 0; for (const ch of finalTxt) numW += /\d/.test(ch) ? digitW : sepW;
+      const blockW = numW + u * 0.03 + unitW, blockH = fs * 1.55, [bx, by] = place(p, W, H, blockW, blockH, "center");
+      g.globalAlpha = inK * (1 - outK); g.translate(0, outK * u * 0.12 + (1 - inK) * u * 0.05);
+      const baseY = by + fs * 0.88;
+      g.save(); g.translate(bx + blockW / 2, baseY - fs * 0.4); g.scale(punch, punch); g.translate(-(bx + blockW / 2), -(baseY - fs * 0.4));
+      // Ziffern rechtsbündig (Zählwerk): jede Stelle mit vertikaler Unschärfe je nach Tempo
+      g.font = CF(fs, 900); g.textAlign = "left"; g.textBaseline = "alphabetic";
+      g.shadowColor = "rgba(0,0,0,.65)"; g.shadowBlur = u * 0.045; g.shadowOffsetY = u * 0.01;
+      g.lineWidth = Math.max(2, u * 0.006); g.strokeStyle = "rgba(0,0,0,.35)"; g.lineJoin = "round";
+      const chars = [...txt]; let x = bx + numW;
+      for (let i = chars.length - 1, place10 = 0; i >= 0; i--){
+        const ch = chars[i], w = /\d/.test(ch) ? digitW : sepW; x -= w;
+        if (/\d/.test(ch)){
+          const blur = Math.min(1, speed / Math.pow(10, place10) / 18);                     // niedrige Stellen verwischen zuerst
+          if (blur > 0.05){
+            for (let k = -3; k <= 3; k++){ g.globalAlpha = inK * (1 - outK) * (k ? 0.18 * blur : 1 - 0.55 * blur); g.fillStyle = "#fff"; g.fillText(ch, x, baseY + k * fs * 0.09 * blur); }
+            g.globalAlpha = inK * (1 - outK);
+          } else { g.strokeText(ch, x, baseY); g.fillStyle = "#fff"; g.fillText(ch, x, baseY); }
+          place10++;
+        } else { g.fillStyle = "#fff"; g.fillText(ch, x, baseY); }
+      }
+      g.font = CF(fs * 0.34, 900); g.fillStyle = col; g.fillText(unit, bx + numW + u * 0.03, baseY);
+      g.restore();
+      // Akzentstrich
+      const lk = easeOut(clamp((lt - T1) / 0.35));
+      if (lk > 0){ g.shadowBlur = 0; g.fillStyle = col; rr(g, bx, baseY + fs * 0.1, blockW * lk, Math.max(4, u * 0.012), u * 0.006); g.fill(); }
+      // Unterzeile: Flagge + Schreibmaschine
+      const sub = (p.sub || "").toUpperCase(), sk = clamp((lt - T1 + 0.25) / Math.max(0.3, sub.length * 0.035));
+      if (sub && sk > 0){
+        const c = lookup(firstCountry(p)), im = c && flagImg(c.a2), sy = baseY + fs * 0.42, r = fs * 0.09;
+        let tx = bx;
+        if (im){ g.save(); g.globalAlpha *= clamp(sk * 4); flagCircle(g, im, bx + r, sy - r * 0.35, r, null); g.restore(); tx += r * 2.6; }
+        g.font = CF(fs * 0.21, 800); g.fillStyle = "#fff"; g.shadowColor = "rgba(0,0,0,.75)"; g.shadowBlur = u * 0.025;
+        const shown = sub.slice(0, Math.ceil(sub.length * sk)).split("").join(" ");
+        g.fillText(shown + (sk < 1 && Math.floor(lt * 10) % 2 ? "▍" : ""), tx, sy);
+      }
+      // Höhenmeter-Chip
+      if (p.hm){
+        const hk = backOut(clamp((lt - T1 - 0.25) / 0.35));
+        if (hk > 0){
+          g.font = CF(fs * 0.13, 800); const t = p.hm, w = g.measureText(t).width + fs * 0.16, h = fs * 0.2, hx = bx + blockW - w, hy = by + fs * 0.02;
+          g.save(); g.translate(hx + w / 2, hy + h / 2); g.scale(hk, hk); g.shadowBlur = 0;
+          g.fillStyle = "rgba(14,15,18,.72)"; rr(g, -w / 2, -h / 2, w, h, h / 2); g.fill();
+          g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(t, 0, fs * 0.005); g.restore();
+        }
       }
       g.restore();
     },
@@ -1209,6 +1270,7 @@ const ASSETS = (() => {
     stamp: { country: "Thailand", team: "Hannes", color: "#b06ae8", prev: "Vietnam, Laos", headline: "NEUES LAND ERREICHT", confetti: true, stampStyle: "real", mode: "land", place: "", date: "" },
     teamcard: { color: "#9b59d0", label: "AKTUELLES BUDGET", value: "21,57 €", l1: "ZURÜCKGELEGT", v1: "1.186 KM", l2: "BIS ZUM ZIEL", v2: "2.936 KM", countries: "Vietnam, Laos", slots: 7, pos: "bl" },
     chapter: { text: "Was bisher geschah", color: "#f5c542", pos: "tl" },
+    kmintro: { from: "0", to: "1840", unit: "KM", sub: "Tag 23 · Laos", country: "Laos", hm: "↗ 12.340 HM", color: "#ff5a36" },
     passintro: { surname: "Vincenz", given: "Hannes", nationality: "Weltenbummler", dob: "18 FEB / FEB 00", expiry: "31 DEZ / DEC 35", country0: "Republik der Weltenbummler",
       stations: "Europa, Thailand, Laos", greet: "Grüße aus", stampText: "KEIN GELD", stampColor: "#d8262c", coverTop: "Hannes präsentiert", coverTitle: "DIE 0-EURO|WELTREISE", coverEmblem: "0€", coverBottom: "World Tour", bg: "blue" },
     flag: { country: "Laos", text: "WILLKOMMEN IN", sub: "" },
@@ -1231,6 +1293,7 @@ const ASSETS = (() => {
       ["place", "Grenzübergang (optional)", "text"], ["date", "Datum (leer = heute)", "text"]],
     teamcard: [["img", "Teamfoto", "image"], ["color", "Teamfarbe", "color"], ["label", "Überschrift", "text"], ["value", "Wert", "text"], ["l1", "Kasten 1", "text"], ["v1", "Wert 1", "text"], ["l2", "Kasten 2", "text"], ["v2", "Wert 2", "text"], ["countries", "Besuchte Länder (Komma)", "text"], ["slots", "Plätze gesamt", "number"]],
     chapter: [["text", "Text", "text"], ["color", "Farbe", "color"]],
+    kmintro: [["from", "Zählt von", "text"], ["to", "bis (Kilometer)", "text"], ["unit", "Einheit", "text"], ["sub", "Unterzeile", "text"], ["country", "Flagge (Land)", "text"], ["hm", "Chip oben (leer = aus)", "text"], ["color", "Akzentfarbe", "color"]],
     passintro: [["photo", "Passfoto", "image"], ["cutout", "Ausgeschnittene Figur (PNG mit transparentem Hintergrund)", "image"], ["stations", "Stationen (Länder oder Kontinente, Komma)", "text"],
       ["surname", "Nachname", "text"], ["given", "Vorname", "text"], ["nationality", "Staatsangehörigkeit (frei)", "text"], ["dob", "Geburtsdatum", "text"], ["expiry", "Gültig bis", "text"], ["country0", "Kopfzeile Pass", "text"],
       ["greet", "Plakat-Zeile", "text"], ["stampText", "Stempel", "text"], ["stampColor", "Stempelfarbe", "color"], ["coverTop", "Umschlag oben", "text"], ["coverTitle", "Umschlag-Titel (| = neue Zeile)", "text"], ["coverEmblem", "Wappen-Text", "text"], ["coverBottom", "Umschlag unten", "text"],
@@ -1267,7 +1330,7 @@ const ASSETS = (() => {
         body.querySelectorAll("[data-k]").forEach(inp => {
           const k = inp.dataset.k;
           if (inp.type === "checkbox") inp.checked = !!a[k];
-          else if (inp.tagName !== "SELECT") inp.value = a[k] ?? (inp.type === "color" ? ({ stamp: "#b06ae8", teamcard: "#9b59d0", chapter: "#f5c542", hexflag: "#f5c542", clock: "#3ddc6f" }[a.type] || "#ff3b45") : "");
+          else if (inp.tagName !== "SELECT") inp.value = a[k] ?? (inp.type === "color" ? ({ kmintro: "#ff5a36", stamp: "#b06ae8", teamcard: "#9b59d0", chapter: "#f5c542", hexflag: "#f5c542", clock: "#3ddc6f" }[a.type] || "#ff3b45") : "");
           if (k === "pos" && !a.pos) inp.value = { money: "top", clock: "tl", info: "bl", flags: "top" }[a.type] || "center";
           inp.addEventListener("input", () => {
             a[k] = inp.type === "checkbox" ? inp.checked : (inp.type === "number" || inp.type === "range") ? parseFloat(inp.value) || 0 : inp.value;
