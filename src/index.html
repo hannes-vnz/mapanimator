@@ -152,6 +152,7 @@
               <option value="dunkel">Race Dunkel</option>
               <option value="satellit">Satellit</option>
               <option value="pastell">Pastell-Topo</option>
+              <option value="papier">Papier-Cutout</option>
               <option value="nacht">Nacht-GPS</option>
               <option value="vintage">Abenteuer (Vintage)</option>
               <option value="minimal">Minimal Flach</option>
@@ -191,6 +192,7 @@
           <div class="setting"><label>Linienspitze</label>
             <select id="tipStyle">
               <option value="model3d" selected>3D-Modell (Verkehrsmittel)</option>
+              <option value="sprite">2D-Figur (Bus, Rad, Camper …)</option>
               <option value="avatar">Avatar (rundes Foto)</option>
               <option value="mode">Symbol (Verkehrsmittel)</option>
               <option value="stop">Wie Stopp-Pins (Foto/Badge)</option>
@@ -202,6 +204,10 @@
           <div class="setting"><label>Foto/Avatar Spitze</label>
             <label class="photo-label" id="tipPhotoLbl">Wählen<input type="file" id="tipPhoto" accept="image/*" hidden></label>
           </div>
+          <div class="setting"><label>Eigenes Bild als Figur</label>
+            <span class="pair"><label class="photo-label" id="tipSpriteLbl">Wählen<input type="file" id="tipSprite" accept="image/*" hidden></label><button type="button" class="btn ghost" id="tipSpriteClear" title="Eigenes Bild entfernen">✕</button></span>
+          </div>
+          <div class="setting"><label>Sticker-Rand (Papier-Look)</label><input type="checkbox" id="spriteSticker" checked></div>
           <div class="setting"><label>Name unter Avatar</label><input type="text" id="tipLabel" placeholder="z.B. HANNES"></div>
           <div class="setting adv"><label>Pin-Einblendung</label>
             <select id="popStyle">
@@ -275,6 +281,7 @@
           <div class="setting"><label>Whip-Pan am Anfang</label><input type="checkbox" id="whipIn"></div>
           <div class="setting"><label>Whip-Pan am Ende</label><input type="checkbox" id="whipOut"></div>
           <div class="setting"><label>Wolken-Einflug</label><input type="checkbox" id="fxClouds"></div>
+          <div class="setting"><label>Stop-Motion (12 Bilder/s, Papier-Look)</label><input type="checkbox" id="fxStopmotion"></div>
           <div class="setting"><label>Start halten (s)</label><input type="number" id="introHold" value="0" min="0" max="20" step="0.5"></div>
           <div class="setting"><label>Ende halten (s)</label><input type="number" id="outroHold" value="0" min="0" max="20" step="0.5"></div>
           <div class="setting"><label>Nur letzte Etappe animieren</label><select id="legFocus"><option value="all" selected>nein, ganze Route</option><option value="last">ja (vorherige schon gezeichnet)</option></select></div>
@@ -536,6 +543,7 @@
 <script src="templates.js"></script>
 <script src="camera.js"></script>
 <script src="marks.js"></script>
+<script src="sprites.js"></script>
 <script src="labels.js"></script>
 <script src="signs.js"></script>
 <script src="regions.js"></script>

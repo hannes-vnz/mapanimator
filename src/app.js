@@ -196,6 +196,15 @@ const THEMES = {
     detail: { states: "#ffffff", road: "#ffffff", rail: "#dddddd", wood: "#ffffff", urban: "#ffffff", park: "#ffffff" },
     defaultLine: "#ffd23f", glowDefault: true
   },
+  papier: {       // Papier-Cutout: Land/Wasser als Papier mit Textur, Küsten als Schnittkanten mit Schatten, Wälder als aufgeklebte Stücke
+    paper: true, bg: "#f1e4c8", water: "#8fc3df", ice: "#fbf6ec", iceOp: 1,
+    hills: null,
+    boundary: { color: "#a0826d", width: 1.6, dash: [2, 2], opacity: 0.9 },
+    country: { color: "#5b4636", halo: "#f6ecd6", upper: true, spacing: 0.15 },
+    city: { color: "#5b4636", halo: "#f6ecd6" },
+    detail: { states: "#c9b391", road: "#e8d6b4", rail: "#b49d7c", wood: "#9cc48a", urban: "#ead9b8", park: "#b6d39a" },
+    defaultLine: "#e0533c", glowDefault: false
+  },
   pastell: {      // Reise-Vlog-Look (Kara & Nate): helle Topo-Karte, Relief, dünne dunkle Linie
     bg: "#ece9e3", water: "#bcd5e6", ice: "#f8f8f6", iceOp: 0.9,
     hills: { shadow: "#a9a196", highlight: "#ffffff", accent: "#d9d2c7", ex: 0.55 },
@@ -268,7 +277,7 @@ function buildBaseStyle(name){
     };
     style.layers.push({ id: "sat", type: "raster", source: "sat" });
   } else {
-    style.layers.push({ id: "bg", type: "background", paint: { "background-color": C("land", t.bg) } });
+    style.layers.push({ id: "bg", type: "background", paint: t.paper ? { "background-pattern": "paper-land" } : { "background-color": C("land", t.bg) } });
     if (t.atlas){
       style.sources.atlas = { type: "geojson", data: "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson" };
       const sh = t.shades;
@@ -302,7 +311,19 @@ function buildBaseStyle(name){
       filter: ["==", ["get", "class"], "ice"],
       paint: { "fill-color": t.ice, "fill-opacity": t.iceOp } });
     style.layers.push({ id: "water", type: "fill", source: "omt", "source-layer": "water",
-      paint: { "fill-color": C("water", t.water) } });
+      paint: t.paper ? { "fill-pattern": "paper-water" } : { "fill-color": C("water", t.water) } });
+    if (t.paper){                                                          // Schnittkante: Schatten der Landschicht fällt ins Wasser, helle Papierkante
+      style.layers.push({ id: "paper-coast-shadow", type: "line", source: "omt", "source-layer": "water", filter: ["in", ["get", "class"], ["literal", ["ocean", "sea", "lake"]]],
+        paint: { "line-color": "rgba(55,40,25,0.3)", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 3, 8, 6, 14, 9], "line-offset": ["interpolate", ["linear"], ["zoom"], 2, 1.5, 8, 3, 14, 4.5], "line-blur": ["interpolate", ["linear"], ["zoom"], 2, 2, 8, 4] } });
+      style.layers.push({ id: "paper-coast-edge", type: "line", source: "omt", "source-layer": "water",
+        paint: { "line-color": "#fffaf0", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 1, 10, 2.2], "line-opacity": 0.9 } });
+      for (const [id, src, f, pat] of [["paper-wood", "landcover", ["==", ["get", "class"], "wood"], "paper-green"], ["paper-park", "park", null, "paper-green2"]]){
+        const base = { source: "omt", "source-layer": src, minzoom: id === "paper-wood" ? 7 : 6 }; if (f) base.filter = f;
+        style.layers.push(Object.assign({ id: id + "-shadow", type: "line", paint: { "line-color": "rgba(55,40,25,0.28)", "line-width": 4, "line-offset": -2, "line-blur": 3, "line-translate": [1.5, 2] } }, base));
+        style.layers.push(Object.assign({ id, type: "fill", paint: { "fill-pattern": pat, "fill-opacity": 0.95 } }, base));
+        style.layers.push(Object.assign({ id: id + "-edge", type: "line", paint: { "line-color": "#fbf6e8", "line-width": 1, "line-opacity": 0.8 } }, base));
+      }
+    }
     style.layers.push({ id: "waterway", type: "line", source: "omt", "source-layer": "waterway",
       minzoom: 6,
       paint: { "line-color": C("water", t.water), "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 12, 2] } });
@@ -395,6 +416,28 @@ map.addControl(new maplibregl.AttributionControl({
 }));
 let bootOK = false;
 map.on("load", () => { bootOK = true; });
+// Papier-Texturen (Papier-Cutout-Stil): werden erzeugt, sobald der Stil sie anfordert
+function paperTexture(base, fibers){
+  const S = 256, c = document.createElement("canvas"); c.width = c.height = S; const g = c.getContext("2d");
+  g.fillStyle = base; g.fillRect(0, 0, S, S);
+  let sd = 1234567; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 40; i++){ const x = rnd() * S, y = rnd() * S, r = 10 + rnd() * 40, gr = g.createRadialGradient(x, y, 0, x, y, r);   // Flecken
+    const d = rnd() < 0.5; gr.addColorStop(0, d ? "rgba(90,60,30,0.025)" : "rgba(255,255,255,0.045)"); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr;
+    for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) g.fillRect(x - r + ox, y - r + oy, r * 2, r * 2); }
+  g.lineWidth = 0.7; for (let i = 0; i < fibers; i++){ const x = rnd() * S, y = rnd() * S, a = rnd() * Math.PI, l = 4 + rnd() * 10;   // Fasern
+    g.strokeStyle = rnd() < 0.5 ? "rgba(255,255,255,0.35)" : "rgba(80,55,30,0.12)"; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+  const d = g.getImageData(0, 0, S, S), px = d.data; for (let i = 0; i < px.length; i += 4){ const n = (rnd() - 0.5) * 14; px[i] += n; px[i + 1] += n; px[i + 2] += n; }   // Körnung
+  g.putImageData(d, 0, 0);
+  return g.getImageData(0, 0, S, S);
+}
+const PAPER_TEX = { "paper-land": ["#f1e4c8", 900], "paper-water": ["#8fc3df", 500], "paper-green": ["#9cc48a", 600], "paper-green2": ["#b6d39a", 600] };
+const paperCache = {};
+function ensurePaperImages(){
+  for (const [id, t] of Object.entries(PAPER_TEX)){ if (map.hasImage(id)) continue; const im = paperCache[id] || (paperCache[id] = paperTexture(t[0], t[1]));
+    try { map.addImage(id, { width: 256, height: 256, data: new Uint8Array(im.data.buffer.slice(0)) }, { pixelRatio: 2 }); } catch (e) {} }
+}
+map.on("styleimagemissing", e => { if (PAPER_TEX[e.id]) ensurePaperImages(); });
+map.on("style.load", () => { if ((THEMES[val("mapStyle")] || {}).paper){ ensurePaperImages(); map.triggerRepaint(); } });
 setTimeout(() => {
   if (!bootOK) setStatus("Karte konnte nicht starten. Läuft die Datei in einer Vorschau/Sandbox? Bitte herunterladen und lokal im Browser öffnen (Internet nötig).");
 }, 8000);
@@ -498,6 +541,7 @@ function addHighlightLayers(){
 }, 0));
 
 function addRuntimeLayers(){
+  if ((THEMES[val("mapStyle")] || {}).paper) ensurePaperImages();
   addHighlightLayers();
   setTimeout(() => { try { applyTerrain(); } catch(e){} }, 0);
   if (!map.getSource("features")) map.addSource("features", { type: "geojson", data: emptyFC() });
@@ -527,6 +571,10 @@ function addRuntimeLayers(){
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": ["get", "color"], "line-width": 12, "line-blur": 8, "line-opacity": 0 }
   });
+  if (!map.getLayer("route-shadow") && (THEMES[val("mapStyle")] || {}).paper) map.addLayer({
+    id: "route-shadow", type: "line", source: "route", filter: ["==", ["get", "dash"], 0],
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "rgba(40,25,10,0.35)", "line-width": 12, "line-blur": 4, "line-translate": [3, 4] } });
   if (!map.getLayer("route-casing")) map.addLayer({
     id: "route-casing", type: "line", source: "route",
     filter: ["==", ["get", "dash"], 0],
@@ -1632,6 +1680,7 @@ function setLineWidths(w){
   if (map.getLayer("route-core")) map.setPaintProperty("route-core", "line-width", Math.max(1, w * 0.32));
   if (map.getLayer("route-dash")) map.setPaintProperty("route-dash", "line-width", w);
   if (map.getLayer("route-casing")) map.setPaintProperty("route-casing", "line-width", w + Math.max(2.5, w * 0.8));
+  if (map.getLayer("route-shadow")) map.setPaintProperty("route-shadow", "line-width", w * 2 + 4);
 }
 
 /* ---------- Animations-Kontext (alle Routen) ---------- */
@@ -1857,6 +1906,7 @@ function tipFracFallback(t){
 let camPos = null;
 function renderAt(t, live){
   if (!anim) return;
+  if (checked("fxStopmotion")) t = Math.floor(t * 12 + 1e-6) / 12;       // Papier-Animation: 12 Bilder pro Sekunde
   hlAnim(t);
   const total = timelineTotal();
   t = Math.min(Math.max(t, 0), total);
@@ -2654,7 +2704,7 @@ const SETTING_IDS = ["mapStyle","pinStyle","glow","tipStyle","tipLabel","popStyl
   "labelSize","pinFont","lineColor","lineWidth","lineStyle","lineCasing","travelMode","legDur","pauseDur","constSpeed",
   "camMode","zoom","stopZoom","pitch","smooth","rotSpeed","legEase","speedMult","endOverview","resolution",
   "totalDur","terrain3d","terrainEx","ccLand","ccWater","ccBoundary","ccLabel",
-  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","cloudLayer","fxVignette","fxStars","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","asBrand","asRes","asKey","introOn","introStyle","introTitle","introSub","introDur","cntOn","cntLabel","cntStart","cntPos","profOn","profPos","profStyle","profSize","mmOn","mmPos","mmStyle","mmSize","mmAuto","mmTheme","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","introHold","outroHold","signScale","rgMtn","rgLand","rgSea","rgSize"];
+  "dtStates","dtRoads","dtRail","dtWood","dtUrban","dtParks","dtTowns","dtLabels","projGlobe","cloudLayer","fxVignette","fxStars","poiDist","uiLang","hlIso","hlColor","hlOp","hlLine","hlT0","expFps","ovOn","ovKm0","ovRound","ovDay0","ovDay1","ovPrefix","ovPos","expBlur","spriteSticker","fxStopmotion","asBrand","asRes","asKey","introOn","introStyle","introTitle","introSub","introDur","cntOn","cntLabel","cntStart","cntPos","profOn","profPos","profStyle","profSize","mmOn","mmPos","mmStyle","mmSize","mmAuto","mmTheme","tplLen","tplFeel","tplId","camPresetId","whipIn","whipOut","whipDir","legFocus","fxClouds","introHold","outroHold","signScale","rgMtn","rgLand","rgSea","rgSize"];
 
 function serializeProject(){
   return {
@@ -2665,7 +2715,7 @@ function serializeProject(){
     })),
     routes: routes.map(rt => ({
       name: rt.name, color: rt.color, tipLabel: rt.tipLabel, gpx: rt.gpx,
-      tipPhoto: imgToDataURL(rt.tipPhoto),
+      tipPhoto: imgToDataURL(rt.tipPhoto), tipSprite: rt.tipSprite || null,
       waypoints: rt.waypoints.map(wp => ({ name: wp.name, lat: wp.lat, lng: wp.lng, color: wp.color, mode: wp.mode || "", speed: wp.speed || 1, photo: imgToDataURL(wp.photo) }))
     })),
     features: features.map(f => ({ name: f.name, geometry: f.geometry, color: f.color, appearT: f.appearT })),
@@ -2730,6 +2780,7 @@ async function loadProject(proj){
     rt.tipLabel = pr.tipLabel || "";
     rt.gpx = pr.gpx || null;
     rt.tipPhoto = await loadImg(pr.tipPhoto);
+    rt.tipSprite = pr.tipSprite || null;
     for (const w of (pr.waypoints || [])){
       const photo = await loadImg(w.photo);
       rt.waypoints.push({ id: ++wpCounter, name: w.name, lat: w.lat, lng: w.lng, color: w.color || rt.color, mode: w.mode || "", speed: w.speed || 1, photo });

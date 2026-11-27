@@ -233,6 +233,17 @@ try {
     ASSETS.set([]); document.querySelector('[data-tab="route"]').click();
     return Object.keys(ASSETS.types).length + " Typen, ZIP " + z.frames + " Bilder (2 Länder), MP4 " + Math.round(m.blob.size / 1024) + " KB";
   }));
+  await step("Papier-Cutout + 2D-Figuren", () => page.evaluate(async () => {
+    await MA.load({ name: "papier", route: { stops: [{ name: "Hanoi", c: [105.85, 21.03] }, { name: "Vinh", c: [105.68, 18.68], mode: "bus" }] } });
+    await MA_TEMPLATES.applyTemplate(MA_TEMPLATES.list.find(x => x.id === "papier"));
+    if (val("mapStyle") !== "papier" || val("tipStyle") !== "sprite") throw new Error("Look nicht gesetzt");
+    if (!map.hasImage("paper-land")) throw new Error("Papiertextur fehlt");
+    for (const m of Object.keys(MODES)) SPRITES.figure(m, "#e0533c", 0.5, 120, true, null);
+    setPlayhead(timelineTotal() * 0.5, true);
+    document.getElementById("fxStopmotion").checked = false;
+    await MA_TEMPLATES.applyTemplate(MA_TEMPLATES.list[0]);
+    return Object.keys(MODES).length + " Figuren, Papier-Stil ok";
+  }));
   await step("Whip-Pan (Kamera + Unschärfe)", () => page.evaluate(async () => {
     document.getElementById("whipIn").checked = true;
     document.getElementById("whipDir").value = "right";
