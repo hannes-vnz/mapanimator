@@ -7311,7 +7311,7 @@ const MARKS = (() => {
    Zug, Fähre, Boot, Kajak, Flugzeug, Heli, Ballon …) in Routenfarbe – oder ein eigenes Bild.
    Schaut in Fahrtrichtung (spiegelt sich), neigt sich mit der Strecke, wippt beim Fahren,
    Räder/Pedale drehen sich. Optional weißer Sticker-Rand (Papier-Cutout-Look).
-   Gezeichnet aufs Overlay (#ovl) → automatisch im MP4.
+   Als Bild in der Karte (Ebene „sprite-layer“ unter den Stopp-Pins) → exakt auf der Linie, Pins davor, automatisch im MP4.
    ========================================================= */
 const SPRITES = (() => {
   const $ = id => document.getElementById(id);
@@ -7432,53 +7432,78 @@ const SPRITES = (() => {
 
   /* ---------- pro Bild: Position, Richtung, Neigung ---------- */
   function lngLatAt(p, idx){ const i = Math.max(0, Math.min(Math.floor(idx), p.coords.length - 1)), f = idx - i, a = p.coords[i], b = p.coords[Math.min(i + 1, p.coords.length - 1)]; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; }
-  function draw(){
-    if (val("tipStyle") !== "sprite" || !anim || lastT == null) return;
-    const c = $("ovl"), g = c.getContext("2d"), W = c.width, H = c.height, u = Math.min(W, H);
-    const hpx = u * 0.11 * (num("tipScale") || 1), sticker = checked("spriteSticker");
-    for (const p of anim.per){
-      const idx = p._tipIdx || 0, ll = lngLatAt(p, idx), pt = map.project(ll), lg = legAt(p, idx), mode = lg.mode;
-      const st = state.get(p) || { face: 1, idx: idx, tilt: 0, ph: 0 };
-      // Fahrtrichtung auf dem Bildschirm (Punkte etwas vor/hinter der Spitze)
-      const span = Math.max(1, p.coords.length * 0.004), a = map.project(lngLatAt(p, Math.max(0, idx - span))), b = map.project(lngLatAt(p, Math.min(p.coords.length - 1, idx + span)));
-      const dx = b.x - a.x, dy = b.y - a.y, moving = Math.abs(idx - st.idx) > 1e-4;
-      if (Math.abs(dx) > 2) st.face = dx < 0 ? -1 : 1;
-      const maxTilt = AIR.has(mode) ? 0.5 : 0.3, want = Math.max(-maxTilt, Math.min(maxTilt, Math.atan2(dy, Math.abs(dx) + 1e-6))) * (Math.abs(dx) + Math.abs(dy) > 3 ? 1 : 0);
-      st.tilt += (want - st.tilt) * 0.25; st.ph = lastT * 9; st.idx = idx; state.set(p, st);
-      const img = p.rt._spriteImg && p.rt._spriteImg.complete && p.rt._spriteImg.naturalWidth ? p.rt._spriteImg : null;
-      const f = figure(mode, p.rt.color, moving ? st.ph : 0, hpx, sticker, img);
-      const bob = moving && !AIR.has(mode) ? Math.abs(Math.sin(lastT * 14)) * hpx * 0.025 : AIR.has(mode) ? Math.sin(lastT * 3) * hpx * 0.04 : 0;
-      const anchorY = AIR.has(mode) ? f.pad + f.H * 0.55 : f.pad + f.H * (130 / 150);
-      g.save(); g.translate(pt.x, pt.y - bob); g.rotate(st.tilt * st.face); g.scale(st.face, 1);
-      g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = hpx * 0.12; g.shadowOffsetX = hpx * 0.04 * st.face; g.shadowOffsetY = hpx * 0.06;
-      g.drawImage(f.c, -f.c.width / 2, -anchorY);
-      g.restore();
-      if (p.rt.tipLabel){                                                     // Name über der Figur
-        const txt = p.rt.tipLabel.toUpperCase(); g.save(); g.font = "800 " + Math.round(hpx * 0.2) + "px 'Avenir Next Condensed','Arial Narrow',sans-serif";
-        const tw = g.measureText(txt).width + hpx * 0.2, th = hpx * 0.28, ty = pt.y - bob - anchorY + f.pad - th - hpx * 0.05;
-        g.fillStyle = p.rt.color; rr(g, pt.x - tw / 2, ty, tw, th, th / 2); g.fill(); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, pt.x, ty + th / 2 + 1); g.restore();
+  // Figur als Bild in der Karte (Ebene unter den Stopp-Pins): MapLibre setzt sie im selben Bild wie die Linie → kein Versatz
+  const comp = document.createElement("canvas");
+  function ensureLayer(){
+    try {
+      if (!map.getSource("sprite-src")) map.addSource("sprite-src", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      if (!map.getLayer("sprite-layer")) map.addLayer({ id: "sprite-layer", type: "symbol", source: "sprite-src",
+        layout: { "icon-image": ["get", "icon"], "icon-anchor": "center", "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-rotation-alignment": "viewport", "icon-pitch-alignment": "viewport" } },
+        map.getLayer("stops-icons") ? "stops-icons" : undefined);
+    } catch (e) {}
+  }
+  function setImage(name, cv){
+    const g = cv.getContext("2d"), data = g.getImageData(0, 0, cv.width, cv.height), dpr = map.getPixelRatio() || 1;
+    const prev = map.hasImage(name) ? map.getImage(name) : null;
+    if (prev && prev.data && prev.data.width === cv.width && prev.data.height === cv.height && Math.abs((prev.pixelRatio || 1) - dpr) < 1e-6) map.updateImage(name, data);
+    else { if (prev) map.removeImage(name); map.addImage(name, data, { pixelRatio: dpr }); }
+  }
+  function update(){
+    const src = map.getSource && map.getSource("sprite-src");
+    if (!src){ ensureLayer(); if (!map.getSource("sprite-src")) return; }
+    const feats = [];
+    if (val("tipStyle") === "sprite" && anim && lastT != null){
+      const box = map.getContainer(), u = Math.min(box.clientWidth, box.clientHeight) || 1080, dpr = map.getPixelRatio() || 1;
+      const hpx = u * 0.11 * (num("tipScale") || 1), sticker = checked("spriteSticker");
+      for (const p of anim.per){
+        const idx = p._tipIdx || 0, ll = lngLatAt(p, idx), lg = legAt(p, idx), mode = lg.mode;
+        const st = state.get(p) || { face: 1, idx: idx, tilt: 0, ph: 0 };
+        const span = Math.max(1, p.coords.length * 0.004), a = map.project(lngLatAt(p, Math.max(0, idx - span))), b = map.project(lngLatAt(p, Math.min(p.coords.length - 1, idx + span)));
+        const dx = b.x - a.x, dy = b.y - a.y, moving = Math.abs(idx - st.idx) > 1e-4;
+        if (Math.abs(dx) > 2) st.face = dx < 0 ? -1 : 1;
+        const maxTilt = AIR.has(mode) ? 0.5 : 0.3, want = Math.max(-maxTilt, Math.min(maxTilt, Math.atan2(dy, Math.abs(dx) + 1e-6))) * (Math.abs(dx) + Math.abs(dy) > 3 ? 1 : 0);
+        st.tilt += (want - st.tilt) * 0.25; st.ph = lastT * 9; st.idx = idx; state.set(p, st);
+        const img = p.rt._spriteImg && p.rt._spriteImg.complete && p.rt._spriteImg.naturalWidth ? p.rt._spriteImg : null;
+        const H = hpx * dpr, f = figure(mode, p.rt.color, moving ? st.ph : 0, H, sticker, img);
+        const bob = moving && !AIR.has(mode) ? Math.abs(Math.sin(lastT * 14)) * H * 0.025 : AIR.has(mode) ? Math.sin(lastT * 3) * H * 0.04 : 0;
+        // Fahrzeuge: Räder auf der Linie, etwas eingesunken, damit die Linie sichtbar „unter“ der Figur endet; Luftfahrzeuge: mittig
+        const anchorY = AIR.has(mode) ? f.pad + f.H * 0.55 : f.pad + f.H * (124 / 150);
+        const S = Math.ceil(Math.max(f.c.width, f.c.height) * 2.3); if (comp.width !== S || comp.height !== S){ comp.width = S; comp.height = S; }
+        const g = comp.getContext("2d"); g.clearRect(0, 0, S, S);
+        g.save(); g.translate(S / 2, S / 2 - bob); g.rotate(st.tilt * st.face); g.scale(st.face, 1);
+        g.shadowColor = "rgba(0,0,0,.35)"; g.shadowBlur = H * 0.12; g.shadowOffsetX = H * 0.04 * st.face; g.shadowOffsetY = H * 0.06;
+        g.drawImage(f.c, -f.c.width / 2, -anchorY); g.restore();
+        if (p.rt.tipLabel){                                                   // Name über der Figur
+          const txt = p.rt.tipLabel.toUpperCase(); g.save(); g.font = "800 " + Math.round(H * 0.2) + "px 'Avenir Next Condensed','Arial Narrow',sans-serif";
+          const tw = g.measureText(txt).width + H * 0.2, th = H * 0.28, ty = S / 2 - bob - anchorY + f.pad - th - H * 0.05;
+          g.fillStyle = p.rt.color; rr(g, S / 2 - tw / 2, ty, tw, th, th / 2); g.fill(); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, S / 2, ty + th / 2 + 1); g.restore();
+        }
+        const name = "sprite-" + p.rt.id; setImage(name, comp);
+        feats.push({ type: "Feature", properties: { icon: name }, geometry: { type: "Point", coordinates: ll } });
       }
     }
+    map.getSource("sprite-src").setData({ type: "FeatureCollection", features: feats });
   }
+  const draw = update;
 
   /* ---------- Einbinden ---------- */
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); };
+  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); try { update(); } catch (e) { console.warn("2D-Figur:", e); } };
   const baseDS = drawStatic;
-  window.drawStatic = drawStatic = async function (){ await baseDS(); if (playheadT <= 0.01) lastT = null; drawOverlay(); };
-  const baseDO = drawOverlay;
-  window.drawOverlay = drawOverlay = function (){ baseDO(); try { draw(); } catch (e) { console.warn("2D-Figur:", e); } };
+  window.drawStatic = drawStatic = async function (){ await baseDS(); lastT = playheadT || 0; try { update(); } catch (e) {} };
+  const baseAR = addRuntimeLayers;
+  window.addRuntimeLayers = addRuntimeLayers = function (){ baseAR(); ensureLayer(); };
   // eigenes Bild als Figur (PNG mit transparentem Hintergrund am besten)
   const inp = $("tipSprite");
   if (inp) inp.addEventListener("change", () => {
     const fl = inp.files[0]; if (!fl) return; const rd = new FileReader();
     rd.onload = () => { const im = new Image(); im.onload = () => { R()._spriteImg = im; R().tipSprite = rd.result; $("tipStyle").value = "sprite"; $("tipSpriteLbl").childNodes[0].textContent = tr("Bild ✓");
-      if (anim) renderAt(playheadT, false); else drawOverlay(); }; im.src = rd.result; };
+      if (anim) renderAt(playheadT, false); }; im.src = rd.result; };
     rd.readAsDataURL(fl);
   });
   const clr = $("tipSpriteClear");
   if (clr) clr.addEventListener("click", () => { R()._spriteImg = null; R().tipSprite = null; $("tipSpriteLbl").childNodes[0].textContent = tr("Wählen"); if (anim) renderAt(playheadT, false); });
-  ["spriteSticker", "tipScale", "tipStyle"].forEach(id => $(id) && $(id).addEventListener("input", () => { if (anim) renderAt(playheadT, false); else drawOverlay(); }));
+  ["spriteSticker", "tipScale", "tipStyle"].forEach(id => $(id) && $(id).addEventListener("input", () => { if (anim) renderAt(playheadT, false); }));
   document.addEventListener("ma:loaded", () => { for (const rt of routes) if (rt.tipSprite && !rt._spriteImg){ const im = new Image(); im.src = rt.tipSprite; rt._spriteImg = im; } });
 
   Object.assign(EN, { "Bild ✓": "Image ✓" });
