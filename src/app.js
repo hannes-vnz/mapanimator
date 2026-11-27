@@ -1904,9 +1904,15 @@ function tipFracFallback(t){
 
 /* ---------- Zentrale Render-Funktion (Playback + Scrubbing) ---------- */
 let camPos = null;
+// Stop-Motion: Zeit auf einen gleichmäßigen Takt runden, der glatt in die Export-Bildrate passt (jedes Bild 3× bzw. 2×/5× gleich lang)
+function stopmoT(t){
+  if (!checked("fxStopmotion")) return t;
+  const fps = parseInt(val("expFps")) || 30, hold = Math.max(1, Math.round(fps / 12)), step = hold / fps;
+  return Math.floor(t / step + 1e-6) * step;
+}
 function renderAt(t, live){
   if (!anim) return;
-  if (checked("fxStopmotion")) t = Math.floor(t * 12 + 1e-6) / 12;       // Papier-Animation: 12 Bilder pro Sekunde
+  t = stopmoT(t);
   hlAnim(t);
   const total = timelineTotal();
   t = Math.min(Math.max(t, 0), total);
@@ -2577,7 +2583,7 @@ async function exportMP4(opts = {}){
     for (let i = 0; i < n && !err; i++, fi++){
       const t = i / fps;
       setPlayheadOnly(t);
-      if (checked("expBlur")){
+      if (checked("expBlur") && !checked("fxStopmotion")){   // Stop-Motion hält Bilder an → Unschärfe würde Schritte verschmieren
         // 6 Unterbilder über einen halben Frame (180°-Shutter) mitteln
         if (typeof CAM !== "undefined") CAM.drawBackdrop(g, W, H);
         const S = 6;

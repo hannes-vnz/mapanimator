@@ -2706,7 +2706,6 @@ body.assets-mode #timeline{display:none;}
           <div class="setting"><label>Whip-Pan am Anfang</label><input type="checkbox" id="whipIn"></div>
           <div class="setting"><label>Whip-Pan am Ende</label><input type="checkbox" id="whipOut"></div>
           <div class="setting"><label>Wolken-Einflug</label><input type="checkbox" id="fxClouds"></div>
-          <div class="setting"><label>Stop-Motion (12 Bilder/s, Papier-Look)</label><input type="checkbox" id="fxStopmotion"></div>
           <div class="setting"><label>Start halten (s)</label><input type="number" id="introHold" value="0" min="0" max="20" step="0.5"></div>
           <div class="setting"><label>Ende halten (s)</label><input type="number" id="outroHold" value="0" min="0" max="20" step="0.5"></div>
           <div class="setting"><label>Nur letzte Etappe animieren</label><select id="legFocus"><option value="all" selected>nein, ganze Route</option><option value="last">ja (vorherige schon gezeichnet)</option></select></div>
@@ -2914,6 +2913,7 @@ body.assets-mode #timeline{display:none;}
             <select id="expFps"><option value="30" selected>30 fps</option><option value="25">25 fps</option><option value="60">60 fps</option></select>
           </div>
           <div class="setting"><label>Bewegungsunschärfe</label><input type="checkbox" id="expBlur"></div>
+          <div class="setting"><label>Stop-Motion-Look (Legetrick, ~10 Bilder/s)</label><input type="checkbox" id="fxStopmotion"></div>
           <div class="setting" id="expAllScenesRow" hidden><label>Alle Szenen in einem Video</label><input type="checkbox" id="expAllScenes" checked></div>
           <div class="setting adv"><label>Stopp-Positionen (JSON)</label><input type="checkbox" id="expPos"></div>
           <button class="btn full big" id="mp4Btn">■ MP4 framegenau rendern</button>
@@ -5219,9 +5219,15 @@ function tipFracFallback(t){
 
 /* ---------- Zentrale Render-Funktion (Playback + Scrubbing) ---------- */
 let camPos = null;
+// Stop-Motion: Zeit auf einen gleichmäßigen Takt runden, der glatt in die Export-Bildrate passt (jedes Bild 3× bzw. 2×/5× gleich lang)
+function stopmoT(t){
+  if (!checked("fxStopmotion")) return t;
+  const fps = parseInt(val("expFps")) || 30, hold = Math.max(1, Math.round(fps / 12)), step = hold / fps;
+  return Math.floor(t / step + 1e-6) * step;
+}
 function renderAt(t, live){
   if (!anim) return;
-  if (checked("fxStopmotion")) t = Math.floor(t * 12 + 1e-6) / 12;       // Papier-Animation: 12 Bilder pro Sekunde
+  t = stopmoT(t);
   hlAnim(t);
   const total = timelineTotal();
   t = Math.min(Math.max(t, 0), total);
@@ -5892,7 +5898,7 @@ async function exportMP4(opts = {}){
     for (let i = 0; i < n && !err; i++, fi++){
       const t = i / fps;
       setPlayheadOnly(t);
-      if (checked("expBlur")){
+      if (checked("expBlur") && !checked("fxStopmotion")){   // Stop-Motion hält Bilder an → Unschärfe würde Schritte verschmieren
         // 6 Unterbilder über einen halben Frame (180°-Shutter) mitteln
         if (typeof CAM !== "undefined") CAM.drawBackdrop(g, W, H);
         const S = 6;
@@ -6167,9 +6173,9 @@ const TEMPLATES = [
   { id: "earthsat", name: "Satellit: Erde", sub: "Google-Earth-Look: Satelliten-Globus mit Wolken und Sternen, weiße Leuchtlinie", icon: "🛰️", bg: ["#123049", "#05070c"],
     set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: true, projGlobe: true, cloudLayer: true, fxStars: true, fxVignette: false, pinScale: 1.2, mapStyle: "satellit", lineColor: "#ffffff", lineWidth: 5, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "dot", pinStyle: "tag", pinFont: "display" } },
-  { id: "papier", name: "Papier-Cutout", sub: "Gelegte Papierkarte: Textur, Schnittkanten mit Schatten, 2D-Figur als Sticker, Stop-Motion", icon: "✂️", bg: ["#f1e4c8", "#8fc3df"],
+  { id: "papier", name: "Papier-Cutout", sub: "Gelegte Papierkarte: Textur, Schnittkanten mit Schatten, 2D-Figur als Sticker", icon: "✂️", bg: ["#f1e4c8", "#8fc3df"],
     set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: true, projGlobe: false, cloudLayer: false, fxStars: false, fxVignette: false, fxStopmotion: false, mapStyle: "papier", lineColor: "#e0533c", lineWidth: 7, lineStyle: "solid", lineCasing: true, glow: false,
-           tipStyle: "sprite", spriteSticker: true, fxStopmotion: true, pinStyle: "sticker", pinFont: "rounded" } },
+           tipStyle: "sprite", spriteSticker: true, fxStopmotion: false, pinStyle: "sticker", pinFont: "rounded" } },
   { id: "raceglobe", name: "Race: Globus-Flug", sub: "Satelliten-Globus, roter Leuchtbogen, Flaggen-Etiketten", icon: "🌍", bg: ["#1d3550", "#0b0d12"],
     set: { rgMtn: false, rgLand: false, rgSea: false, dtLabels: false, projGlobe: true, cloudLayer: true, fxStars: true, fxVignette: true, fxStopmotion: false, pinScale: 1.4, mapStyle: "satellit", lineColor: "#ff2d3c", lineWidth: 7, lineStyle: "solid", lineCasing: false, glow: true,
            tipStyle: "dot", pinStyle: "tag", pinFont: "display", travelMode: "fly" } },
@@ -7459,10 +7465,10 @@ const SPRITES = (() => {
         const idx = p._tipIdx || 0, ll = lngLatAt(p, idx), lg = legAt(p, idx), mode = lg.mode;
         const st = state.get(p) || { face: 1, idx: idx, tilt: 0, ph: 0 };
         const span = Math.max(1, p.coords.length * 0.004), a = map.project(lngLatAt(p, Math.max(0, idx - span))), b = map.project(lngLatAt(p, Math.min(p.coords.length - 1, idx + span)));
-        const dx = b.x - a.x, dy = b.y - a.y, moving = Math.abs(idx - st.idx) > 1e-4;
+        const dx = b.x - a.x, dy = b.y - a.y, moving = lastT === st.t ? !!st.mv : Math.abs(idx - st.idx) > 1e-4;   // gleiches Bild nochmal (Stop-Motion, Unschärfe) → Zustand halten
         if (Math.abs(dx) > 2) st.face = dx < 0 ? -1 : 1;
         const maxTilt = AIR.has(mode) ? 0.5 : 0.3, want = Math.max(-maxTilt, Math.min(maxTilt, Math.atan2(dy, Math.abs(dx) + 1e-6))) * (Math.abs(dx) + Math.abs(dy) > 3 ? 1 : 0);
-        st.tilt += (want - st.tilt) * 0.25; st.ph = lastT * 9; st.idx = idx; state.set(p, st);
+        const dt = lastT - (st.t ?? lastT); st.tilt = (dt <= 0 || dt > 0.5) ? (st.t == null ? want : st.tilt) : st.tilt + (want - st.tilt) * (1 - Math.exp(-dt * 8)); st.t = lastT; st.ph = lastT * 9; st.idx = idx; st.mv = moving; state.set(p, st);   // Neigung zeitbasiert: gleich glatt bei 25/30/60 fps
         const img = p.rt._spriteImg && p.rt._spriteImg.complete && p.rt._spriteImg.naturalWidth ? p.rt._spriteImg : null;
         const H = hpx * dpr, f = figure(mode, p.rt.color, moving ? st.ph : 0, H, sticker, img);
         const bob = moving && !AIR.has(mode) ? Math.abs(Math.sin(lastT * 14)) * H * 0.025 : AIR.has(mode) ? Math.sin(lastT * 3) * H * 0.04 : 0;
@@ -7488,7 +7494,7 @@ const SPRITES = (() => {
 
   /* ---------- Einbinden ---------- */
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); try { update(); } catch (e) { console.warn("2D-Figur:", e); } };
+  window.renderAt = renderAt = function (t, live){ lastT = stopmoT(t); baseRA(t, live); try { update(); } catch (e) { console.warn("2D-Figur:", e); } };
   const baseDS = drawStatic;
   window.drawStatic = drawStatic = async function (){ await baseDS(); lastT = playheadT || 0; try { update(); } catch (e) {} };
   const baseAR = addRuntimeLayers;
@@ -7739,7 +7745,7 @@ const LABELS = (() => {
 
   /* ---------- Einhängen ---------- */
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); };
+  window.renderAt = renderAt = function (t, live){ lastT = stopmoT(t); baseRA(t, live); };
   const baseDO = drawOverlay;
   window.drawOverlay = drawOverlay = function (){ baseDO(); draw(); };
   const baseDS = drawStatic;
@@ -8531,7 +8537,7 @@ const OVL = (() => {
 
   /* ---------- Einbinden ---------- */
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); };
+  window.renderAt = renderAt = function (t, live){ lastT = stopmoT(t); baseRA(t, live); };
   const baseDS = drawStatic;
   window.drawStatic = drawStatic = async function (){ await baseDS(); if (playheadT <= 0.01) lastT = null; drawOverlay(); };
   const baseDO = drawOverlay;
@@ -8680,7 +8686,7 @@ const INTRO = (() => {
   }
 
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); };
+  window.renderAt = renderAt = function (t, live){ lastT = stopmoT(t); baseRA(t, live); };
   const baseDS = drawStatic;
   window.drawStatic = drawStatic = async function (){ await baseDS(); if (playheadT <= 0.01) lastT = null; drawOverlay(); };
   const baseDO = drawOverlay;

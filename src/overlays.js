@@ -305,7 +305,7 @@ const OVL = (() => {
 
   /* ---------- Einbinden ---------- */
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); };
+  window.renderAt = renderAt = function (t, live){ lastT = stopmoT(t); baseRA(t, live); };
   const baseDS = drawStatic;
   window.drawStatic = drawStatic = async function (){ await baseDS(); if (playheadT <= 0.01) lastT = null; drawOverlay(); };
   const baseDO = drawOverlay;

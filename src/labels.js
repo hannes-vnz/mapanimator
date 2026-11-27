@@ -226,7 +226,7 @@ const LABELS = (() => {
 
   /* ---------- Einhängen ---------- */
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); };
+  window.renderAt = renderAt = function (t, live){ lastT = stopmoT(t); baseRA(t, live); };
   const baseDO = drawOverlay;
   window.drawOverlay = drawOverlay = function (){ baseDO(); draw(); };
   const baseDS = drawStatic;

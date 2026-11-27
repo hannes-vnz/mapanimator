@@ -153,10 +153,10 @@ const SPRITES = (() => {
         const idx = p._tipIdx || 0, ll = lngLatAt(p, idx), lg = legAt(p, idx), mode = lg.mode;
         const st = state.get(p) || { face: 1, idx: idx, tilt: 0, ph: 0 };
         const span = Math.max(1, p.coords.length * 0.004), a = map.project(lngLatAt(p, Math.max(0, idx - span))), b = map.project(lngLatAt(p, Math.min(p.coords.length - 1, idx + span)));
-        const dx = b.x - a.x, dy = b.y - a.y, moving = Math.abs(idx - st.idx) > 1e-4;
+        const dx = b.x - a.x, dy = b.y - a.y, moving = lastT === st.t ? !!st.mv : Math.abs(idx - st.idx) > 1e-4;   // gleiches Bild nochmal (Stop-Motion, Unschärfe) → Zustand halten
         if (Math.abs(dx) > 2) st.face = dx < 0 ? -1 : 1;
         const maxTilt = AIR.has(mode) ? 0.5 : 0.3, want = Math.max(-maxTilt, Math.min(maxTilt, Math.atan2(dy, Math.abs(dx) + 1e-6))) * (Math.abs(dx) + Math.abs(dy) > 3 ? 1 : 0);
-        st.tilt += (want - st.tilt) * 0.25; st.ph = lastT * 9; st.idx = idx; state.set(p, st);
+        const dt = lastT - (st.t ?? lastT); st.tilt = (dt <= 0 || dt > 0.5) ? (st.t == null ? want : st.tilt) : st.tilt + (want - st.tilt) * (1 - Math.exp(-dt * 8)); st.t = lastT; st.ph = lastT * 9; st.idx = idx; st.mv = moving; state.set(p, st);   // Neigung zeitbasiert: gleich glatt bei 25/30/60 fps
         const img = p.rt._spriteImg && p.rt._spriteImg.complete && p.rt._spriteImg.naturalWidth ? p.rt._spriteImg : null;
         const H = hpx * dpr, f = figure(mode, p.rt.color, moving ? st.ph : 0, H, sticker, img);
         const bob = moving && !AIR.has(mode) ? Math.abs(Math.sin(lastT * 14)) * H * 0.025 : AIR.has(mode) ? Math.sin(lastT * 3) * H * 0.04 : 0;
@@ -182,7 +182,7 @@ const SPRITES = (() => {
 
   /* ---------- Einbinden ---------- */
   const baseRA = renderAt;
-  window.renderAt = renderAt = function (t, live){ lastT = t; baseRA(t, live); try { update(); } catch (e) { console.warn("2D-Figur:", e); } };
+  window.renderAt = renderAt = function (t, live){ lastT = stopmoT(t); baseRA(t, live); try { update(); } catch (e) { console.warn("2D-Figur:", e); } };
   const baseDS = drawStatic;
   window.drawStatic = drawStatic = async function (){ await baseDS(); lastT = playheadT || 0; try { update(); } catch (e) {} };
   const baseAR = addRuntimeLayers;
